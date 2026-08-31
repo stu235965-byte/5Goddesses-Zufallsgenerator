@@ -1,4 +1,4 @@
-const CACHE_NAME = '5goddesses-pwa-v2';
+const CACHE_NAME = '5goddesses-pwa-v3';
 const OFFLINE_URL = './index.html';
 const ASSETS = [
   "./generator.js",
