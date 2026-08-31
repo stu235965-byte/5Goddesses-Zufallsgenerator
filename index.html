@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>5Goddesses – Zufallsgenerator</title>
+  <meta name="theme-color" content="#101010">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="5Goddesses">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">5 GODDESSES</div>
+    <nav>
+      <button class="navbtn active" data-page="generator">Zufallsgenerator</button>
+      <button class="navbtn" data-page="profil">Mein Kartenpool</button>
+      <button id="appInstallieren" class="installbtn" hidden>App installieren</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="page-generator" class="page active">
+      <h1>ZUFALLSGENERATOR</h1>
+      <div id="profilStatus" class="status"></div>
+      <button id="ziehen" class="primary">Neue Karten ziehen</button>
+      <div id="generatorMeldung" class="meldung" hidden></div>
+      <div id="bereiche"></div>
+    </section>
+
+    <section id="page-profil" class="page">
+      <h1>MEIN KARTENPOOL</h1>
+      <p class="intro">Wähle hier alle Karten aus, die du in der Realität besitzt. Der Zufallsgenerator verwendet anschließend nur diese Karten.</p>
+
+      <div class="profilbox">
+        <label for="profilname">Profilname</label>
+        <div class="profilrow">
+          <input id="profilname" type="text" maxlength="40" placeholder="z. B. Mein Kartenpool">
+          <button id="profilSpeichern" class="primary small">Profil speichern</button>
+        </div>
+        <div id="speicherInfo" class="speicherinfo"></div>
+      </div>
+
+      <div class="pool-actions">
+        <button id="alleAuswaehlen">Alle auswählen</button>
+        <button id="alleAbwaehlen">Alle abwählen</button>
+      </div>
+
+      <div id="poolUebersicht" class="pool-uebersicht"></div>
+      <div id="kartenpool"></div>
+    </section>
+  </main>
+
+  <script src="karten.js"></script>
+  <script src="generator.js"></script>
+  <script src="pwa.js"></script>
+</body>
+</html>
