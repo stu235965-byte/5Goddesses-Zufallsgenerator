@@ -1,31 +1,43 @@
-5Goddesses – Gefecht v1.15
+5Goddesses – Gefecht v1.16
+RÜSTKAMMER / AUSRÜSTUNGS-GRUNDSYSTEM
 
-KORREKTUR STARTEHRE
+Umgesetzt auf Basis des Regelwerks:
 
-Bisher:
-- Jede neu ausgespielte Karte startete intern mit 0 Ehre,
-  unabhängig von dem auf der Karte angegebenen Ehre-Wert.
+- Rüstkammer-Nebenattribute Waffe, Schild, Rüstung und Kopfschutz
+  werden als Ausrüstung erkannt.
+- Drag & Drop aus der Hand:
+  Waffe -> nur Waffenfeld einer ausliegenden Bezwingerin
+  Schild -> nur Schildfeld
+  Rüstung -> nur Rüstungsfeld
+  Kopfschutz -> nur Helmbereich
+- Nur Ausrüstungsfelder von tatsächlich ausliegenden Bezwingerinnen
+  sind legale Ziele.
+- Belegte Ausrüstungsfelder dürfen ersetzt werden.
+  Die bisherige Ausrüstung geht dabei auf den Ablagestapel.
+- Ausrüstung kann alternativ verdeckt in einen freien AZR-Bereich
+  gesetzt werden.
+- Ausrüstung kann NICHT offen in der AZR liegen.
+- Wird verdeckte Ausrüstung in VP/NP aufgedeckt, muss sie sofort an
+  eine Bezwingerin angelegt werden.
+- Solange diese Platzierung aussteht, kann die Phase nicht gewechselt werden.
+- Klick-/Button-Bedienung zusätzlich zu Drag & Drop, damit die Funktion
+  auch auf Touch-Geräten nutzbar bleibt.
+- Ausrüstung kann in VP/NP freiwillig durch Klick auf das belegte
+  Ausrüstungsfeld abgelegt werden.
+- Stirbt eine Bezwingerin, werden Waffe, Schild, Rüstung und Kopfschutz
+  zusammen mit ihr auf den Ablagestapel gelegt.
+- Gegenstand und Reliquie bleiben als AZR-Karten behandelt.
+- Individuelle Kartenwirkungen und Werteboni der Ausrüstung sind noch
+  NICHT implementiert; dieses Update bildet zunächst die regelkonforme
+  Platzierung und Lebensdauer der Karten ab.
 
-Jetzt:
-- Eine Karte startet beim Ausspielen mit ihrer in der Kartendatenbank
-  angegebenen Ehre (`ehre`).
-- Wird eine Karte verdeckt gesetzt, besitzt sie diese Startehre bereits
-  intern.
-- Solange die Karte verdeckt liegt, erhält sie in Ehrungsphasen KEINE
-  zusätzliche Ehre.
-- Beim Aufdecken ist ihre normale Startehre weiterhin vorhanden.
-- Danach kann die offene Karte in folgenden Ehrungsphasen wie vorgesehen
-  zusätzliche Ehre erhalten, sofern sie ein Herz-Attribut besitzt.
-- Karten mit keiner angegebenen Startehre beginnen weiterhin bei 0.
-
-Wichtig:
-- Bereits laufende gespeicherte Gefechte werden nicht rückwirkend auf
-  Startehre gesetzt, weil ein aktueller Wert von 0 auch durch bereits
-  ausgegebene Ehre entstanden sein könnte.
-- Für einen sauberen Test bitte ein neues Gefecht starten.
-
-Service Worker: v22
+Kompatibilität:
+- Alte gespeicherte Gefechte erhalten beim Laden automatisch leere
+  Ausrüstungsbereiche.
+- Service Worker v23.
 
 Zu ersetzen:
+- battlefield.js
 - game-engine.js
+- style.css
 - service-worker.js

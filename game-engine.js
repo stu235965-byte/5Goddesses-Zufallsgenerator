@@ -91,6 +91,10 @@ function playerFromDeck(deck,index){
     development:[...k.entwicklung],
     hand:[],
     bezSlots:[null,null],
+    equipment:[
+      {weapon:null,shield:null,armor:null,helmet:null},
+      {weapon:null,shield:null,armor:null,helmet:null}
+    ],
     azr:[null,null,null],
     primary:null,
     secondary:null,
@@ -100,6 +104,37 @@ function playerFromDeck(deck,index){
   };
 }
 function cardData(runtime){return runtime?dbCard(runtime.bild):null}
+const EQUIPMENT_TYPE_TO_SLOT={
+  'Waffe':'weapon',
+  'Schild':'shield',
+  'Rüstung':'armor',
+  'Kopfschutz':'helmet'
+};
+function equipmentKind(c){
+  if(!c || c.deck_bereich!=='ruestkammer')return null;
+  return EQUIPMENT_TYPE_TO_SLOT[c.kartentyp]||null;
+}
+function isEquipmentCard(c){return !!equipmentKind(c)}
+function equipmentLabel(kind){
+  return ({weapon:'Waffe',shield:'Schild',armor:'Rüstung',helmet:'Kopfschutz'})[kind]||kind;
+}
+function discardRuntime(p,r){
+  if(!r)return;
+  for(const img of r.developmentStack||[r.bild])p.discard.push(img);
+}
+function ensureEquipmentState(p){
+  if(!Array.isArray(p.equipment))p.equipment=[];
+  while(p.equipment.length<2)p.equipment.push(null);
+  for(let i=0;i<2;i++){
+    if(!p.equipment[i] || Array.isArray(p.equipment[i])){
+      p.equipment[i]={weapon:null,shield:null,armor:null,helmet:null};
+    }else{
+      for(const k of ['weapon','shield','armor','helmet']){
+        if(p.equipment[i][k]===undefined)p.equipment[i][k]=null;
+      }
+    }
+  }
+}
 function log(state,text){
   state.log.unshift({
     at:new Date().toISOString(),
@@ -134,6 +169,7 @@ function startGame(deck1,deck2,startPlayer){
     firstTurn:true,
     winner:null,
     attack:null,
+    pendingEquipment:null,
     sharedPrimary:null,
     players:[playerFromDeck(deck1,0),playerFromDeck(deck2,1)],
     log:[]
@@ -231,6 +267,9 @@ function playOpenAzr(state,handIndex,slot){
   if(p.azr[slot])return {ok:false,msg:'Dieser ASTRAL-/Rüstkammer-Bereich ist belegt.'};
   const bild=p.hand[handIndex],c=dbCard(bild);
   if(!c || !['astral','ruestkammer'].includes(c.deck_bereich))return {ok:false,msg:'Nur ASTRAL- oder Rüstkammer-Karten können hier ausgespielt werden.'};
+  if(isEquipmentCard(c)){
+    return {ok:false,msg:`${c.kartentyp} darf offen nicht in der AZR liegen. Spiele die Karte direkt an eine Bezwingerin oder setze sie verdeckt.`};
+  }
   p.hand.splice(handIndex,1);
   const r=makeRuntimeCard(bild,p.index,p.turnCount);
   r.faceDown=false;
@@ -238,12 +277,79 @@ function playOpenAzr(state,handIndex,slot){
   log(state,`${p.name} spielt ${c.name} offen in die ASTRAL-/Rüstkammer-Zone. Der individuelle Karteneffekt ist noch nicht implementiert.`);
   return {ok:true};
 }
+function equipRuntimeToBez(state,p,r,bezSlot,kind){
+  ensureEquipmentState(p);
+  if(!p.bezSlots[bezSlot])return {ok:false,msg:'In diesem Bereich liegt keine Bezwingerin.'};
+  const c=cardData(r);
+  const actualKind=equipmentKind(c);
+  if(!actualKind || actualKind!==kind)return {ok:false,msg:'Diese Ausrüstung gehört nicht in diesen Bereich.'};
+
+  const previous=p.equipment[bezSlot][kind];
+  if(previous){
+    discardRuntime(p,previous);
+    log(state,`${cardData(previous)?.name||'Die bisherige Ausrüstung'} wird ersetzt und auf den Ablagestapel gelegt.`);
+  }
+
+  r.faceDown=false;
+  p.equipment[bezSlot][kind]=r;
+  log(state,`${p.name} legt ${c?.name||'eine Ausrüstung'} als ${equipmentLabel(kind)} an Bezwingerin ${bezSlot+1} an.`);
+  return {ok:true};
+}
+function equipFromHand(state,handIndex,bezSlot,kind){
+  const p=active(state);
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Ausrüstungen können nur in Versorgungs- oder Nachschubphase angelegt werden.'};
+  const bild=p.hand[handIndex],c=dbCard(bild);
+  if(!c || equipmentKind(c)!==kind)return {ok:false,msg:'Diese Handkarte gehört nicht in diesen Ausrüstungsbereich.'};
+  if(!p.bezSlots[bezSlot])return {ok:false,msg:'Hier liegt keine Bezwingerin, an die die Ausrüstung angelegt werden kann.'};
+
+  p.hand.splice(handIndex,1);
+  const r=makeRuntimeCard(bild,p.index,p.turnCount);
+  return equipRuntimeToBez(state,p,r,bezSlot,kind);
+}
+function equipFromAzr(state,azrSlot,bezSlot,kind){
+  const p=active(state);
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Verdeckte Ausrüstung kann nur in Versorgungs- oder Nachschubphase aktiviert werden.'};
+  const r=p.azr[azrSlot];
+  if(!r || r.faceDown)return {ok:false,msg:'Die Ausrüstung muss zuerst aufgedeckt werden.'};
+  const c=cardData(r);
+  if(!c || equipmentKind(c)!==kind)return {ok:false,msg:'Diese Karte gehört nicht in diesen Ausrüstungsbereich.'};
+
+  const result=equipRuntimeToBez(state,p,r,bezSlot,kind);
+  if(result.ok){
+    p.azr[azrSlot]=null;
+    state.pendingEquipment=null;
+  }
+  return result;
+}
+function discardEquipment(state,bezSlot,kind){
+  const p=active(state);
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Ausrüstungen können nur in Versorgungs- oder Nachschubphase freiwillig abgelegt werden.'};
+  ensureEquipmentState(p);
+  const r=p.equipment[bezSlot]?.[kind];
+  if(!r)return {ok:false,msg:'In diesem Ausrüstungsbereich liegt keine Karte.'};
+  discardRuntime(p,r);
+  p.equipment[bezSlot][kind]=null;
+  log(state,`${p.name} legt ${cardData(r)?.name||'eine Ausrüstung'} freiwillig auf den Ablagestapel.`);
+  return {ok:true};
+}
 function reveal(state,slot){
   const p=active(state),r=p.azr[slot];
   if(!r || !r.faceDown)return {ok:false,msg:'Hier liegt keine verdeckte Karte.'};
+  const c=cardData(r);
+
+  if(isEquipmentCard(c)){
+    if(!['supply','resupply'].includes(currentPhase(state).id)){
+      return {ok:false,msg:'Verdeckte Waffe, Schild, Rüstung oder Kopfschutz kann nur in Versorgungs- oder Nachschubphase aktiviert werden.'};
+    }
+    r.faceDown=false;
+    state.pendingEquipment={owner:p.index,azrSlot:slot,kind:equipmentKind(c)};
+    log(state,`${p.name} deckt ${c?.name||'eine Ausrüstung'} auf. Sie muss jetzt sofort an eine Bezwingerin angelegt werden.`);
+    return {ok:true,needsEquipmentPlacement:true,kind:equipmentKind(c)};
+  }
+
   if(!['honor','supply','rush','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'In dieser Phase kann die gesetzte Karte in der Grundversion nicht aktiviert werden.'};
   r.faceDown=false;
-  log(state,`${p.name} deckt ${cardData(r)?.name||'eine gesetzte Karte'} auf. Der individuelle Karteneffekt ist noch nicht implementiert.`);
+  log(state,`${p.name} deckt ${c?.name||'eine gesetzte Karte'} auf. Der individuelle Karteneffekt ist noch nicht implementiert.`);
   return {ok:true};
 }
 function availableDevelopment(state,runtime){
@@ -386,9 +492,19 @@ function killIfNeeded(state,playerIndex,kind,slot=null){
     return true;
   }
 
-  for(const img of r.developmentStack||[r.bild])p.discard.push(img);
+  discardRuntime(p,r);
 
-  if(kind==='bez')p.bezSlots[slot]=null;
+  if(kind==='bez'){
+    ensureEquipmentState(p);
+    for(const k of ['weapon','shield','armor','helmet']){
+      const eq=p.equipment[slot][k];
+      if(eq){
+        discardRuntime(p,eq);
+        p.equipment[slot][k]=null;
+      }
+    }
+    p.bezSlots[slot]=null;
+  }
   if(kind==='primary')state.sharedPrimary=null;
   if(kind==='secondary')p.secondary=null;
 
@@ -460,6 +576,10 @@ function advancePhase(state){
   if(state.winner!==null)return {ok:false,msg:'Das Gefecht ist bereits beendet.'};
   const p=active(state),phase=currentPhase(state);
 
+  if(state.pendingEquipment){
+    return {ok:false,msg:'Die aufgedeckte Ausrüstung muss zuerst an eine Bezwingerin angelegt werden.'};
+  }
+
   if(phase.id==='draw'){
     const nonempty=Object.values(p.stacks).some(a=>a.length);
     if(nonempty && !p.drawDone)return {ok:false,msg:'In der Ziehphase muss zuerst eine Karte von einem Hauptstapel gezogen werden.'};
@@ -516,11 +636,13 @@ function migrateLoadedState(state){
 
   if(state.sharedPrimary===undefined)state.sharedPrimary=null;
   if(state.attack===undefined)state.attack=null;
+  if(state.pendingEquipment===undefined)state.pendingEquipment=null;
 
   state.players.forEach((p,index)=>{
     if(p.index===undefined)p.index=index;
     if(p.honorGrantedTurn===undefined)p.honorGrantedTurn=null;
     if(p.secondary===undefined)p.secondary=null;
+    ensureEquipmentState(p);
     if(!Array.isArray(p.azr))p.azr=[null,null,null];
     while(p.azr.length<3)p.azr.push(null);
     if(!Array.isArray(p.bezSlots))p.bezSlots=[null,null];
@@ -541,6 +663,9 @@ function migrateLoadedState(state){
 
     normalizeRuntime(p.refuge,true);
     p.bezSlots.forEach(r=>normalizeRuntime(r,false));
+    p.equipment.forEach(eq=>{
+      for(const k of ['weapon','shield','armor','helmet'])normalizeRuntime(eq[k],false);
+    });
     p.azr.forEach(r=>normalizeRuntime(r,false));
     normalizeRuntime(p.secondary,false);
   });
@@ -566,6 +691,7 @@ function clear(){localStorage.removeItem('5goddesses_active_game_v1')}
 window.G5Engine={
   PHASES,decks,validDeck,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,playOpenAzr,reveal,
+  equipmentKind,isEquipmentCard,equipFromHand,equipFromAzr,discardEquipment,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,hasHeartAttribute,attackTargets,prepareAttack,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,returnToRush,cardData
 };

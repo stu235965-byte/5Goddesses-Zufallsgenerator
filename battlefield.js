@@ -129,13 +129,20 @@ function stackHtml(p,key,label){
 function developmentHtml(p){
   return `<div class="dev-pile"><span>ENTWICKLUNG</span><b>${p.development.length}</b></div>`;
 }
-function equipmentSlot(label,kind,bezIndex){
-  return `<button class="equip-slot ${kind}" data-equip="${kind}" data-equip-bez="${bezIndex}" disabled><span>${label}</span></button>`;
+function equipmentSlot(label,kind,bezIndex,r,isActive){
+  return `<button class="equip-slot ${kind}" data-equip="${kind}" data-equip-bez="${bezIndex}" ${isActive?'':'disabled'}>
+    ${runtimeCardHtml(r)}
+    <span class="slot-label">${label}</span>
+  </button>`;
 }
 function bezCore(r,i,isActive){
   return `<button class="board-slot bez-slot" data-bez="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN</span></button>`;
 }
 function playerBoardHtml(p,isActive,isOpponent){
+  const eq=p.equipment||[
+    {weapon:null,shield:null,armor:null,helmet:null},
+    {weapon:null,shield:null,armor:null,helmet:null}
+  ];
   const azr=p.azr.map((r,i)=>`<button class="board-slot azr-slot" data-azr="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r,{hidden:isOpponent&&r?.faceDown})}<span class="slot-label">AZR ${i+1}</span></button>`).join('');
   const oppClass=isOpponent?' mirrored':'';
 
@@ -157,23 +164,23 @@ function playerBoardHtml(p,isActive,isOpponent){
         </div>
 
         <div class="combat-grid">
-          <div class="cg l-helmet">${equipmentSlot('HELM','helmet',0)}</div>
-          <div class="cg r-helmet">${equipmentSlot('HELM','helmet',1)}</div>
+          <div class="cg l-helmet">${equipmentSlot('HELM','helmet',0,eq[0]?.helmet,isActive)}</div>
+          <div class="cg r-helmet">${equipmentSlot('HELM','helmet',1,eq[1]?.helmet,isActive)}</div>
 
-          <div class="cg l-weapon">${equipmentSlot('WAFFE','weapon',0)}</div>
+          <div class="cg l-weapon">${equipmentSlot('WAFFE','weapon',0,eq[0]?.weapon,isActive)}</div>
           <div class="cg l-bez">${bezCore(p.bezSlots[0],0,isActive)}</div>
-          <div class="cg l-shield">${equipmentSlot('SCHILD','shield',0)}</div>
+          <div class="cg l-shield">${equipmentSlot('SCHILD','shield',0,eq[0]?.shield,isActive)}</div>
 
           <div class="cg refuge">
             <button class="refuge-card" data-refuge ${isActive?'':'disabled'}>${runtimeCardHtml(p.refuge)}<span class="slot-label">ZUFLUCHT</span></button>
           </div>
 
-          <div class="cg r-weapon">${equipmentSlot('WAFFE','weapon',1)}</div>
+          <div class="cg r-weapon">${equipmentSlot('WAFFE','weapon',1,eq[1]?.weapon,isActive)}</div>
           <div class="cg r-bez">${bezCore(p.bezSlots[1],1,isActive)}</div>
-          <div class="cg r-shield">${equipmentSlot('SCHILD','shield',1)}</div>
+          <div class="cg r-shield">${equipmentSlot('SCHILD','shield',1,eq[1]?.shield,isActive)}</div>
 
-          <div class="cg l-armor">${equipmentSlot('RÜSTUNG','armor',0)}</div>
-          <div class="cg r-armor">${equipmentSlot('RÜSTUNG','armor',1)}</div>
+          <div class="cg l-armor">${equipmentSlot('RÜSTUNG','armor',0,eq[0]?.armor,isActive)}</div>
+          <div class="cg r-armor">${equipmentSlot('RÜSTUNG','armor',1,eq[1]?.armor,isActive)}</div>
         </div>
 
         <div class="azr-row">${azr}</div>
@@ -237,7 +244,19 @@ function renderBoards(){
   document.querySelectorAll('#playerBoard [data-azr]').forEach(btn=>{
     btn.addEventListener('click',()=>handleAzr(Number(btn.dataset.azr)));
   });
+  document.querySelectorAll('#playerBoard [data-equip]').forEach(btn=>{
+    btn.addEventListener('click',()=>handleEquipmentSlot(btn.dataset.equip,Number(btn.dataset.equipBez)));
+  });
   document.querySelector('#playerBoard [data-refuge]')?.addEventListener('click',()=>handleRefuge());
+
+  if(state.pendingEquipment && state.pendingEquipment.owner===state.activePlayer){
+    const pending=state.pendingEquipment;
+    [0,1].forEach(i=>{
+      if(E().active(state).bezSlots[i]){
+        document.querySelector(`#playerBoard [data-equip="${pending.kind}"][data-equip-bez="${i}"]`)?.classList.add('drop-valid','equip-pending-target');
+      }
+    });
+  }
 
   // Angriffsauswahl in der Ansturmphase.
   if(phase()?.id==='rush' && !state.attack){
@@ -332,6 +351,27 @@ function renderActions(){
   }
 
   if(['supply','resupply'].includes(ph.id)){
+    if(state.pendingEquipment && state.pendingEquipment.owner===state.activePlayer){
+      const pending=state.pendingEquipment;
+      const r=p.azr[pending.azrSlot];
+      const info=document.createElement('span');
+      info.innerHTML=`Aufgedeckte Ausrüstung: <strong>${esc(cardName(r))}</strong>. Wähle jetzt die passende Ausrüstungsposition einer Bezwingerin.`;
+      root.appendChild(info);
+
+      [0,1].forEach(bezSlot=>{
+        const b=document.createElement('button');
+        b.className='primary';
+        b.textContent=`An Bezwingerin ${bezSlot+1} anlegen`;
+        b.disabled=!p.bezSlots[bezSlot];
+        b.addEventListener('click',()=>{
+          const rr=E().equipFromAzr(state,pending.azrSlot,bezSlot,pending.kind);
+          saveRender(rr.msg||'Ausrüstung angelegt.');
+        });
+        root.appendChild(b);
+      });
+      return;
+    }
+
     const c=handSelected();
     if(c){
       const info=document.createElement('span');
@@ -352,6 +392,22 @@ function renderActions(){
         });
       }
       if(['astral','ruestkammer'].includes(c.deck_bereich)){
+        const eqKind=E().equipmentKind(c);
+
+        if(eqKind){
+          [0,1].forEach(bezSlot=>{
+            const b=document.createElement('button');
+            b.textContent=`${c.kartentyp} an Bezwingerin ${bezSlot+1} anlegen`;
+            b.disabled=!p.bezSlots[bezSlot];
+            b.addEventListener('click',()=>{
+              const r=E().equipFromHand(state,selectedHandIndex,bezSlot,eqKind);
+              if(r.ok)selectedHandIndex=null;
+              saveRender(r.msg||'Ausrüstung angelegt.');
+            });
+            root.appendChild(b);
+          });
+        }
+
         [0,1,2].forEach(slot=>{
           const hiddenBtn=document.createElement('button');
           hiddenBtn.textContent=`Verdeckt in AZR ${slot+1}`;
@@ -363,19 +419,24 @@ function renderActions(){
           });
           root.appendChild(hiddenBtn);
 
-          const openBtn=document.createElement('button');
-          openBtn.textContent=`Offen in AZR ${slot+1}`;
-          openBtn.disabled=!!p.azr[slot];
-          openBtn.addEventListener('click',()=>{
-            const r=E().playOpenAzr(state,selectedHandIndex,slot);
-            if(r.ok)selectedHandIndex=null;
-            saveRender(r.msg||'Karte offen ausgespielt.');
-          });
-          root.appendChild(openBtn);
+          if(!eqKind){
+            const openBtn=document.createElement('button');
+            openBtn.textContent=`Offen in AZR ${slot+1}`;
+            openBtn.disabled=!!p.azr[slot];
+            openBtn.addEventListener('click',()=>{
+              const r=E().playOpenAzr(state,selectedHandIndex,slot);
+              if(r.ok)selectedHandIndex=null;
+              saveRender(r.msg||'Karte offen ausgespielt.');
+            });
+            root.appendChild(openBtn);
+          }
         });
+
         const note=document.createElement('span');
         note.className='action-note';
-        note.textContent='Offen oder verdeckt setzen ist bereits möglich. Der individuelle Karteneffekt wird später ergänzt.';
+        note.textContent=eqKind
+          ?'Ausrüstungen werden offen direkt an eine Bezwingerin angelegt. In der AZR dürfen sie nur verdeckt gesetzt werden.'
+          :'Diese Karte kann offen oder verdeckt in die AZR gespielt werden. Individuelle Karteneffekte folgen später.';
         root.appendChild(note);
       }
     }else{
@@ -574,6 +635,33 @@ function handleAzr(slot){
     saveRender(rr.msg||'Karte aufgedeckt.');
   }
 }
+function handleEquipmentSlot(kind,bezSlot){
+  const p=E().active(state);
+
+  if(state.pendingEquipment && state.pendingEquipment.owner===state.activePlayer){
+    const pending=state.pendingEquipment;
+    if(kind!==pending.kind)return message('Diese aufgedeckte Ausrüstung gehört in einen anderen Ausrüstungsbereich.','warn');
+    const rr=E().equipFromAzr(state,pending.azrSlot,bezSlot,kind);
+    return saveRender(rr.msg||'Ausrüstung angelegt.');
+  }
+
+  if(selectedHandIndex!==null){
+    const c=handSelected();
+    if(c && E().equipmentKind(c)){
+      const rr=E().equipFromHand(state,selectedHandIndex,bezSlot,kind);
+      if(rr.ok)selectedHandIndex=null;
+      return saveRender(rr.msg||'Ausrüstung angelegt.');
+    }
+  }
+
+  const r=p.equipment?.[bezSlot]?.[kind];
+  if(r && ['supply','resupply'].includes(phase().id)){
+    if(confirm(`${cardName(r)} auf den Ablagestapel legen?`)){
+      const rr=E().discardEquipment(state,bezSlot,kind);
+      return saveRender(rr.msg||'Ausrüstung abgelegt.');
+    }
+  }
+}
 function chooseTarget(target){
   if(phase()?.id!=='rush'||selectedAttacker===null)return;
   const legal=E().attackTargets(state,selectedAttacker).some(t=>t.type===target.type&&t.slot===target.slot);
@@ -605,6 +693,12 @@ function legalDropSelectors(handIndex){
   }
 
   if(['astral','ruestkammer'].includes(c.deck_bereich)){
+    const eqKind=E().equipmentKind(c);
+    if(eqKind){
+      [0,1].forEach(i=>{
+        if(p.bezSlots[i])targets.push(`[data-equip="${eqKind}"][data-equip-bez="${i}"]`);
+      });
+    }
     [0,1,2].forEach(i=>{ if(!p.azr[i]) targets.push(`[data-azr="${i}"]`); });
   }
   return targets;
@@ -616,7 +710,7 @@ function markLegalDropTargets(handIndex){
   }
 }
 function wireDragAndDrop(){
-  document.querySelectorAll('#playerBoard [data-bez],#playerBoard [data-azr]').forEach(target=>{
+  document.querySelectorAll('#playerBoard [data-bez],#playerBoard [data-azr],#playerBoard [data-equip]').forEach(target=>{
     target.addEventListener('dragover',ev=>{
       const raw=ev.dataTransfer.getData('text/plain');
       const idx=raw===''?selectedHandIndex:Number(raw);
@@ -640,10 +734,18 @@ function wireDragAndDrop(){
       let r;
       if(target.dataset.bez!==undefined){
         r=E().recruit(state,idx,Number(target.dataset.bez));
+      }else if(target.dataset.equip!==undefined){
+        r=E().equipFromHand(state,idx,Number(target.dataset.equipBez),target.dataset.equip);
       }else{
         const slot=Number(target.dataset.azr);
-        const offen=confirm('Wie möchtest du die Karte setzen?\\n\\nOK = offen\\nAbbrechen = verdeckt');
-        r=offen ? E().playOpenAzr(state,idx,slot) : E().setFaceDown(state,idx,slot);
+        const c=E().dbCard(E().active(state).hand[idx]);
+        if(E().isEquipmentCard(c)){
+          // Laut Regelwerk darf Ausrüstung in der AZR nur verdeckt gesetzt werden.
+          r=E().setFaceDown(state,idx,slot);
+        }else{
+          const offen=confirm('Wie möchtest du die Karte setzen?\\n\\nOK = offen\\nAbbrechen = verdeckt');
+          r=offen ? E().playOpenAzr(state,idx,slot) : E().setFaceDown(state,idx,slot);
+        }
       }
 
       if(r.ok)selectedHandIndex=null;
