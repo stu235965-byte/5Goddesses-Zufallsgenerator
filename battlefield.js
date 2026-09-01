@@ -94,11 +94,13 @@ function runtimeCardHtml(r,{hidden=false,small=false}={}){
   if(hidden || r.faceDown){
     return `<div class="board-card back ${small?'small':''}"><img class="real-card-back" src="icons/kartenrueckseite.png" alt="Kartenrückseite"></div>`;
   }
-  const isRefuge = c?.deck_bereich==='zuflucht' || c?.kartentyp==='Zuflucht';
-  const delayed = (r.ready===false && !isRefuge) ? ' delayed-card' : '';
+  const delayed = (r.ready===false && E().hasDeploymentDelay(c)) ? ' delayed-card' : '';
+  const readiness = E().hasDeploymentDelay(c)
+    ? (r.ready?'<em>EINSATZBEREIT</em>':'<em class="delay">Einsatzverzögerung</em>')
+    : '';
   return `<div class="board-card ${small?'small':''}${delayed}">
     <img src="${esc(c?.bild||r.bild)}" alt="${esc(c?.name||'Karte')}">
-    <div class="board-card-meta"><strong>${esc(c?.name||'Karte')}</strong><div class="stat-row">${statLine(r)}</div>${r.ready?'<em>EINSATZBEREIT</em>':'<em class="delay">Einsatzverzögerung</em>'}</div>
+    <div class="board-card-meta"><strong>${esc(c?.name||'Karte')}</strong><div class="stat-row">${statLine(r)}</div>${readiness}</div>
   </div>`;
 }
 function stackHtml(p,key,label){

@@ -39,6 +39,17 @@ function validDeck(d){
     d.karten.ruestkammer?.length===5 &&
     d.karten.entwicklung?.length===5;
 }
+function hasDeploymentDelay(c){
+  if(!c)return false;
+  const isRefuge =
+    c.deck_bereich==='zuflucht' ||
+    String(c.kartentyp||'').toLowerCase()==='zuflucht';
+  const isDevelopment =
+    c.entwicklungskarte===true ||
+    String(c.deck_bereich||'').toLowerCase().includes('entwicklung');
+  const hasHearts = c.herzen !== null && c.herzen !== undefined;
+  return !isRefuge && !isDevelopment && hasHearts;
+}
 function makeRuntimeCard(bild,owner,enteredTurn=-1){
   const c=dbCard(bild);
   if(!c)return null;
@@ -50,7 +61,7 @@ function makeRuntimeCard(bild,owner,enteredTurn=-1){
     physicalShield:c.physischer_schild ?? 0,
     astralShield:c.astraler_schild ?? 0,
     honor:0,
-    ready:false,
+    ready:!hasDeploymentDelay(c),
     enteredTurn,
     attackedTurn:null,
     developedTurn:null,

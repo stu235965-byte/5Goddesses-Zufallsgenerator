@@ -1,17 +1,21 @@
-5Goddesses – Gefecht v1.7
+5Goddesses – Gefecht v1.8
 
-Neu/Korrigiert:
-- Handkarten können per Drag & Drop ausgespielt werden.
-- Bezwingerin -> freier Bezwingerinnenplatz.
-- ASTRAL-/Rüstkammerkarte -> freies AZR-Feld.
-- Beim Drop auf AZR kann offen oder verdeckt gewählt werden.
-- Während des Ziehens werden regelkonforme Zielzonen gold hervorgehoben.
-- Aktionen werden weiterhin anhand der aktuellen Phase geprüft.
-- Einsatzverzögerte Karten werden auf dem Spielfeld um 180° auf den Kopf gedreht.
-- Zufluchtkarten sind ausdrücklich niemals einsatzverzögert und werden nicht gedreht.
-- Bestehende Klick-/Button-Bedienung bleibt als Fallback erhalten.
-- Service Worker v14.
+Korrektur der Einsatzverzögerung:
 
-Hinweis:
-Drag & Drop für die einzelnen Ausrüstungsfelder (Helm/Waffe/Schild/Rüstung)
-wird sinnvollerweise mit deren vollständiger Kartentyp-/Ausrüstungslogik ergänzt.
+Eine Karte ist jetzt NUR dann einsatzverzögert, wenn:
+1. sie KEINE Zuflucht ist,
+2. sie KEINE Entwicklungskarte ist,
+3. sie ein Herz-Attribut besitzt.
+
+Wichtig:
+- Herzen = 0 zählt ausdrücklich als vorhandenes Herz-Attribut.
+- ASTRAL- und Rüstkammerkarten ohne Herz-Attribut sind nie einsatzverzögert.
+- Entwicklungskarten sind nie einsatzverzögert.
+- Zufluchtkarten sind nie einsatzverzögert.
+- Nur tatsächlich einsatzverzögerte Karten werden um 180° gedreht.
+- Bei Karten ohne Einsatzverzögerung wird auch kein Hinweis
+  'EINSATZBEREIT' / 'Einsatzverzögerung' angezeigt.
+
+Drag & Drop aus v1.7 bleibt enthalten.
+
+Service Worker: v15
