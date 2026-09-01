@@ -1,32 +1,30 @@
-5Goddesses – Gefecht v1.11
+5Goddesses – Gefecht v1.12
 
-KRITISCHER RENDER-FIX
+ROBUSTER RENDER-FIX
 
-Ursache des leeren Spielfelds:
-battlefield.js verwendet seit der neuen Einsatzverzögerungsregel
-E().hasDeploymentDelay(...). Diese Funktion war zwar in game-engine.js
-vorhanden, wurde aber versehentlich NICHT über window.G5Engine exportiert.
+Die Ursache wurde weiter eingegrenzt:
+Die Darstellung der Karten war weiterhin von einer Funktion aus
+game-engine.js abhängig. Bei einem gemischten Browser-/Service-Worker-
+Cache konnte battlefield.js bereits die neue Version sein, während
+game-engine.js noch aus einer älteren Version kam. Dann brach das
+Rendern beim ersten Kartenfeld komplett ab.
 
-Dadurch entstand beim Rendern der ersten Karte ein JavaScript-Fehler.
-Folge:
-- Gegnerfeld blieb leer
-- eigenes Feld blieb leer
-- Hand blieb leer
-- nur die statische Primärzone war noch sichtbar
+In v1.12:
+- battlefield.js besitzt die Einsatzverzögerungsprüfung jetzt selbst.
+- Das Rendern ist damit NICHT mehr von hasDeploymentDelay aus der Engine
+  abhängig.
+- Gegnerfeld und eigenes Spielfeld werden getrennt abgesichert gerendert.
+  Ein einzelner Fehler kann damit nicht mehr das komplette Gefechtsfeld
+  verschwinden lassen.
+- Die Engine exportiert hasDeploymentDelay trotzdem weiterhin korrekt.
+- Sticky Phasenleiste bleibt erhalten.
+- Service Worker v19.
 
-Behoben:
-- hasDeploymentDelay wird korrekt von G5Engine exportiert
-- bestehende gespeicherte Gefechte werden beim Laden defensiv auf die
-  neueren Zustandsfelder migriert
-- Zufluchten bleiben dabei immer einsatzbereit
-- Karten ohne Einsatzverzögerung werden bei alten Spielständen korrigiert
-- Sticky Phasen-/Aktionsleiste aus v1.10 bleibt enthalten
-- Service Worker v18
-
-Für diesen Fix ersetzen:
+Bitte bei diesem Fix ALLE vier Dateien ersetzen:
+- battlefield.js
 - game-engine.js
+- style.css
 - service-worker.js
 
-Falls der Browser nach dem GitHub-Upload noch die alte Version zeigt:
-Seite einmal vollständig neu laden bzw. die installierte PWA schließen
-und erneut öffnen.
+Danach Browser/PWA vollständig schließen und neu öffnen.
+Wenn GitHub Pages verwendet wird, ggf. einmal Strg+F5 im Browser.

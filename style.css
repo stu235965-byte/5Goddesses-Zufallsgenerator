@@ -613,3 +613,16 @@ h1{font-size:30px;margin:0 0 16px}
     top:76px;
   }
 }
+
+.board-render-error{
+  min-height:180px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  border:1px solid #8b3a3a;
+  border-radius:10px;
+  color:#ffb0b0;
+  background:#241313;
+  text-align:center;
+}

@@ -78,6 +78,18 @@ function message(text,type=''){
   el.textContent=text||'';
   el.className='game-message'+(type?` ${type}`:'');
 }
+function cardHasDeploymentDelay(c){
+  if(!c)return false;
+  const isRefuge =
+    c.deck_bereich==='zuflucht' ||
+    String(c.kartentyp||'').toLowerCase()==='zuflucht';
+  const isDevelopment =
+    c.entwicklungskarte===true ||
+    String(c.deck_bereich||'').toLowerCase().includes('entwicklung');
+  const hasHearts = c.herzen !== null && c.herzen !== undefined;
+  return !isRefuge && !isDevelopment && hasHearts;
+}
+
 function statLine(r){
   if(!r)return '';
   const c=E().cardData(r);
@@ -94,8 +106,9 @@ function runtimeCardHtml(r,{hidden=false,small=false}={}){
   if(hidden || r.faceDown){
     return `<div class="board-card back ${small?'small':''}"><img class="real-card-back" src="icons/kartenrueckseite.png" alt="Kartenrückseite"></div>`;
   }
-  const delayed = (r.ready===false && E().hasDeploymentDelay(c)) ? ' delayed-card' : '';
-  const readiness = E().hasDeploymentDelay(c)
+  const deploymentDelayApplies = cardHasDeploymentDelay(c);
+  const delayed = (r.ready===false && deploymentDelayApplies) ? ' delayed-card' : '';
+  const readiness = deploymentDelayApplies
     ? (r.ready?'<em>EINSATZBEREIT</em>':'<em class="delay">Einsatzverzögerung</em>')
     : '';
   return `<div class="board-card ${small?'small':''}${delayed}">
@@ -182,9 +195,28 @@ function renderSharedPrimary(){
 
 function renderBoards(){
   const a=state.activePlayer,opp=1-a;
-  document.getElementById('opponentBoard').innerHTML=playerBoardHtml(state.players[opp],false,true);
-  document.getElementById('playerBoard').innerHTML=playerBoardHtml(state.players[a],true,false);
-  renderSharedPrimary();
+  const opponentRoot=document.getElementById('opponentBoard');
+  const playerRoot=document.getElementById('playerBoard');
+
+  try{
+    opponentRoot.innerHTML=playerBoardHtml(state.players[opp],false,true);
+  }catch(err){
+    console.error('Gegnerfeld konnte nicht gerendert werden:',err);
+    opponentRoot.innerHTML='<div class="board-render-error">Gegnerfeld konnte nicht dargestellt werden. Bitte Gefecht neu laden.</div>';
+  }
+
+  try{
+    playerRoot.innerHTML=playerBoardHtml(state.players[a],true,false);
+  }catch(err){
+    console.error('Eigenes Spielfeld konnte nicht gerendert werden:',err);
+    playerRoot.innerHTML='<div class="board-render-error">Eigenes Spielfeld konnte nicht dargestellt werden. Bitte Gefecht neu laden.</div>';
+  }
+
+  try{
+    renderSharedPrimary();
+  }catch(err){
+    console.error('Primärzone konnte nicht gerendert werden:',err);
+  }
 
   // Stack draw in draw phase.
   document.querySelectorAll('#playerBoard .stack-pile').forEach(btn=>{
