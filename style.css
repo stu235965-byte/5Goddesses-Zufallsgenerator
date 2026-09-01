@@ -968,3 +968,34 @@ h1{font-size:30px;margin:0 0 16px}
     height:auto;
   }
 }
+
+
+/* PWA v1.25 – sichtbare Versionsanzeige im Header */
+.brand-wrap{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:max-content;
+}
+.app-version{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:24px;
+  padding:3px 8px;
+  border:1px solid #4a4a4a;
+  border-radius:999px;
+  background:#191919;
+  color:#d7bd77;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.04em;
+  line-height:1;
+  white-space:nowrap;
+}
+@media(max-width:700px){
+  .brand-wrap{
+    width:100%;
+    justify-content:space-between;
+  }
+}
