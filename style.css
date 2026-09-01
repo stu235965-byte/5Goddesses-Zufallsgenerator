@@ -127,10 +127,10 @@ h1{font-size:30px;margin:0 0 16px}
 .main-line{display:grid;grid-template-columns:230px 145px 230px;gap:25px;align-items:center;justify-content:center}
 .refuge-column{display:flex;justify-content:center;align-items:center}
 .refuge-card,.board-slot.bez-slot,.board-slot.azr-slot{width:118px;min-height:168px;padding:4px}
-.bez-station{display:grid;grid-template-rows:42px auto 42px;gap:6px;justify-items:center}
-.bez-middle{display:grid;grid-template-columns:54px 118px 54px;gap:6px;align-items:center}
-.equip-slot{width:54px;height:78px;border:1px dashed #75643a;border-radius:6px;background:rgba(255,255,255,.025);color:#8f8058;padding:2px;font-size:8px;font-weight:800;letter-spacing:.04em}
-.equip-slot.helmet,.equip-slot.armor{width:82px;height:42px}
+.bez-station{display:grid;grid-template-rows:auto auto auto;gap:8px;justify-items:center}
+.bez-middle{display:grid;grid-template-columns:118px 118px 118px;gap:8px;align-items:center}
+.equip-slot{width:118px;height:168px;border:1px dashed #75643a;border-radius:8px;background:rgba(255,255,255,.025);color:#8f8058;padding:4px;font-size:10px;font-weight:800;letter-spacing:.04em;display:grid;place-items:center}
+.equip-slot.helmet,.equip-slot.armor{width:118px;height:168px}
 .azr-row{display:grid;grid-template-columns:repeat(3,118px);gap:13px;justify-content:center}
 .stacks-column{display:grid;gap:9px;justify-items:center}
 .stacks-column .stack-pile{width:92px;height:132px;background-image:url("icons/kartenrueckseite.png");background-size:cover;background-position:center;border-color:#8d7130}
@@ -158,10 +158,21 @@ h1{font-size:30px;margin:0 0 16px}
   .rule-board{grid-template-columns:75px minmax(500px,1fr) 100px;gap:8px;overflow-x:auto}
   .main-line{grid-template-columns:190px 120px 190px;gap:10px}
   .refuge-card,.board-slot.bez-slot,.board-slot.azr-slot{width:100px;min-height:145px}
-  .bez-middle{grid-template-columns:44px 100px 44px}
-  .equip-slot{width:44px;height:65px}.equip-slot.helmet,.equip-slot.armor{width:72px;height:36px}
+  .bez-middle{grid-template-columns:100px 100px 100px}
+  .equip-slot{width:100px;height:145px}.equip-slot.helmet,.equip-slot.armor{width:100px;height:145px}
   .azr-row{grid-template-columns:repeat(3,100px)}
   .board-card>img,.board-card.back .real-card-back{width:90px;max-height:132px}
   .board-empty{height:125px}
   .stacks-column .stack-pile,.stacks-column .discard-pile,.development-column .dev-pile{width:72px;height:104px}
+}
+
+
+/* Gefecht v1.2 – volle Ausrüstungsfelder */
+.equip-slot{
+  aspect-ratio: 118 / 168;
+}
+@media(max-width:1050px){
+  .equip-slot{
+    aspect-ratio: 100 / 145;
+  }
 }
