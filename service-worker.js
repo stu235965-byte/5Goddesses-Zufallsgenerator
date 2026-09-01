@@ -1,10 +1,13 @@
-const CACHE_NAME = '5goddesses-pwa-v3';
+const CACHE_NAME = '5goddesses-pwa-v4';
 const OFFLINE_URL = './index.html';
 const ASSETS = [
   "./generator.js",
   "./icons/apple-touch-icon.png",
+  "./icons/favicon-16.png",
+  "./icons/favicon-32.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./icons/icon-maskable-192.png",
   "./icons/icon-maskable-512.png",
   "./index.html",
   "./Astralkammer/1.01-07-32-03e63bf8.webp",

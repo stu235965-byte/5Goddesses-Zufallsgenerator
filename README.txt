@@ -1,16 +1,22 @@
-5GODDESSES – IPHONE-INSTALLATION UPDATE
-========================================
+5GODDESSES – ICON UPDATE
 
-Für GitHub müssen nur diese beiden Dateien ersetzt werden:
+Dieses Update ersetzt sämtliche PWA-/App-/Browser-Icons durch das gewünschte
+schwarz-goldene 5Goddesses-Symbol.
 
-- pwa.js
+Auf GitHub ersetzen/hochladen:
+- index.html
+- manifest.webmanifest
 - service-worker.js
+- pwa.js
+- den kompletten Inhalt des Ordners icons/
 
-Änderungen:
-- iPhone/iPad erkennt die App automatisch.
-- Der Button heißt dort „Auf iPhone installieren“.
-- Beim Antippen erscheint eine verständliche Schritt-für-Schritt-Anleitung für Safari.
-- Falls die Seite auf iOS nicht in Safari geöffnet wurde, wird darauf hingewiesen.
-- Service-Worker-Cache wurde auf v3 erhöht, damit die neue Version geladen wird.
+Neue/aktualisierte Icons:
+- apple-touch-icon.png       (iPhone/iPad)
+- icon-192.png               (PWA)
+- icon-512.png               (PWA)
+- icon-maskable-192.png      (Android adaptive icon)
+- icon-maskable-512.png      (Android adaptive icon)
+- favicon-32.png             (Browser-Tab)
+- favicon-16.png             (Browser-Tab)
 
-Die Ordnerstruktur im GitHub-Repository bleibt unverändert.
+Der Service-Worker-Cache wurde auf v4 erhöht.
