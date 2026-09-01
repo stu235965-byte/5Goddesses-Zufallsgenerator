@@ -11,6 +11,7 @@ const DECK_ORDER=['zuflucht','bezwingerinnen','astral','ruestkammer','entwicklun
 
 let editorDeck=null;
 let editorOriginalId=null;
+let editorPreviewBild=null;
 
 function deckDb(){return window.GODDESSES_DB?.karten||[]}
 function deckKarte(bild){return deckDb().find(k=>k.bild===bild)||null}
@@ -258,9 +259,48 @@ document.getElementById('deckSpeichern')?.addEventListener('click',()=>{
   renderGespeicherteDecks();
 });
 
+function zeigeDeckKartenVorschau(karte){
+  if(!karte)return;
+  editorPreviewBild=karte.bild;
+
+  const empty=document.getElementById('deckCardPreviewEmpty');
+  const content=document.getElementById('deckCardPreviewContent');
+  const img=document.getElementById('deckCardPreviewImage');
+  const name=document.getElementById('deckCardPreviewName');
+  const meta=document.getElementById('deckCardPreviewMeta');
+  if(!empty||!content||!img||!name||!meta)return;
+
+  empty.hidden=true;
+  content.hidden=false;
+  img.src=karte.bild;
+  img.alt=karte.name||'Kartenvorschau';
+  name.textContent=karte.name||'Karte';
+
+  const details=[];
+  if(karte.kartengruppe)details.push(karte.kartengruppe);
+  if(karte.kartentyp)details.push(karte.kartentyp);
+  if(karte.klasse)details.push(karte.klasse);
+  if(karte.bereich)details.push(karte.bereich);
+  if(karte.stufe)details.push(`Stufe ${karte.stufe}`);
+  meta.textContent=details.join(' · ');
+}
+function leereDeckKartenVorschau(){
+  editorPreviewBild=null;
+  const empty=document.getElementById('deckCardPreviewEmpty');
+  const content=document.getElementById('deckCardPreviewContent');
+  const img=document.getElementById('deckCardPreviewImage');
+  if(empty)empty.hidden=false;
+  if(content)content.hidden=true;
+  if(img){
+    img.removeAttribute('src');
+    img.alt='';
+  }
+}
+
 function oeffneDeckEditor(deck){
   editorOriginalId=deck?.id||null;
   editorDeck=kopiereKartenstruktur(deck?.karten||leeresDeck());
+  editorPreviewBild=null;
 
   document.getElementById('deckListeAnsicht').hidden=true;
   document.getElementById('deckEditor').hidden=false;
@@ -269,11 +309,13 @@ function oeffneDeckEditor(deck){
   input.value=deck?.name||'Neues Deck';
 
   renderDeckEditor();
+  leereDeckKartenVorschau();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function schliesseDeckEditor(){
   editorDeck=null;
   editorOriginalId=null;
+  leereDeckKartenVorschau();
   document.getElementById('deckEditor').hidden=true;
   document.getElementById('deckListeAnsicht').hidden=false;
   window.scrollTo({top:0,behavior:'smooth'});
@@ -463,7 +505,10 @@ function renderDeckEditor(){
         }
       }
 
-      el.addEventListener('click',()=>toggleDeckKarte(bereich,karte));
+      el.addEventListener('click',()=>{
+        zeigeDeckKartenVorschau(karte);
+        toggleDeckKarte(bereich,karte);
+      });
       grid.appendChild(el);
     }
 
@@ -477,6 +522,11 @@ function renderDeckEditor(){
     }
 
     root.appendChild(sec);
+  }
+
+  if(editorPreviewBild){
+    const preview=deckKarte(editorPreviewBild);
+    if(preview)zeigeDeckKartenVorschau(preview);
   }
 }
 

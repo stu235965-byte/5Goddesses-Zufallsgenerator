@@ -1,4 +1,4 @@
-const CACHE_NAME = '5goddesses-pwa-v30';
+const CACHE_NAME = '5goddesses-pwa-v31';
 const OFFLINE_URL = './index.html';
 const ASSETS = [
   "./5goddesses-datenbank.js",

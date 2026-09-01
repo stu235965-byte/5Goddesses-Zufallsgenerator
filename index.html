@@ -93,7 +93,24 @@
 
         <div id="deckStatus" class="deck-status"></div>
         <div id="deckMeldung" class="meldung" hidden></div>
-        <div id="deckBuilderBereiche"></div>
+
+        <div class="deck-builder-layout">
+          <div id="deckBuilderBereiche" class="deck-builder-main"></div>
+
+          <aside id="deckCardPreview" class="deck-card-preview" aria-live="polite">
+            <div class="deck-card-preview-sticky">
+              <div class="eyebrow">KARTENVORSCHAU</div>
+              <div id="deckCardPreviewEmpty" class="deck-card-preview-empty">
+                Klicke links auf eine Karte, um sie hier groß und lesbar anzuzeigen.
+              </div>
+              <div id="deckCardPreviewContent" class="deck-card-preview-content" hidden>
+                <img id="deckCardPreviewImage" src="" alt="">
+                <div id="deckCardPreviewName" class="deck-card-preview-name"></div>
+                <div id="deckCardPreviewMeta" class="deck-card-preview-meta"></div>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
     </section>
 

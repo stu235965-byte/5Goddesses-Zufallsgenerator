@@ -811,3 +811,102 @@ h1{font-size:30px;margin:0 0 16px}
 .attack-target-valid:focus-visible{
   outline:5px solid #f4dc91 !important;
 }
+
+
+/* Deckbuilder v1.24 – große Kartenvorschau rechts */
+.deck-builder-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 330px;
+  gap:26px;
+  align-items:start;
+  max-width:1720px;
+  margin:0 auto;
+}
+.deck-builder-main{
+  min-width:0;
+}
+.deck-card-preview{
+  min-width:0;
+}
+.deck-card-preview-sticky{
+  position:sticky;
+  top:165px;
+  padding:14px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:12px;
+  box-shadow:0 10px 28px rgba(0,0,0,.32);
+}
+.deck-card-preview-empty{
+  min-height:360px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  border:1px dashed #555;
+  border-radius:9px;
+  color:var(--muted);
+  text-align:center;
+  line-height:1.5;
+}
+.deck-card-preview-content img{
+  display:block;
+  width:100%;
+  height:auto;
+  max-height:72vh;
+  object-fit:contain;
+  border-radius:8px;
+  background:#0d0d0d;
+}
+.deck-card-preview-name{
+  margin-top:10px;
+  font-size:17px;
+  line-height:1.25;
+  font-weight:800;
+  color:#f2f2f2;
+}
+.deck-card-preview-meta{
+  margin-top:5px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.4;
+}
+
+/* Der Kartenbereich darf innerhalb der neuen linken Spalte die volle Breite nutzen. */
+.deck-builder-main .builder-category-head,
+.deck-builder-main .builder-hint,
+.deck-builder-main .builder-grid{
+  max-width:none;
+}
+
+/* Auf schmalen Bildschirmen bleibt die Vorschau erhalten, aber nicht als
+   schmale rechte Spalte. */
+@media(max-width:1100px){
+  .deck-builder-layout{
+    grid-template-columns:minmax(0,1fr) 270px;
+    gap:16px;
+  }
+  .deck-card-preview-sticky{
+    top:175px;
+  }
+}
+@media(max-width:780px){
+  .deck-builder-layout{
+    display:block;
+  }
+  .deck-card-preview{
+    margin:18px 0 26px;
+  }
+  .deck-card-preview-sticky{
+    position:relative;
+    top:auto;
+  }
+  .deck-card-preview-empty{
+    min-height:120px;
+  }
+  .deck-card-preview-content img{
+    width:min(360px,100%);
+    max-height:none;
+    margin:0 auto;
+  }
+}

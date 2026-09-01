@@ -1,31 +1,23 @@
-5Goddesses – Gefecht v1.23
-ANGRIFFSZIEL-KLICK ROBUST KORRIGIERT
+5Goddesses – v1.24
+DECKBUILDER: GROSSE KARTENVORSCHAU
 
-Symptom:
-- Zielkarten leuchteten gold.
-- Klick auf eine gegnerische Bezwingerin führte trotzdem nicht zu
-  „Physisch angreifen“ / „ASTRAL angreifen“.
+Neu unter „Meine Decks“ -> „Neues Deck erstellen“:
+- Rechts neben der Kartenauswahl befindet sich jetzt eine große Kartenvorschau.
+- Sobald eine Karte angeklickt wird, erscheint sie dort groß und lesbar.
+- Die Vorschau bleibt auch erhalten, wenn der Deckbuilder nach dem
+  Hinzufügen/Entfernen einer Karte neu gerendert wird.
+- Angezeigt werden außerdem Kartenname und vorhandene Metadaten wie
+  Kartentyp, Klasse/Bereich und Stufe.
+- Die Vorschau ist auf Desktop sticky und bleibt beim Scrollen sichtbar.
+- Auf kleineren Bildschirmen wandert die Vorschau unter den Deckbuilder,
+  damit die Kartenauswahl nicht zu schmal wird.
+- Das Anklicken einer Karte hat weiterhin dieselbe Auswahlfunktion wie zuvor;
+  zusätzlich wird lediglich die große Vorschau aktualisiert.
 
-Korrektur:
-- Gold markierte Ziele besitzen nun direkt einen eigenen Klick-Handler.
-- Standardverhalten des Buttons wird unterdrückt.
-- Die alte globale Capture-Klickbehandlung wurde entfernt, damit ein Klick
-  nicht während des Events bereits das Spielfeld neu rendert.
-- Bilder, Werteanzeige und andere Kindelemente können den Zielklick nicht
-  mehr abfangen; die gesamte gold markierte Zone ist die Klickfläche.
-- Bezwingerinnen/Zuflucht sind ausdrücklich type="button".
-- Primär-/Sekundärziele sind auch per Tastatur aktivierbar.
-- Nach erfolgreicher Auswahl erscheint sofort die Meldung:
-  „Angriffsziel gewählt. Wähle jetzt Physisch oder ASTRAL.“
-
-Ablauf:
-1. eigene Bezwingerin anklicken
-2. goldes gegnerisches Ziel anklicken
-3. Buttons „Physisch angreifen“ und „ASTRAL angreifen“ erscheinen
-
-Service Worker v30.
+Service Worker v31.
 
 Zu ersetzen:
-- battlefield.js
+- index.html
+- deckbuilder.js
 - style.css
 - service-worker.js
