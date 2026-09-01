@@ -156,7 +156,8 @@ function honorCardsOfPlayer(state,p){
     p.refuge,
     ...p.bezSlots,
     p.secondary,
-    ...p.azr,
+    // Verdeckte AZR-Karten erhalten keine Ehre.
+    ...p.azr.filter(r=>r && !r.faceDown),
     state.sharedPrimary?.owner===p.index ? state.sharedPrimary : null
   ];
   return cards.filter(Boolean);
