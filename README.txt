@@ -1,22 +1,31 @@
-5GODDESSES – ICON CACHE FIX
+5Goddesses – Gemeinsames Datenmodell
+Schema-Version: 1
 
-Dieses Paket verwendet neue Icon-Dateinamen, damit Android/Chrome nicht mehr
-auf die alten PWA-Icons aus dem Cache zurückgreifen kann.
+Gesamtzahl Karten: 158
 
-Auf GitHub hochladen/ersetzen:
-1. Die vier neuen Dateien in den Ordner icons/ hochladen:
-   - icon-192-v2.png
-   - icon-512-v2.png
-   - icon-maskable-192-v2.png
-   - icon-maskable-512-v2.png
+Verteilung:
+- Zuflucht: 10
+- Bezwingerinnen: 30
+- Astral: 49
+- Rüstkammer: 50
+- Entwicklung: 19
 
-2. manifest.webmanifest im Hauptverzeichnis durch die neue Version ersetzen.
+Wichtig:
+- Alle Kartengruppen verwenden jetzt exakt dieselben Schlüsselfelder.
+- Nicht relevante/nicht vorhandene Einzelwerte stehen als null.
+- Ein tatsächlicher Kartenwert 0 bleibt 0.
+- Entwicklungskarten sind über entwicklungskarte=true markiert.
+- Wenn möglich, verweist grundkarte_bild auf die gleichnamige Stufe-1-Karte.
+- effekte und tags sind bereits als leere Felder vorbereitet, damit wir später
+  Kartentexte und NPC-Logik ergänzen können, ohne das Schema erneut umzubauen.
 
-Danach auf Android:
-- installierte 5Goddesses-PWA deinstallieren
-- Browser komplett schließen
-- Seite erneut öffnen
-- PWA neu installieren
+Dateien:
+- 5goddesses-datenbank.json : empfohlene zentrale Datenbank inkl. Indizes/Deckregeln
+- karten_daten.json          : nur die Kartenliste
+- 5goddesses-datenbank.js   : direkt im Browser/PWA einbindbar
+- karten_daten.csv           : Kontrolltabelle
+- datenmodell_schema.json    : Erklärung aller Felder
 
-Die alten Icon-Dateien können auf GitHub bleiben; sie werden vom neuen Manifest
-nicht mehr verwendet.
+Validierung:
+- Doppelte IDs: 0
+- Karten ohne Namen: 0
