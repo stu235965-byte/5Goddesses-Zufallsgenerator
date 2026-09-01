@@ -60,7 +60,11 @@ function makeRuntimeCard(bild,owner,enteredTurn=-1){
     hearts:c.herzen ?? 0,
     physicalShield:c.physischer_schild ?? 0,
     astralShield:c.astraler_schild ?? 0,
-    honor:0,
+    // Gedruckte Ehre ist die Startehre der Karte.
+    // Sie ist bereits beim Ausspielen vorhanden – auch wenn die Karte
+    // zunächst verdeckt gesetzt wird. Verdeckte Karten erhalten lediglich
+    // keine zusätzliche Ehre aus der Ehrungsphase.
+    honor:c.ehre ?? 0,
     ready:!hasDeploymentDelay(c),
     enteredTurn,
     attackedTurn:null,
