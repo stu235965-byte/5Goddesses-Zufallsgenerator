@@ -1,22 +1,22 @@
-5GODDESSES – ICON UPDATE
+5GODDESSES – ICON CACHE FIX
 
-Dieses Update ersetzt sämtliche PWA-/App-/Browser-Icons durch das gewünschte
-schwarz-goldene 5Goddesses-Symbol.
+Dieses Paket verwendet neue Icon-Dateinamen, damit Android/Chrome nicht mehr
+auf die alten PWA-Icons aus dem Cache zurückgreifen kann.
 
-Auf GitHub ersetzen/hochladen:
-- index.html
-- manifest.webmanifest
-- service-worker.js
-- pwa.js
-- den kompletten Inhalt des Ordners icons/
+Auf GitHub hochladen/ersetzen:
+1. Die vier neuen Dateien in den Ordner icons/ hochladen:
+   - icon-192-v2.png
+   - icon-512-v2.png
+   - icon-maskable-192-v2.png
+   - icon-maskable-512-v2.png
 
-Neue/aktualisierte Icons:
-- apple-touch-icon.png       (iPhone/iPad)
-- icon-192.png               (PWA)
-- icon-512.png               (PWA)
-- icon-maskable-192.png      (Android adaptive icon)
-- icon-maskable-512.png      (Android adaptive icon)
-- favicon-32.png             (Browser-Tab)
-- favicon-16.png             (Browser-Tab)
+2. manifest.webmanifest im Hauptverzeichnis durch die neue Version ersetzen.
 
-Der Service-Worker-Cache wurde auf v4 erhöht.
+Danach auf Android:
+- installierte 5Goddesses-PWA deinstallieren
+- Browser komplett schließen
+- Seite erneut öffnen
+- PWA neu installieren
+
+Die alten Icon-Dateien können auf GitHub bleiben; sie werden vom neuen Manifest
+nicht mehr verwendet.
