@@ -1,43 +1,31 @@
-5Goddesses – Gefecht v1.22
-REGELKONFORME SCHILDQUELLEN-AUSWAHL
+5Goddesses – Gefecht v1.23
+ANGRIFFSZIEL-KLICK ROBUST KORRIGIERT
 
-Korrektur zu v1.21:
-Das Regelwerk erlaubt bei zusätzlichen/externalen Schildpunkten aus
-Ausrüstung die Entscheidung, ob zuerst ein externer Schildpunkt oder
-ein Basis-Schildpunkt der Bezwingerin verloren geht.
+Symptom:
+- Zielkarten leuchteten gold.
+- Klick auf eine gegnerische Bezwingerin führte trotzdem nicht zu
+  „Physisch angreifen“ / „ASTRAL angreifen“.
 
-Jetzt umgesetzt:
-- Trifft Schaden eine Bezwingerin und existieren passende Schildpunkte,
-  pausiert die Schadensabwicklung.
-- In der Aktionsleiste erscheinen Buttons für jede aktuell mögliche
-  Schildquelle.
-- Beispiele:
-    "Legionsschild (1)"
-    "Kristallharnisch (1)"
-    "Basisschild von Q.U.E.E.N. (2)"
-- Der betroffene Spieler wählt, von welcher Karte die Schildpunkte
-  zuerst entfernt werden.
-- Sind danach noch Schaden UND weitere Schildquellen vorhanden,
-  erscheint die Auswahl erneut.
-- Erst wenn keine passenden Schilde mehr vorhanden sind, wird der
-  verbleibende Schaden automatisch von den Herzen abgezogen.
-- Physischer Schaden zeigt nur physische Schildquellen.
-- ASTRAL-Schaden zeigt nur ASTRAL-Schildquellen.
-- Angreifer und Verteidiger werden bei einem gleichzeitigen Kampf
-  getrennt abgewickelt; dadurch kann jeder für seine Bezwingerin die
-  jeweilige Schildquelle bestimmen.
-- Erst nach Abschluss aller Schildentscheidungen werden besiegte Karten
-  entfernt und der Kampf beendet.
-- Primär-/Sekundärbereich und Zuflucht bleiben ohne angelegte
-  Bezwingerinnen-Ausrüstung bei der direkten Schild->Herz-Abwicklung.
+Korrektur:
+- Gold markierte Ziele besitzen nun direkt einen eigenen Klick-Handler.
+- Standardverhalten des Buttons wird unterdrückt.
+- Die alte globale Capture-Klickbehandlung wurde entfernt, damit ein Klick
+  nicht während des Events bereits das Spielfeld neu rendert.
+- Bilder, Werteanzeige und andere Kindelemente können den Zielklick nicht
+  mehr abfangen; die gesamte gold markierte Zone ist die Klickfläche.
+- Bezwingerinnen/Zuflucht sind ausdrücklich type="button".
+- Primär-/Sekundärziele sind auch per Tastatur aktivierbar.
+- Nach erfolgreicher Auswahl erscheint sofort die Meldung:
+  „Angriffsziel gewählt. Wähle jetzt Physisch oder ASTRAL.“
 
-Die Stärkeboni aus v1.21 bleiben erhalten:
-Basisstärke + aktuell wirksame Ausrüstungsstärke nur für den Kampf.
+Ablauf:
+1. eigene Bezwingerin anklicken
+2. goldes gegnerisches Ziel anklicken
+3. Buttons „Physisch angreifen“ und „ASTRAL angreifen“ erscheinen
 
-Service Worker v29.
+Service Worker v30.
 
 Zu ersetzen:
 - battlefield.js
-- game-engine.js
 - style.css
 - service-worker.js

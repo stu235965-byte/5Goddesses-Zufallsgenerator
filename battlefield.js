@@ -25,7 +25,6 @@ function saveRender(msg=''){
 }
 function gamePageOpened(){
   window.addEventListener('resize',updateStickyGameOffsets);
-  document.getElementById('gameShell')?.addEventListener('click',handleBattlefieldTargetClick,true);
 
   fillDeckSelectors();
   const saved=E().load();
@@ -152,7 +151,7 @@ function bezCore(r,i,isActive){
   // Gegnerische Bezwingerinnen dürfen nicht als HTML-"disabled" gerendert
   // werden: In der Ansturmphase müssen sie als Angriffsziel anklickbar sein.
   // Eigene Grundaktionen werden ohnehin nur über #playerBoard verdrahtet.
-  return `<button class="board-slot bez-slot${isActive?'':' opponent-slot'}" data-bez="${i}" aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN</span></button>`;
+  return `<button type="button" class="board-slot bez-slot${isActive?'':' opponent-slot'}" data-bez="${i}" aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN</span></button>`;
 }
 function playerBoardHtml(p,isActive,isOpponent){
   const eq=p.equipment||[
@@ -173,7 +172,7 @@ function playerBoardHtml(p,isActive,isOpponent){
 
       <div class="playmat-center">
         <div class="secondary-row">
-          <div class="secondary-zone" data-secondary-target>
+          <div class="secondary-zone" data-secondary-target role="button" tabindex="0">
             <span class="area-title">SEKUNDÄRZONE</span>
             ${runtimeCardHtml(p.secondary||null,{small:true})}
           </div>
@@ -188,7 +187,7 @@ function playerBoardHtml(p,isActive,isOpponent){
           <div class="cg l-shield">${equipmentSlot('SCHILD','shield',0,eq[0]?.shield,isActive)}</div>
 
           <div class="cg refuge">
-            <button class="refuge-card${isActive?'':' opponent-slot'}" data-refuge aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(p.refuge)}<span class="slot-label">ZUFLUCHT</span></button>
+            <button type="button" class="refuge-card${isActive?'':' opponent-slot'}" data-refuge aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(p.refuge)}<span class="slot-label">ZUFLUCHT</span></button>
           </div>
 
           <div class="cg r-weapon">${equipmentSlot('WAFFE','weapon',1,eq[1]?.weapon,isActive)}</div>
@@ -216,7 +215,7 @@ function renderSharedPrimary(){
   if(!root)return;
   const shared=state.sharedPrimary||null;
   root.innerHTML=shared
-    ? `<div class="shared-primary-card" data-primary-target>${runtimeCardHtml(shared)}</div>`
+    ? `<div class="shared-primary-card" data-primary-target role="button" tabindex="0">${runtimeCardHtml(shared)}</div>`
     : `<div class="shared-primary-empty"><span>PRIMÄR</span><small>Frei</small></div>`;
 }
 
@@ -295,10 +294,23 @@ function renderBoards(){
         const legal=targets.some(t=>t.type===target.type && t.slot===target.slot);
         if(!legal)return;
         el.classList.add('attack-target-valid');
+        el.dataset.attackTarget='true';
         if(selectedTarget && selectedTarget.type===target.type && selectedTarget.slot===target.slot){
           el.classList.add('attack-target-selected');
         }
-        el.addEventListener('click',()=>chooseTarget(target));
+
+        const activateTarget=(ev)=>{
+          ev.preventDefault();
+          ev.stopPropagation();
+          chooseTarget(target);
+          return false;
+        };
+        el.onclick=activateTarget;
+        el.onkeydown=(ev)=>{
+          if(ev.key==='Enter' || ev.key===' '){
+            activateTarget(ev);
+          }
+        };
       };
 
       [0,1].forEach(i=>addTarget(`#opponentBoard [data-bez="${i}"]`,{type:'bez',slot:i}));
@@ -774,11 +786,12 @@ function chooseTarget(target){
   if(phase()?.id!=='rush'||selectedAttacker===null)return;
   const legal=E().attackTargets(state,selectedAttacker).some(t=>t.type===target.type&&t.slot===target.slot);
   if(!legal)return message('Dieses Ziel darf mit dieser Bezwingerin derzeit nicht angegriffen werden.','warn');
-  selectedTarget=target;
+  selectedTarget={type:target.type,slot:target.slot};
   selectedAttackType=null;
   renderBoards();
   renderActions();
   message('Angriffsziel gewählt. Wähle jetzt Physisch oder ASTRAL.');
+  requestAnimationFrame(updateStickyGameOffsets);
 }
 
 function clearDropTargets(){

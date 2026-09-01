@@ -792,3 +792,22 @@ h1{font-size:30px;margin:0 0 16px}
 .shield-source-button{
   white-space:normal;
 }
+
+/* Gefecht v1.23 – robuste Klickfläche für Angriffziele */
+.attack-target-valid{
+  position:relative !important;
+  z-index:60 !important;
+  pointer-events:auto !important;
+  cursor:pointer !important;
+  touch-action:manipulation;
+}
+.attack-target-valid .board-card,
+.attack-target-valid .board-card *,
+.attack-target-valid > img,
+.attack-target-valid > span,
+.attack-target-valid > div{
+  pointer-events:none !important;
+}
+.attack-target-valid:focus-visible{
+  outline:5px solid #f4dc91 !important;
+}
