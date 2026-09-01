@@ -18,6 +18,7 @@ function saveRender(msg=''){
 }
 function gamePageOpened(){
   window.addEventListener('resize',updateStickyGameOffsets);
+  document.getElementById('gameShell')?.addEventListener('click',handleBattlefieldTargetClick,true);
 
   fillDeckSelectors();
   const saved=E().load();
@@ -136,7 +137,10 @@ function equipmentSlot(label,kind,bezIndex,r,isActive){
   </button>`;
 }
 function bezCore(r,i,isActive){
-  return `<button class="board-slot bez-slot" data-bez="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN</span></button>`;
+  // Gegnerische Bezwingerinnen dürfen nicht als HTML-"disabled" gerendert
+  // werden: In der Ansturmphase müssen sie als Angriffsziel anklickbar sein.
+  // Eigene Grundaktionen werden ohnehin nur über #playerBoard verdrahtet.
+  return `<button class="board-slot bez-slot${isActive?'':' opponent-slot'}" data-bez="${i}" aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN</span></button>`;
 }
 function playerBoardHtml(p,isActive,isOpponent){
   const eq=p.equipment||[
@@ -172,7 +176,7 @@ function playerBoardHtml(p,isActive,isOpponent){
           <div class="cg l-shield">${equipmentSlot('SCHILD','shield',0,eq[0]?.shield,isActive)}</div>
 
           <div class="cg refuge">
-            <button class="refuge-card" data-refuge ${isActive?'':'disabled'}>${runtimeCardHtml(p.refuge)}<span class="slot-label">ZUFLUCHT</span></button>
+            <button class="refuge-card${isActive?'':' opponent-slot'}" data-refuge aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(p.refuge)}<span class="slot-label">ZUFLUCHT</span></button>
           </div>
 
           <div class="cg r-weapon">${equipmentSlot('WAFFE','weapon',1,eq[1]?.weapon,isActive)}</div>
@@ -662,6 +666,33 @@ function handleEquipmentSlot(kind,bezSlot){
     }
   }
 }
+function handleBattlefieldTargetClick(ev){
+  if(phase()?.id!=='rush' || selectedAttacker===null || state.attack)return;
+
+  const bez=ev.target.closest('#opponentBoard [data-bez]');
+  if(bez){
+    chooseTarget({type:'bez',slot:Number(bez.dataset.bez)});
+    return;
+  }
+
+  const refuge=ev.target.closest('#opponentBoard [data-refuge]');
+  if(refuge){
+    chooseTarget({type:'refuge'});
+    return;
+  }
+
+  const secondary=ev.target.closest('#opponentBoard [data-secondary-target]');
+  if(secondary){
+    chooseTarget({type:'secondary'});
+    return;
+  }
+
+  const primary=ev.target.closest('#sharedPrimaryZone [data-primary-target]');
+  if(primary){
+    chooseTarget({type:'primary'});
+  }
+}
+
 function chooseTarget(target){
   if(phase()?.id!=='rush'||selectedAttacker===null)return;
   const legal=E().attackTargets(state,selectedAttacker).some(t=>t.type===target.type&&t.slot===target.slot);

@@ -1,43 +1,29 @@
-5Goddesses – Gefecht v1.16
-RÜSTKAMMER / AUSRÜSTUNGS-GRUNDSYSTEM
+5Goddesses – Gefecht v1.17
+ANGRIFFSZIEL-KLICKFIX
 
-Umgesetzt auf Basis des Regelwerks:
+Fehlerursache:
+- Gegnerische Bezwingerinnen und die gegnerische Zuflucht wurden als
+  echte HTML-Buttons mit dem Attribut "disabled" gerendert.
+- Ein HTML-Button mit "disabled" löst keine Click-Events aus.
+- Deshalb leuchteten die Ziele zwar korrekt gold auf, aber ein Klick
+  darauf konnte die Zielauswahl nicht auslösen.
 
-- Rüstkammer-Nebenattribute Waffe, Schild, Rüstung und Kopfschutz
-  werden als Ausrüstung erkannt.
-- Drag & Drop aus der Hand:
-  Waffe -> nur Waffenfeld einer ausliegenden Bezwingerin
-  Schild -> nur Schildfeld
-  Rüstung -> nur Rüstungsfeld
-  Kopfschutz -> nur Helmbereich
-- Nur Ausrüstungsfelder von tatsächlich ausliegenden Bezwingerinnen
-  sind legale Ziele.
-- Belegte Ausrüstungsfelder dürfen ersetzt werden.
-  Die bisherige Ausrüstung geht dabei auf den Ablagestapel.
-- Ausrüstung kann alternativ verdeckt in einen freien AZR-Bereich
-  gesetzt werden.
-- Ausrüstung kann NICHT offen in der AZR liegen.
-- Wird verdeckte Ausrüstung in VP/NP aufgedeckt, muss sie sofort an
-  eine Bezwingerin angelegt werden.
-- Solange diese Platzierung aussteht, kann die Phase nicht gewechselt werden.
-- Klick-/Button-Bedienung zusätzlich zu Drag & Drop, damit die Funktion
-  auch auf Touch-Geräten nutzbar bleibt.
-- Ausrüstung kann in VP/NP freiwillig durch Klick auf das belegte
-  Ausrüstungsfeld abgelegt werden.
-- Stirbt eine Bezwingerin, werden Waffe, Schild, Rüstung und Kopfschutz
-  zusammen mit ihr auf den Ablagestapel gelegt.
-- Gegenstand und Reliquie bleiben als AZR-Karten behandelt.
-- Individuelle Kartenwirkungen und Werteboni der Ausrüstung sind noch
-  NICHT implementiert; dieses Update bildet zunächst die regelkonforme
-  Platzierung und Lebensdauer der Karten ab.
+Korrektur:
+- Gegnerische Bezwingerinnen und Zuflucht bleiben visuell als gegnerische
+  Felder markiert, sind technisch aber nicht mehr "disabled".
+- Eigene Aktionen können dadurch nicht versehentlich auf dem Gegnerfeld
+  ausgeführt werden, weil diese Handler weiterhin nur an #playerBoard
+  gebunden sind.
+- Zusätzlich gibt es jetzt eine zentrale Angriffsziel-Erkennung über
+  Event Delegation. Dadurch bleibt die Zielauswahl auch nach einem
+  Neurendern des Spielfelds stabil.
+- Auswahlfolge bleibt:
+  1. eigene Angreiferin
+  2. goldes gegnerisches Ziel
+  3. Physisch oder ASTRAL
 
-Kompatibilität:
-- Alte gespeicherte Gefechte erhalten beim Laden automatisch leere
-  Ausrüstungsbereiche.
-- Service Worker v23.
+Service Worker: v24
 
 Zu ersetzen:
 - battlefield.js
-- game-engine.js
-- style.css
 - service-worker.js
