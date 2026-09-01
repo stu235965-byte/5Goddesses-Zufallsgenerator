@@ -663,3 +663,105 @@ h1{font-size:30px;margin:0 0 16px}
   outline:3px solid #d7b455;
   outline-offset:2px;
 }
+
+
+/* Gefecht v1.19 – Karten immer vollständig innerhalb ihrer Zone */
+.combat-grid .equip-slot,
+.combat-grid .board-slot.bez-slot,
+.combat-grid .refuge-card,
+.board-slot.azr-slot,
+.secondary-zone,
+.shared-primary-zone{
+  overflow:hidden;
+  box-sizing:border-box;
+}
+
+/* Eine ausgespielte Karte nimmt exakt die verfügbare Kartenfläche ein. */
+.combat-grid .equip-slot .board-card,
+.combat-grid .board-slot.bez-slot .board-card,
+.combat-grid .refuge-card .board-card,
+.board-slot.azr-slot .board-card,
+.secondary-zone .board-card,
+.shared-primary-zone .board-card{
+  position:relative;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* Das eigentliche Kartenbild wird vollständig in die Zone eingepasst.
+   Kein Abschneiden mehr – besonders wichtig bei Helm/Rüstung. */
+.combat-grid .equip-slot .board-card > img,
+.combat-grid .board-slot.bez-slot .board-card > img,
+.combat-grid .refuge-card .board-card > img,
+.board-slot.azr-slot .board-card > img,
+.secondary-zone .board-card > img,
+.shared-primary-zone .board-card > img,
+.combat-grid .equip-slot .board-card.back .real-card-back,
+.combat-grid .board-slot.bez-slot .board-card.back .real-card-back,
+.combat-grid .refuge-card .board-card.back .real-card-back,
+.board-slot.azr-slot .board-card.back .real-card-back,
+.secondary-zone .board-card.back .real-card-back,
+.shared-primary-zone .board-card.back .real-card-back{
+  display:block;
+  width:100% !important;
+  height:100% !important;
+  max-width:100% !important;
+  max-height:100% !important;
+  object-fit:contain !important;
+  margin:0 !important;
+  padding:0 !important;
+  box-sizing:border-box;
+}
+
+/* Name/Werte liegen als kompakte Einblendung über der Karte und vergrößern
+   dadurch nicht mehr den Kartencontainer über die Zone hinaus. */
+.combat-grid .equip-slot .board-card-meta,
+.combat-grid .board-slot.bez-slot .board-card-meta,
+.combat-grid .refuge-card .board-card-meta,
+.board-slot.azr-slot .board-card-meta,
+.secondary-zone .board-card-meta,
+.shared-primary-zone .board-card-meta{
+  position:absolute;
+  left:3px;
+  right:3px;
+  bottom:3px;
+  z-index:3;
+  margin:0;
+  padding:2px 3px;
+  border-radius:5px;
+  background:rgba(0,0,0,.74);
+  box-sizing:border-box;
+  pointer-events:none;
+  max-height:42%;
+  overflow:hidden;
+}
+
+/* Das Feld-Label bleibt lesbar, ohne die Karte aus ihrer Zone zu drücken. */
+.combat-grid .equip-slot > .slot-label,
+.combat-grid .board-slot.bez-slot > .slot-label,
+.combat-grid .refuge-card > .slot-label,
+.board-slot.azr-slot > .slot-label,
+.secondary-zone > .slot-label,
+.shared-primary-zone > .slot-label{
+  z-index:4;
+}
+
+/* Leere Felder behalten weiterhin exakt die vorgesehenen Abmessungen. */
+.combat-grid .equip-slot .board-empty,
+.combat-grid .board-slot.bez-slot .board-empty,
+.combat-grid .refuge-card .board-empty,
+.board-slot.azr-slot .board-empty,
+.secondary-zone .board-empty,
+.shared-primary-zone .board-empty{
+  width:100%;
+  height:100%;
+  min-height:0;
+}
