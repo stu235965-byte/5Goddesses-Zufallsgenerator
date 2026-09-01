@@ -370,17 +370,40 @@ function develop(state,kind,slot=null){
   const kosten=dev.stufe;
   if(r.honor<kosten)return {ok:false,msg:`Für Stufe ${dev.stufe} werden ${kosten} Ehre auf dieser Karte benötigt.`};
 
+  // Bereits verlorene Herzen und Basis-Schilde bleiben auch nach einer
+  // Entwicklung verloren. Beispiel: 5 -> aktuell 3 Herzen = 2 Schaden.
+  // Hat die neue Stufe 7 Herzen, startet sie deshalb mit 5 statt 7.
+  const alt=cardData(r);
+
+  const alteMaxHerzen=alt?.herzen ?? r.hearts ?? 0;
+  const alterMaxPhysSchild=alt?.physischer_schild ?? r.physicalShield ?? 0;
+  const alterMaxAstralSchild=alt?.astraler_schild ?? r.astralShield ?? 0;
+
+  const herzSchaden=Math.max(0,alteMaxHerzen-(r.hearts ?? 0));
+  const physSchildSchaden=Math.max(0,alterMaxPhysSchild-(r.physicalShield ?? 0));
+  const astralSchildSchaden=Math.max(0,alterMaxAstralSchild-(r.astralShield ?? 0));
+
   r.honor-=kosten;
   p.development=p.development.filter(x=>x!==dev.bild);
   r.developmentStack.push(dev.bild);
   r.bild=dev.bild;
   r.stufe=dev.stufe;
-  // Neue Basiswerte der obersten Entwicklungsstufe übernehmen.
-  r.hearts=dev.herzen ?? r.hearts;
-  r.physicalShield=dev.physischer_schild ?? r.physicalShield;
-  r.astralShield=dev.astraler_schild ?? r.astralShield;
+
+  const neueMaxHerzen=dev.herzen ?? alteMaxHerzen;
+  const neuerMaxPhysSchild=dev.physischer_schild ?? alterMaxPhysSchild;
+  const neuerMaxAstralSchild=dev.astraler_schild ?? alterMaxAstralSchild;
+
+  r.hearts=Math.max(0,neueMaxHerzen-herzSchaden);
+  r.physicalShield=Math.max(0,neuerMaxPhysSchild-physSchildSchaden);
+  r.astralShield=Math.max(0,neuerMaxAstralSchild-astralSchildSchaden);
+
+  // Angriffswerte sind keine verbrauchten Ressourcen und werden daher
+  // direkt auf die Werte der neuen Entwicklungsstufe gesetzt.
+  r.physical=dev.physische_staerke ?? r.physical;
+  r.astral=dev.astrale_staerke ?? r.astral;
+
   r.developedTurn=p.turnCount;
-  log(state,`${p.name} entwickelt ${dev.name} auf Stufe ${dev.stufe}.`);
+  log(state,`${p.name} entwickelt ${dev.name} auf Stufe ${dev.stufe}. Bereits erlittener Herz- und Schildschaden bleibt erhalten.`);
   return {ok:true};
 }
 function canAttack(runtime,p){

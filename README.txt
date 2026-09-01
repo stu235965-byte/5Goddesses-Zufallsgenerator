@@ -1,29 +1,30 @@
-5Goddesses – Gefecht v1.17
-ANGRIFFSZIEL-KLICKFIX
+5Goddesses – Gefecht v1.18
+ENTWICKLUNG: ERLITTENER SCHADEN BLEIBT ERHALTEN
 
-Fehlerursache:
-- Gegnerische Bezwingerinnen und die gegnerische Zuflucht wurden als
-  echte HTML-Buttons mit dem Attribut "disabled" gerendert.
-- Ein HTML-Button mit "disabled" löst keine Click-Events aus.
-- Deshalb leuchteten die Ziele zwar korrekt gold auf, aber ein Klick
-  darauf konnte die Zielauswahl nicht auslösen.
+Regel umgesetzt:
+Bereits verlorene Herzen sowie bereits verlorene physische und astrale
+Basis-Schildpunkte werden durch eine Entwicklung nicht wiederhergestellt.
 
-Korrektur:
-- Gegnerische Bezwingerinnen und Zuflucht bleiben visuell als gegnerische
-  Felder markiert, sind technisch aber nicht mehr "disabled".
-- Eigene Aktionen können dadurch nicht versehentlich auf dem Gegnerfeld
-  ausgeführt werden, weil diese Handler weiterhin nur an #playerBoard
-  gebunden sind.
-- Zusätzlich gibt es jetzt eine zentrale Angriffsziel-Erkennung über
-  Event Delegation. Dadurch bleibt die Zielauswahl auch nach einem
-  Neurendern des Spielfelds stabil.
-- Auswahlfolge bleibt:
-  1. eigene Angreiferin
-  2. goldes gegnerisches Ziel
-  3. Physisch oder ASTRAL
+Beispiel:
+Stufe 1 besitzt 5 Herzen, aktuell sind noch 3 vorhanden.
+=> 2 Herzschaden wurden bereits erlitten.
 
-Service Worker: v24
+Stufe 2 besitzt 7 Herzen.
+Nach der Entwicklung besitzt die Karte daher 7 - 2 = 5 Herzen.
+
+Dasselbe Prinzip wird getrennt angewendet auf:
+- Herzen
+- physischen Schild
+- astralen Schild
+
+Physische und astrale Angriffsstärke werden auf die gedruckten Werte
+der neuen Entwicklungsstufe gesetzt.
+
+Die vorhandene Ehre bleibt erhalten, abzüglich der für die Entwicklung
+bezahlten Ehre.
+
+Service Worker: v25
 
 Zu ersetzen:
-- battlefield.js
+- game-engine.js
 - service-worker.js
