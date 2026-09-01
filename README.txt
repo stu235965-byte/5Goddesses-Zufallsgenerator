@@ -1,36 +1,20 @@
-5Goddesses PWA – Update Zufallsgenerator mit Entwicklungsdeck
+5Goddesses PWA – Deckbuilder-Update
 
-Auf GitHub im Hauptverzeichnis ersetzen:
+Auf GitHub im Hauptverzeichnis ersetzen/hochladen:
+- index.html
+- style.css
 - generator.js
+- deckbuilder.js (neu)
 - service-worker.js
-- 5goddesses-datenbank.js
-- 5goddesses-datenbank.json
 
-Neue Generatorlogik:
-- 1 Zuflucht
-- 3 Bezwingerinnen mit unterschiedlichen Klassen
-- 5 Astralkammer
-- 5 Rüstkammer
-- 5 Entwicklungskarten
-
-Alle Karten hängen vom persönlichen Kartenpool ab.
-
-Pflichtregel:
-Die gezogene Stufe-1-Zuflucht wird nur aus Zufluchten gewählt, deren passende
-Stufe-2-Zuflucht ebenfalls im Kartenpool ausgewählt ist. Diese passende
-Stufe-2-Zuflucht ist immer eine der fünf Entwicklungskarten.
-
-Priorisierung:
-Für die übrigen vier Plätze werden zuerst verfügbare Stufe-2-Entwicklungskarten
-bevorzugt, deren Grundkarte tatsächlich im gerade generierten Deck liegt.
-Wenn danach noch Plätze frei sind, werden sie zufällig mit anderen ausgewählten
-Entwicklungskarten aufgefüllt.
-
-Hinweis zum aktuellen Datenbestand:
-Die derzeitige gemeinsame Datenbank enthält Entwicklungskarten für Zufluchten
-und Bezwingerinnen. Sobald später passende Stufe-2-Astral- oder
-Rüstkammerkarten in der Datenbank vorhanden sind, werden sie durch dieselbe
-Logik automatisch ebenfalls priorisiert.
-
-Service Worker:
-Cache-Version auf v6 erhöht, damit installierte PWAs die neue Logik laden.
+Neu:
+- „Meine Decks“ neben „Mein Kartenpool“
+- Eigene Gefecht-Decks ausschließlich aus dem persönlichen Kartenpool
+- 1 Zuflucht, 3 Bezwingerinnen, 5 Astralkammer, 5 Rüstkammer, 5 Entwicklung = 19
+- 3 Bezwingerinnen müssen unterschiedliche Klassen haben
+- passende Stufe-2-Zuflucht wird automatisch als Pflichtkarte gesetzt
+- unvollständige Decks können als Entwurf gespeichert werden
+- gespeicherte Decks können geöffnet, bearbeitet und gelöscht werden
+- zufallsgenerierte vollständige Decks können direkt gespeichert werden
+- Speicherung lokal im Browser/PWA-Speicher
+- Service Worker v7

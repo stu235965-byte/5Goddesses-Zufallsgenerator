@@ -60,6 +60,7 @@ function zeigeSeite(name){
   document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
   document.getElementById('page-'+name).classList.add('active');
   if(name==='profil')renderKartenpool();
+  if(name==='decks' && window.renderGespeicherteDecks)window.renderGespeicherteDecks();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('.navbtn').forEach(b=>b.addEventListener('click',()=>zeigeSeite(b.dataset.page)));
@@ -162,6 +163,9 @@ function ziehen(){
   meldung.hidden=true;
   meldung.innerHTML='';
   ziel.innerHTML='';
+  window.AKTUELLES_ZUFALLSDECK=null;
+  const savebar=document.getElementById('generatorSpeichern');
+  if(savebar)savebar.hidden=true;
 
   const fehler=[];
 
@@ -215,6 +219,22 @@ function ziehen(){
   ziel.appendChild(kartenSektion('Astralkammer',astral));
   ziel.appendChild(kartenSektion('Rüstkammer',ruestkammer));
   ziel.appendChild(kartenSektion('Entwicklungskarten',entwicklung));
+
+  window.AKTUELLES_ZUFALLSDECK={
+    zuflucht:[zuflucht.bild],
+    bezwingerinnen:bezwingerinnen.map(k=>k.bild),
+    astral:astral.map(k=>k.bild),
+    ruestkammer:ruestkammer.map(k=>k.bild),
+    entwicklung:entwicklung.map(k=>k.bild)
+  };
+
+  if(savebar){
+    savebar.hidden=false;
+    const nameInput=document.getElementById('generatorDeckname');
+    if(nameInput && !nameInput.value.trim()){
+      nameInput.value='Zufallsdeck';
+    }
+  }
 
   window.scrollTo({top:0,behavior:'smooth'});
 }

@@ -1,9 +1,10 @@
-const CACHE_NAME = '5goddesses-pwa-v6';
+const CACHE_NAME = '5goddesses-pwa-v7';
 const OFFLINE_URL = './index.html';
 const ASSETS = [
   "./5goddesses-datenbank.js",
   "./5goddesses-datenbank.json",
   "./generator.js",
+  "./deckbuilder.js",
   "./icons/apple-touch-icon.png",
   "./icons/favicon-16.png",
   "./icons/favicon-32.png",
