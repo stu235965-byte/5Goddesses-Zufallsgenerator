@@ -1,4 +1,4 @@
-const CACHE_NAME = '5goddesses-pwa-v8';
+const CACHE_NAME = '5goddesses-pwa-v9';
 const OFFLINE_URL = './index.html';
 const ASSETS = [
   "./5goddesses-datenbank.js",
@@ -16,6 +16,7 @@ const ASSETS = [
   "./icons/icon-maskable-512-v2.png",
   "./index.html",
   "./manifest.webmanifest",
+  "./icons/kartenrueckseite.png",
   "./pwa.js",
   "./style.css",
   "./Zuflucht/1.04-01-32-f3d2e6a0.webp",

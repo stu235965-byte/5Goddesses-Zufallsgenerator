@@ -81,17 +81,22 @@ function message(text,type=''){
 function statLine(r){
   if(!r)return '';
   const c=E().cardData(r);
-  return `♥ ${r.hearts} · ⚔ ${c?.physische_staerke??0} · ✦ ${c?.astrale_staerke??0} · 🛡 ${r.physicalShield}/${r.astralShield} · Ehre ${r.honor}`;
+  return `<span class="stat heart">♥ ${r.hearts}</span>
+    <span class="stat physical">⚔ ${c?.physische_staerke??0}</span>
+    <span class="stat astral">✦ ${c?.astrale_staerke??0}</span>
+    <span class="stat pshield">◆ ${r.physicalShield}</span>
+    <span class="stat ashield">◆ ${r.astralShield}</span>
+    <span class="stat honor">● ${r.honor}</span>`;
 }
 function runtimeCardHtml(r,{hidden=false,small=false}={}){
   if(!r)return '<div class="board-empty">Frei</div>';
   const c=E().cardData(r);
   if(hidden || r.faceDown){
-    return `<div class="board-card back ${small?'small':''}"><div class="card-back-symbol">5G</div><div class="board-card-meta">${r.faceDown?'VERDECKT':'KARTE'}</div></div>`;
+    return `<div class="board-card back ${small?'small':''}"><img class="real-card-back" src="icons/kartenrueckseite.png" alt="Kartenrückseite"></div>`;
   }
   return `<div class="board-card ${small?'small':''}">
     <img src="${esc(c?.bild||r.bild)}" alt="${esc(c?.name||'Karte')}">
-    <div class="board-card-meta"><strong>${esc(c?.name||'Karte')}</strong><span>${esc(statLine(r))}</span>${r.ready?'<em>EINSATZBEREIT</em>':'<em class="delay">Einsatzverzögerung</em>'}</div>
+    <div class="board-card-meta"><strong>${esc(c?.name||'Karte')}</strong><div class="stat-row">${statLine(r)}</div>${r.ready?'<em>EINSATZBEREIT</em>':'<em class="delay">Einsatzverzögerung</em>'}</div>
   </div>`;
 }
 function stackHtml(p,key,label){
@@ -103,34 +108,49 @@ function stackHtml(p,key,label){
 function developmentHtml(p){
   return `<div class="dev-pile"><span>ENTWICKLUNG</span><b>${p.development.length}</b></div>`;
 }
+function equipmentSlot(label,kind,bezIndex){
+  return `<button class="equip-slot ${kind}" data-equip="${kind}" data-equip-bez="${bezIndex}" disabled><span>${label}</span></button>`;
+}
+function bezStation(r,i,isActive){
+  return `<div class="bez-station">
+    ${equipmentSlot('HELM','helmet',i)}
+    <div class="bez-middle">
+      ${equipmentSlot('WAFFE','weapon',i)}
+      <button class="board-slot bez-slot" data-bez="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN</span></button>
+      ${equipmentSlot('SCHILD','shield',i)}
+    </div>
+    ${equipmentSlot('RÜSTUNG','armor',i)}
+  </div>`;
+}
 function playerBoardHtml(p,isActive,isOpponent){
-  const oppClass=isOpponent?' mirrored':'';
   const azr=p.azr.map((r,i)=>`<button class="board-slot azr-slot" data-azr="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r,{hidden:isOpponent&&r?.faceDown})}<span class="slot-label">AZR ${i+1}</span></button>`).join('');
-  const bez=p.bezSlots.map((r,i)=>`<button class="board-slot bez-slot" data-bez="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r)}<span class="slot-label">Bezwingerin ${i+1}</span></button>`).join('');
+  const oppClass=isOpponent?' mirrored':'';
   return `<div class="board-inner${oppClass}">
     <div class="board-player-title">
       <strong>${esc(p.name)}${isActive?' · AM ZUG':''}</strong>
       <span>${esc(p.deckName)} · Hand ${p.hand.length} · Ablage ${p.discard.length}</span>
     </div>
 
-    <div class="board-grid">
-      <div class="board-side dev-zone">${developmentHtml(p)}</div>
-      <div class="board-center">
-        <div class="main-stacks">
-          ${stackHtml(p,'bezwingerinnen','B')}
-          ${stackHtml(p,'astral','A')}
-          ${stackHtml(p,'ruestkammer','R')}
+    <div class="rule-board">
+      <div class="development-column">${developmentHtml(p)}</div>
+
+      <div class="playmat-center">
+        <div class="main-line">
+          ${bezStation(p.bezSlots[0],0,isActive)}
+          <div class="refuge-column">
+            <button class="refuge-card" data-refuge ${isActive?'':'disabled'}>${runtimeCardHtml(p.refuge)}<span class="slot-label">ZUFLUCHT</span></button>
+          </div>
+          ${bezStation(p.bezSlots[1],1,isActive)}
         </div>
-        <div class="combat-row">
-          <div class="primary-zone"><span>PRIMÄR</span>${runtimeCardHtml(p.primary,{small:true})}</div>
-          <div class="bez-zones">${bez}</div>
-          <div class="azr-zones">${azr}</div>
-        </div>
-        <div class="refuge-zone">
-          <button class="refuge-card" data-refuge ${isActive?'':'disabled'}>${runtimeCardHtml(p.refuge)}<span class="slot-label">ZUFLUCHT</span></button>
-        </div>
+        <div class="azr-row">${azr}</div>
       </div>
-      <div class="board-side discard-zone"><div class="discard-pile"><span>ABLAGE</span><b>${p.discard.length}</b></div></div>
+
+      <div class="stacks-column">
+        ${stackHtml(p,'bezwingerinnen','BEZWINGERINNEN')}
+        ${stackHtml(p,'astral','ASTRAL')}
+        ${stackHtml(p,'ruestkammer','RÜSTKAMMER')}
+        <div class="discard-pile"><span>ABLAGE</span><b>${p.discard.length}</b></div>
+      </div>
     </div>
   </div>`;
 }
@@ -234,19 +254,29 @@ function renderActions(){
       }
       if(['astral','ruestkammer'].includes(c.deck_bereich)){
         [0,1,2].forEach(slot=>{
-          const b=document.createElement('button');
-          b.textContent=`Verdeckt in AZR ${slot+1} setzen`;
-          b.disabled=!!p.azr[slot];
-          b.addEventListener('click',()=>{
+          const hiddenBtn=document.createElement('button');
+          hiddenBtn.textContent=`Verdeckt in AZR ${slot+1}`;
+          hiddenBtn.disabled=!!p.azr[slot];
+          hiddenBtn.addEventListener('click',()=>{
             const r=E().setFaceDown(state,selectedHandIndex,slot);
             if(r.ok)selectedHandIndex=null;
-            saveRender(r.msg||'Karte gesetzt.');
+            saveRender(r.msg||'Karte verdeckt gesetzt.');
           });
-          root.appendChild(b);
+          root.appendChild(hiddenBtn);
+
+          const openBtn=document.createElement('button');
+          openBtn.textContent=`Offen in AZR ${slot+1}`;
+          openBtn.disabled=!!p.azr[slot];
+          openBtn.addEventListener('click',()=>{
+            const r=E().playOpenAzr(state,selectedHandIndex,slot);
+            if(r.ok)selectedHandIndex=null;
+            saveRender(r.msg||'Karte offen ausgespielt.');
+          });
+          root.appendChild(openBtn);
         });
         const note=document.createElement('span');
         note.className='action-note';
-        note.textContent='Offenes Ausspielen und individuelle Kartenwirkungen folgen mit dem Karteneffekt-System.';
+        note.textContent='Offen oder verdeckt setzen ist bereits möglich. Der individuelle Karteneffekt wird später ergänzt.';
         root.appendChild(note);
       }
     }else{

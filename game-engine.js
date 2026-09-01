@@ -184,6 +184,19 @@ function setFaceDown(state,handIndex,slot){
   log(state,`${p.name} setzt eine Karte verdeckt in die ASTRAL-/Rüstkammer-Zone.`);
   return {ok:true};
 }
+function playOpenAzr(state,handIndex,slot){
+  const p=active(state);
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Karten können hier nur in Versorgungs- oder Nachschubphase ausgespielt werden.'};
+  if(p.azr[slot])return {ok:false,msg:'Dieser ASTRAL-/Rüstkammer-Bereich ist belegt.'};
+  const bild=p.hand[handIndex],c=dbCard(bild);
+  if(!c || !['astral','ruestkammer'].includes(c.deck_bereich))return {ok:false,msg:'Nur ASTRAL- oder Rüstkammer-Karten können hier ausgespielt werden.'};
+  p.hand.splice(handIndex,1);
+  const r=makeRuntimeCard(bild,p.index,p.turnCount);
+  r.faceDown=false;
+  p.azr[slot]=r;
+  log(state,`${p.name} spielt ${c.name} offen in die ASTRAL-/Rüstkammer-Zone. Der individuelle Karteneffekt ist noch nicht implementiert.`);
+  return {ok:true};
+}
 function reveal(state,slot){
   const p=active(state),r=p.azr[slot];
   if(!r || !r.faceDown)return {ok:false,msg:'Hier liegt keine verdeckte Karte.'};
@@ -387,7 +400,7 @@ function clear(){localStorage.removeItem('5goddesses_active_game_v1')}
 
 window.G5Engine={
   PHASES,decks,validDeck,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
-  advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,reveal,
+  advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,playOpenAzr,reveal,
   availableDevelopment,develop,canAttack,attackTargets,prepareAttack,resolveCombat,returnToRush,cardData
 };
 })();
