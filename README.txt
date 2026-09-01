@@ -1,12 +1,21 @@
-5Goddesses – Gefecht v1.2
+5Goddesses – Gefecht v1.3
 
-Änderung:
-- Helm-, Waffen-, Schild- und Rüstungsfelder sind jetzt vollwertige Kartenfelder.
-- Alle vier Ausrüstungsfelder haben dieselbe Grundgröße wie die übrigen Kartenfelder.
-- Dadurch können spätere Ausrüstungskarten ohne verzerrte Darstellung direkt dort abgelegt werden.
-- Responsive Größe für kleinere Displays wurde entsprechend angepasst.
-- Service Worker auf v10 erhöht.
+Änderungen am Spielfeld:
+- Sekundärzone ergänzt.
+- Sekundärzone befindet sich oberhalb der eigenen Zuflucht.
+- Primärzone als gemeinsamer Bereich mittig zwischen beiden Spielfeldhälften ergänzt.
+- Primärzone kann später von beiden Spielern belegt werden.
+- Beide Zonen besitzen Kartenformat und sind nicht überstreckt.
+- Service Worker auf v11 erhöht.
+
+Hinweis:
+Die Zonen sind in dieser Version zunächst vollständig im Spielfeld vorhanden.
+Die eigentliche Ausspiellogik für Primär-/Sekundärkarten wird zusammen mit
+den Kartentyp-/Effektregeln ergänzt.
 
 Zu ersetzen:
+- index.html
+- battlefield.js
+- game-engine.js
 - style.css
 - service-worker.js

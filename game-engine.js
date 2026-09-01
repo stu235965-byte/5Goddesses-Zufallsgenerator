@@ -77,6 +77,7 @@ function playerFromDeck(deck,index){
     bezSlots:[null,null],
     azr:[null,null,null],
     primary:null,
+    secondary:null,
     discard:[],
     recruitedThisTurn:false,
     drawDone:false
@@ -117,6 +118,7 @@ function startGame(deck1,deck2,startPlayer){
     firstTurn:true,
     winner:null,
     attack:null,
+    sharedPrimary:null,
     players:[playerFromDeck(deck1,0),playerFromDeck(deck2,1)],
     log:[]
   };

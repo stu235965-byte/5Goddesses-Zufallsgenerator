@@ -176,3 +176,79 @@ h1{font-size:30px;margin:0 0 16px}
     aspect-ratio: 100 / 145;
   }
 }
+
+
+/* Gefecht v1.3 – Primär-/Sekundärzonen */
+.secondary-row{
+  display:flex;
+  justify-content:center;
+  margin-bottom:2px;
+}
+.secondary-zone{
+  width:118px;
+  min-height:168px;
+  border:1px dashed #75643a;
+  border-radius:8px;
+  background:rgba(255,255,255,.025);
+  display:grid;
+  place-items:center;
+  position:relative;
+  padding:4px;
+}
+.area-title{
+  position:absolute;
+  top:4px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:9px;
+  letter-spacing:.08em;
+  color:#a69770;
+  white-space:nowrap;
+  z-index:2;
+}
+.board-inner.mirrored .area-title{
+  transform:translateX(-50%) rotate(180deg);
+}
+.shared-primary-wrap{
+  min-height:205px;
+  border-top:1px solid #66562c;
+  border-bottom:1px solid #66562c;
+  background:linear-gradient(90deg,#080808,#141108,#080808);
+  display:grid;
+  place-items:center;
+  padding:10px 0 12px;
+  position:relative;
+}
+.shared-primary-label{
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.12em;
+  color:#b6a16a;
+  margin-bottom:7px;
+}
+.shared-primary-zone{
+  width:118px;
+  min-height:168px;
+  border:1px dashed #8b7340;
+  border-radius:8px;
+  background:rgba(255,255,255,.03);
+  display:grid;
+  place-items:center;
+  padding:4px;
+}
+.shared-primary-empty{
+  color:#746847;
+  font-size:12px;
+}
+.shared-primary-card{
+  width:100%;
+}
+@media(max-width:1050px){
+  .secondary-zone,.shared-primary-zone{
+    width:100px;
+    min-height:145px;
+  }
+  .shared-primary-wrap{
+    min-height:175px;
+  }
+}

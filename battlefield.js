@@ -135,6 +135,13 @@ function playerBoardHtml(p,isActive,isOpponent){
       <div class="development-column">${developmentHtml(p)}</div>
 
       <div class="playmat-center">
+        <div class="secondary-row">
+          <div class="secondary-zone">
+            <span class="area-title">SEKUNDÄRZONE</span>
+            ${runtimeCardHtml(p.secondary||null,{small:true})}
+          </div>
+        </div>
+
         <div class="main-line">
           ${bezStation(p.bezSlots[0],0,isActive)}
           <div class="refuge-column">
@@ -142,6 +149,7 @@ function playerBoardHtml(p,isActive,isOpponent){
           </div>
           ${bezStation(p.bezSlots[1],1,isActive)}
         </div>
+
         <div class="azr-row">${azr}</div>
       </div>
 
@@ -154,10 +162,20 @@ function playerBoardHtml(p,isActive,isOpponent){
     </div>
   </div>`;
 }
+function renderSharedPrimary(){
+  const root=document.getElementById('sharedPrimaryZone');
+  if(!root)return;
+  const shared=state.sharedPrimary||null;
+  root.innerHTML=shared
+    ? `<div class="shared-primary-card">${runtimeCardHtml(shared)}</div>`
+    : `<div class="shared-primary-empty">Frei</div>`;
+}
+
 function renderBoards(){
   const a=state.activePlayer,opp=1-a;
   document.getElementById('opponentBoard').innerHTML=playerBoardHtml(state.players[opp],false,true);
   document.getElementById('playerBoard').innerHTML=playerBoardHtml(state.players[a],true,false);
+  renderSharedPrimary();
 
   // Stack draw in draw phase.
   document.querySelectorAll('#playerBoard .stack-pile').forEach(btn=>{
