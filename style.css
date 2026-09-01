@@ -999,3 +999,57 @@ h1{font-size:30px;margin:0 0 16px}
     justify-content:space-between;
   }
 }
+
+
+/* Deckbuilder v1.26 – Vorschau als EIN echtes Feld */
+.deck-card-preview-slot{
+  position:relative;
+  width:100%;
+}
+
+/* Standard: nur Platzhalter sichtbar */
+.deck-card-preview .deck-card-preview-empty{
+  display:flex !important;
+}
+.deck-card-preview .deck-card-preview-content{
+  display:none !important;
+}
+
+/* Sobald eine Karte gewählt wurde: Platzhalter AUS, Karte AN */
+.deck-card-preview.has-card .deck-card-preview-empty{
+  display:none !important;
+}
+.deck-card-preview.has-card .deck-card-preview-content{
+  display:block !important;
+}
+
+/* Beide Ansichten nutzen exakt denselben vorgesehenen Bereich */
+.deck-card-preview-empty,
+.deck-card-preview-content{
+  margin:0;
+  width:100%;
+  box-sizing:border-box;
+}
+
+.deck-card-preview-content img{
+  display:block;
+  width:100%;
+  height:auto;
+  max-height:calc(100vh - 270px);
+  object-fit:contain;
+  margin:0 auto;
+}
+
+/* Sticky bleibt auf der rechten Spalte selbst */
+.deck-card-preview{
+  position:sticky !important;
+  top:165px !important;
+  align-self:start !important;
+  height:max-content !important;
+}
+@media(max-width:780px){
+  .deck-card-preview{
+    position:relative !important;
+    top:auto !important;
+  }
+}

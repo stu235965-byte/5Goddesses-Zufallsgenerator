@@ -19,7 +19,7 @@
   <header class="topbar">
     <div class="brand-wrap">
       <div class="brand">5 GODDESSES</div>
-      <div class="app-version" title="Aktuell geladene PWA-Version">v1.25</div>
+      <div class="app-version" title="Aktuell geladene PWA-Version">v1.26</div>
     </div>
     <nav>
       <button class="navbtn active" data-page="generator">Zufallsgenerator</button>
@@ -103,13 +103,15 @@
           <aside id="deckCardPreview" class="deck-card-preview" aria-live="polite">
             <div class="deck-card-preview-sticky">
               <div class="eyebrow">KARTENVORSCHAU</div>
-              <div id="deckCardPreviewEmpty" class="deck-card-preview-empty">
-                Klicke links auf eine Karte, um sie hier groß und lesbar anzuzeigen.
-              </div>
-              <div id="deckCardPreviewContent" class="deck-card-preview-content" hidden>
-                <img id="deckCardPreviewImage" src="" alt="">
-                <div id="deckCardPreviewName" class="deck-card-preview-name"></div>
-                <div id="deckCardPreviewMeta" class="deck-card-preview-meta"></div>
+              <div class="deck-card-preview-slot">
+                <div id="deckCardPreviewEmpty" class="deck-card-preview-empty">
+                  Klicke links auf eine Karte, um sie hier groß und lesbar anzuzeigen.
+                </div>
+                <div id="deckCardPreviewContent" class="deck-card-preview-content">
+                  <img id="deckCardPreviewImage" src="" alt="">
+                  <div id="deckCardPreviewName" class="deck-card-preview-name"></div>
+                  <div id="deckCardPreviewMeta" class="deck-card-preview-meta"></div>
+                </div>
               </div>
             </div>
           </aside>

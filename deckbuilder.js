@@ -270,8 +270,8 @@ function zeigeDeckKartenVorschau(karte){
   const meta=document.getElementById('deckCardPreviewMeta');
   if(!empty||!content||!img||!name||!meta)return;
 
-  empty.hidden=true;
-  content.hidden=false;
+  const previewRoot=document.getElementById('deckCardPreview');
+  previewRoot?.classList.add('has-card');
   img.src=karte.bild;
   img.alt=karte.name||'Kartenvorschau';
   name.textContent=karte.name||'Karte';
@@ -289,8 +289,8 @@ function leereDeckKartenVorschau(){
   const empty=document.getElementById('deckCardPreviewEmpty');
   const content=document.getElementById('deckCardPreviewContent');
   const img=document.getElementById('deckCardPreviewImage');
-  if(empty)empty.hidden=false;
-  if(content)content.hidden=true;
+  const previewRoot=document.getElementById('deckCardPreview');
+  previewRoot?.classList.remove('has-card');
   if(img){
     img.removeAttribute('src');
     img.alt='';
