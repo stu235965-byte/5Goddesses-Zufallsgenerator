@@ -61,6 +61,7 @@ function zeigeSeite(name){
   document.getElementById('page-'+name).classList.add('active');
   if(name==='profil')renderKartenpool();
   if(name==='decks' && window.renderGespeicherteDecks)window.renderGespeicherteDecks();
+  if(name==='game' && window.gamePageOpened)window.gamePageOpened();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('.navbtn').forEach(b=>b.addEventListener('click',()=>zeigeSeite(b.dataset.page)));

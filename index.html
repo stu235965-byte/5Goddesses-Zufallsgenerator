@@ -22,6 +22,7 @@
       <button class="navbtn active" data-page="generator">Zufallsgenerator</button>
       <button class="navbtn" data-page="profil">Mein Kartenpool</button>
       <button class="navbtn" data-page="decks">Meine Decks</button>
+      <button class="navbtn" data-page="game">Gefecht</button>
       <button id="appInstallieren" class="installbtn" hidden>App installieren</button>
     </nav>
   </header>
@@ -96,11 +97,82 @@
       </div>
     </section>
 
+
+    <section id="page-game" class="page">
+      <h1>GEFECHT</h1>
+      <p class="intro">Erste spielbare Gefecht-Version nach dem Regelwerk. Individuelle Karteneffekte werden im nächsten Schritt ergänzt.</p>
+
+      <div id="gameSetup" class="game-setup">
+        <div class="setup-grid">
+          <label>
+            Spieler 1 Deck
+            <select id="gameDeckP1"></select>
+          </label>
+          <label>
+            Spieler 2 Deck
+            <select id="gameDeckP2"></select>
+          </label>
+          <label>
+            Startspieler
+            <select id="gameStartPlayer">
+              <option value="0">Spieler 1</option>
+              <option value="1">Spieler 2</option>
+              <option value="random">Zufällig</option>
+            </select>
+          </label>
+        </div>
+        <div class="game-setup-actions">
+          <button id="gameStart" class="primary">Gefecht starten</button>
+          <button id="gameResume" hidden>Gespeichertes Gefecht fortsetzen</button>
+        </div>
+        <div id="gameSetupInfo" class="meldung" hidden></div>
+      </div>
+
+      <div id="gameShell" hidden>
+        <div class="game-toolbar">
+          <div>
+            <strong id="gameTurnInfo">–</strong>
+            <div id="gamePhaseInfo" class="game-phase-info">–</div>
+          </div>
+          <div class="game-toolbar-actions">
+            <button id="gameNew">Neues Gefecht</button>
+            <button id="gameNextPhase" class="primary">Nächste Phase</button>
+          </div>
+        </div>
+
+        <div id="gameMessage" class="game-message"></div>
+        <div id="gameActions" class="game-actions"></div>
+
+        <div id="battlefield" class="battlefield">
+          <div id="opponentBoard" class="player-board opponent-board"></div>
+          <div class="battle-divider">
+            <span>⚔ GEFECHT ⚔</span>
+          </div>
+          <div id="playerBoard" class="player-board own-board"></div>
+        </div>
+
+        <section class="hand-panel">
+          <div class="hand-head">
+            <h2 id="handTitle">Hand</h2>
+            <span id="handCount"></span>
+          </div>
+          <div id="gameHand" class="game-hand"></div>
+        </section>
+
+        <details class="game-log-wrap">
+          <summary>Spielprotokoll</summary>
+          <div id="gameLog" class="game-log"></div>
+        </details>
+      </div>
+    </section>
+
   </main>
 
   <script src="5goddesses-datenbank.js"></script>
   <script src="generator.js"></script>
   <script src="deckbuilder.js"></script>
+  <script src="game-engine.js"></script>
+  <script src="battlefield.js"></script>
   <script src="pwa.js"></script>
 </body>
 </html>
