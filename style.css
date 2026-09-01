@@ -910,3 +910,61 @@ h1{font-size:30px;margin:0 0 16px}
     margin:0 auto;
   }
 }
+
+
+/* Deckbuilder v1.25 – Vorschau korrekt im Feld + wirklich sticky */
+
+/* Eigene display-Regeln dürfen das native hidden-Attribut nicht überschreiben. */
+.deck-card-preview [hidden]{
+  display:none !important;
+}
+
+/* Sticky muss auf dem Grid-Element selbst liegen.
+   Ein sticky Kind innerhalb eines gleich hohen aside-Containers kann nicht scrollen. */
+.deck-card-preview{
+  position:sticky;
+  top:165px;
+  align-self:start;
+  min-width:0;
+  height:max-content;
+}
+
+.deck-card-preview-sticky{
+  position:static;
+  top:auto;
+}
+
+/* Vorschaufläche ist immer genau ein Bereich:
+   entweder Platzhalter ODER Kartenansicht. */
+.deck-card-preview-empty,
+.deck-card-preview-content{
+  width:100%;
+  box-sizing:border-box;
+}
+
+.deck-card-preview-content{
+  min-height:0;
+}
+
+.deck-card-preview-content img{
+  width:100%;
+  height:auto;
+  max-height:calc(100vh - 265px);
+  object-fit:contain;
+}
+
+/* Tablet */
+@media(max-width:1100px){
+  .deck-card-preview{
+    top:175px;
+  }
+}
+
+/* Mobile: keine sticky Seitenspalte, sondern normal unterhalb. */
+@media(max-width:780px){
+  .deck-card-preview{
+    position:relative;
+    top:auto;
+    height:auto;
+  }
+}
