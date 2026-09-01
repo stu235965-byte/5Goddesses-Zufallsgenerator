@@ -287,6 +287,7 @@ function startGame(deck1,deck2,startPlayer){
     attack:null,
     pendingEquipment:null,
     pendingFieldCard:null,
+    pendingDamage:null,
     sharedPrimary:null,
     players:[playerFromDeck(deck1,0),playerFromDeck(deck2,1)],
     log:[]
@@ -675,36 +676,140 @@ function applyDamage(runtime,amount,type){
   runtime.hearts-=heartLoss;
   return {shield:shieldLoss,hearts:heartLoss};
 }
-function applyDamageToBez(state,playerIndex,bezSlot,amount,type){
+function shieldSourcesForBez(state,playerIndex,bezSlot,type){
   const p=state.players[playerIndex],r=p.bezSlots[bezSlot];
-  if(!r || amount<=0)return {externalShield:0,baseShield:0,hearts:0};
-
+  if(!r)return [];
   ensureEquipmentState(p);
   const shieldKey=type==='physical'?'physicalShield':'astralShield';
-  let externalShield=0;
+  const sources=[];
 
-  // Projekt-Zusatzregel: Ausrüstungsschilde immer zuerst.
   for(const kind of ['shield','armor','helmet','weapon']){
-    if(amount<=0)break;
     const eq=p.equipment[bezSlot]?.[kind];
     if(!eq)continue;
     initializeEquipmentCombatState(eq,p);
-    const loss=Math.min(eq[shieldKey]||0,amount);
-    if(loss>0){
-      eq[shieldKey]-=loss;
-      amount-=loss;
-      externalShield+=loss;
+    const value=eq[shieldKey]||0;
+    if(value>0){
+      sources.push({
+        source:'equipment',
+        kind,
+        label:`${cardData(eq)?.name||equipmentLabel(kind)} (${value})`,
+        value
+      });
     }
   }
 
-  const baseShieldLoss=Math.min(r[shieldKey]||0,amount);
-  r[shieldKey]-=baseShieldLoss;
-  amount-=baseShieldLoss;
+  const baseValue=r[shieldKey]||0;
+  if(baseValue>0){
+    sources.push({
+      source:'base',
+      kind:'base',
+      label:`Basisschild von ${cardData(r)?.name||'Bezwingerin'} (${baseValue})`,
+      value:baseValue
+    });
+  }
+  return sources;
+}
+function applyChosenShieldSource(state,packet,choice){
+  const p=state.players[packet.playerIndex];
+  const r=p.bezSlots[packet.bezSlot];
+  if(!r)return {ok:false,msg:'Die betroffene Bezwingerin ist nicht mehr vorhanden.'};
+  const shieldKey=packet.type==='physical'?'physicalShield':'astralShield';
 
-  const heartLoss=Math.min(r.hearts||0,amount);
+  let sourceRuntime=null,label='';
+  if(choice.source==='base'){
+    sourceRuntime=r;
+    label=`Basisschild von ${cardData(r)?.name||'Bezwingerin'}`;
+  }else if(choice.source==='equipment'){
+    ensureEquipmentState(p);
+    sourceRuntime=p.equipment[packet.bezSlot]?.[choice.kind];
+    if(!sourceRuntime)return {ok:false,msg:'Diese Ausrüstung ist nicht mehr vorhanden.'};
+    label=cardData(sourceRuntime)?.name||equipmentLabel(choice.kind);
+  }else{
+    return {ok:false,msg:'Ungültige Schildquelle.'};
+  }
+
+  const available=sourceRuntime[shieldKey]||0;
+  if(available<=0)return {ok:false,msg:'Diese Schildquelle besitzt keine passenden Schildpunkte mehr.'};
+
+  const loss=Math.min(available,packet.remaining);
+  sourceRuntime[shieldKey]-=loss;
+  packet.remaining-=loss;
+  packet.shieldLoss=(packet.shieldLoss||0)+loss;
+  log(state,`${label} fängt ${loss} ${packet.type==='physical'?'physischen':'ASTRAL'} Schaden ab.`);
+  return {ok:true,loss};
+}
+function finishDamagePacketWithoutShields(state,packet){
+  const p=state.players[packet.playerIndex];
+  const r=p.bezSlots[packet.bezSlot];
+  if(!r || packet.remaining<=0)return;
+  const heartLoss=Math.min(r.hearts||0,packet.remaining);
   r.hearts-=heartLoss;
+  packet.remaining-=heartLoss;
+  packet.heartLoss=(packet.heartLoss||0)+heartLoss;
+  if(heartLoss>0){
+    log(state,`${cardData(r)?.name||'Bezwingerin'} verliert ${heartLoss} Herz${heartLoss===1?'':'en'}.`);
+  }
+  // Überschüssiger Schaden verfällt nach der Grundregel.
+  packet.remaining=0;
+}
+function currentShieldChoice(state){
+  const pd=state.pendingDamage;
+  if(!pd || !pd.packets?.length)return null;
 
-  return {externalShield,baseShield:baseShieldLoss,hearts:heartLoss};
+  while(pd.packetIndex<pd.packets.length){
+    const packet=pd.packets[pd.packetIndex];
+    if(packet.remaining<=0){
+      pd.packetIndex++;
+      continue;
+    }
+    const sources=shieldSourcesForBez(state,packet.playerIndex,packet.bezSlot,packet.type);
+    if(sources.length===0){
+      finishDamagePacketWithoutShields(state,packet);
+      pd.packetIndex++;
+      continue;
+    }
+    return {
+      playerIndex:packet.playerIndex,
+      bezSlot:packet.bezSlot,
+      type:packet.type,
+      remaining:packet.remaining,
+      sources
+    };
+  }
+  return null;
+}
+function finalizePendingCombat(state){
+  const pd=state.pendingDamage;
+  if(!pd)return {ok:false,msg:'Keine offene Schadensverteilung.'};
+
+  const attack=state.attack;
+  if(attack){
+    killIfNeeded(state,pd.defenderIndex,pd.defKind,pd.defSlot);
+    killIfNeeded(state,pd.attackerIndex,'bez',pd.attackerSlot);
+  }
+  state.pendingDamage=null;
+  state.attack=null;
+  return {ok:true,msg:'Kampf vollständig abgewickelt.'};
+}
+function chooseShieldSource(state,source,kind){
+  if(!state.pendingDamage)return {ok:false,msg:'Es wartet keine Schildentscheidung.'};
+  const choice=currentShieldChoice(state);
+  if(!choice){
+    return finalizePendingCombat(state);
+  }
+
+  const selected=choice.sources.find(s=>s.source===source && s.kind===kind);
+  if(!selected)return {ok:false,msg:'Diese Schildquelle steht für den aktuellen Schaden nicht zur Verfügung.'};
+
+  const packet=state.pendingDamage.packets[state.pendingDamage.packetIndex];
+  const result=applyChosenShieldSource(state,packet,selected);
+  if(!result.ok)return result;
+
+  const next=currentShieldChoice(state);
+  if(!next){
+    return finalizePendingCombat(state);
+  }
+  return {ok:true,needsShieldChoice:true,msg:'Wähle die nächste Schildquelle.',choice:next};
 }
 function killIfNeeded(state,playerIndex,kind,slot=null){
   const p=state.players[playerIndex];
@@ -743,10 +848,16 @@ function killIfNeeded(state,playerIndex,kind,slot=null){
 }
 function resolveCombat(state){
   if(currentPhase(state).id!=='combat' || !state.attack)return {ok:false,msg:'Es ist kein Kampf vorbereitet.'};
+  if(state.pendingDamage){
+    const choice=currentShieldChoice(state);
+    return choice
+      ? {ok:true,needsShieldChoice:true,msg:'Wähle, von welcher Karte Schildpunkte entfernt werden sollen.',choice}
+      : finalizePendingCombat(state);
+  }
+
   const p=active(state),opp=opponent(state);
   const a=p.bezSlots[state.attack.attackerSlot];
   if(!a)return {ok:false,msg:'Der Angreifer ist nicht mehr auf dem Feld.'};
-
   if(!state.attack.defenderConfirmed)return {ok:false,msg:'Der verteidigende Spieler muss den Angriff zuerst zulassen.'};
 
   const target=state.attack.target;
@@ -774,27 +885,66 @@ function resolveCombat(state){
     counter={base:counterValue,equipment:0,total:counterValue};
   }
 
-  const dmgToDef=target.type==='bez'
-    ? applyDamageToBez(state,opp.index,target.slot,attackValue,type)
-    : (()=>{const x=applyDamage(d,attackValue,type);return {externalShield:0,baseShield:x.shield,hearts:x.hearts};})();
-
-  const dmgToAtt=applyDamageToBez(state,p.index,state.attack.attackerSlot,counterValue,type);
-
-  a.attackedTurn=p.turnCount;
-
   const atkBonus=atk.equipment?` (Basis ${atk.base} + Ausrüstung ${atk.equipment})`:'';
   const counterBonus=counter.equipment?` (Basis ${counter.base} + Ausrüstung ${counter.equipment})`:'';
   log(state,`${ac?.name||'Angreifer'} verursacht ${attackValue}${atkBonus} ${type==='physical'?'physischen':'ASTRAL'} Schaden; ${dc?.name||'Ziel'} führt gleichzeitig einen Gegenangriff mit ${counterValue}${counterBonus} Stärke aus.`);
 
-  const totalShield=x=>(x.externalShield||0)+(x.baseShield||0);
-  if(totalShield(dmgToDef) || dmgToDef.hearts || totalShield(dmgToAtt) || dmgToAtt.hearts){
-    log(state,`Schaden: Verteidiger −${dmgToDef.externalShield||0} Ausrüstungsschild/−${dmgToDef.baseShield||0} Basisschild/−${dmgToDef.hearts} Herzen; Angreifer −${dmgToAtt.externalShield||0} Ausrüstungsschild/−${dmgToAtt.baseShield||0} Basisschild/−${dmgToAtt.hearts} Herzen.`);
+  a.attackedTurn=p.turnCount;
+
+  // Primär/Sekundär/Zuflucht haben keine anliegende Bezwingerinnen-Ausrüstung
+  // und werden deshalb weiterhin direkt abgewickelt.
+  if(target.type!=='bez'){
+    const dmg=applyDamage(d,attackValue,type);
+    if(dmg.shield||dmg.hearts){
+      log(state,`Verteidiger: −${dmg.shield} Basisschild/−${dmg.hearts} Herzen.`);
+    }
   }
 
-  killIfNeeded(state,opp.index,defKind,defSlot);
-  killIfNeeded(state,p.index,'bez',state.attack.attackerSlot);
-  state.attack=null;
-  return {ok:true};
+  const packets=[];
+  if(target.type==='bez' && attackValue>0){
+    packets.push({
+      role:'defender',
+      playerIndex:opp.index,
+      bezSlot:target.slot,
+      type,
+      remaining:attackValue,
+      shieldLoss:0,
+      heartLoss:0
+    });
+  }
+  if(counterValue>0){
+    packets.push({
+      role:'attacker',
+      playerIndex:p.index,
+      bezSlot:state.attack.attackerSlot,
+      type,
+      remaining:counterValue,
+      shieldLoss:0,
+      heartLoss:0
+    });
+  }
+
+  state.pendingDamage={
+    attackerIndex:p.index,
+    attackerSlot:state.attack.attackerSlot,
+    defenderIndex:opp.index,
+    defKind,
+    defSlot,
+    packetIndex:0,
+    packets
+  };
+
+  const choice=currentShieldChoice(state);
+  if(choice){
+    return {
+      ok:true,
+      needsShieldChoice:true,
+      msg:`${state.players[choice.playerIndex].name}: Wähle, von welcher Karte Schildpunkte entfernt werden sollen.`,
+      choice
+    };
+  }
+
+  return finalizePendingCombat(state);
 }
 function beginPhase(state){
   const p=active(state),phase=currentPhase(state);
@@ -830,6 +980,9 @@ function advancePhase(state){
   }
   if(state.pendingFieldCard){
     return {ok:false,msg:'Die aufgedeckte Primär-/Sekundärkarte muss zuerst in ihren vorgesehenen Bereich verschoben werden.'};
+  }
+  if(state.pendingDamage){
+    return {ok:false,msg:'Die Schild-/Schadensverteilung des aktuellen Kampfes muss zuerst abgeschlossen werden.'};
   }
 
   if(phase.id==='draw'){
@@ -890,6 +1043,7 @@ function migrateLoadedState(state){
   if(state.attack===undefined)state.attack=null;
   if(state.pendingEquipment===undefined)state.pendingEquipment=null;
   if(state.pendingFieldCard===undefined)state.pendingFieldCard=null;
+  if(state.pendingDamage===undefined)state.pendingDamage=null;
 
   state.players.forEach((p,index)=>{
     if(p.index===undefined)p.index=index;
@@ -950,6 +1104,6 @@ window.G5Engine={
   equipmentKind,isEquipmentCard,fieldArea,playFieldFromHand,moveRevealedFieldCard,equipFromHand,equipFromAzr,discardEquipment,
   chooseEquipmentShieldBonus,equipmentCombatProfile,combatStrength,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,hasHeartAttribute,attackTargets,prepareAttack,
-  defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,returnToRush,cardData
+  defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,currentShieldChoice,chooseShieldSource,returnToRush,cardData
 };
 })();

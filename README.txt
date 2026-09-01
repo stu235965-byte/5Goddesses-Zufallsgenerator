@@ -1,35 +1,40 @@
-5Goddesses – Gefecht v1.21
-AUSRÜSTUNGSWERTE IM KAMPF
+5Goddesses – Gefecht v1.22
+REGELKONFORME SCHILDQUELLEN-AUSWAHL
 
-- Externe physische/ASTRAL-Schilde werden separat auf der Ausrüstung geführt.
-- Projekt-Zusatzregel: Passende Ausrüstungsschilde werden IMMER zuerst
-  reduziert, danach Basisschild der Bezwingerin, danach Herzen.
-- Ausrüstung bleibt bei 0 Schildpunkten liegen.
-- Direkte Schildwerte der aktuell vorhandenen Ausrüstungskarten wurden
-  für die Kampfrechnung erfasst.
-- Chikaras Stahlherz fragt beim Anlegen nach physischem oder ASTRAL-Schild.
-- Stärkeboni ändern nie dauerhaft die Basisstärke.
-- Kampfrechnung: Basisstärke + aktiver Ausrüstungsbonus.
-- Unterstützt:
-  * Die Abenddämmerung Hyde: +1 ASTRAL bis nächste eigene AVP
-  * Die Morgenröte Jakyl: +1 physisch bis nächste eigene AVP
-  * Instabiler Stab: +1 ASTRAL bis nächste eigene AVP
-  * Steinschwert: +1 physisch bis nächste eigene AVP
-  * Goldener Dorn: +1 physisch nur beim eigenen Angriff
-- Zeitlich begrenzte Boni enden automatisch zu Beginn der nächsten
-  eigenen Versorgungsphase.
-- Das Kampflog trennt Ausrüstungsschild, Basisschild und Herzen.
+Korrektur zu v1.21:
+Das Regelwerk erlaubt bei zusätzlichen/externalen Schildpunkten aus
+Ausrüstung die Entscheidung, ob zuerst ein externer Schildpunkt oder
+ein Basis-Schildpunkt der Bezwingerin verloren geht.
 
-Noch nicht umgesetzt sind komplexe individuelle Sonderwirkungen wie
-Umwandlungen, Ausweichen, Partnerkombinationen und andere Kartentexte.
+Jetzt umgesetzt:
+- Trifft Schaden eine Bezwingerin und existieren passende Schildpunkte,
+  pausiert die Schadensabwicklung.
+- In der Aktionsleiste erscheinen Buttons für jede aktuell mögliche
+  Schildquelle.
+- Beispiele:
+    "Legionsschild (1)"
+    "Kristallharnisch (1)"
+    "Basisschild von Q.U.E.E.N. (2)"
+- Der betroffene Spieler wählt, von welcher Karte die Schildpunkte
+  zuerst entfernt werden.
+- Sind danach noch Schaden UND weitere Schildquellen vorhanden,
+  erscheint die Auswahl erneut.
+- Erst wenn keine passenden Schilde mehr vorhanden sind, wird der
+  verbleibende Schaden automatisch von den Herzen abgezogen.
+- Physischer Schaden zeigt nur physische Schildquellen.
+- ASTRAL-Schaden zeigt nur ASTRAL-Schildquellen.
+- Angreifer und Verteidiger werden bei einem gleichzeitigen Kampf
+  getrennt abgewickelt; dadurch kann jeder für seine Bezwingerin die
+  jeweilige Schildquelle bestimmen.
+- Erst nach Abschluss aller Schildentscheidungen werden besiegte Karten
+  entfernt und der Kampf beendet.
+- Primär-/Sekundärbereich und Zuflucht bleiben ohne angelegte
+  Bezwingerinnen-Ausrüstung bei der direkten Schild->Herz-Abwicklung.
 
-WICHTIG:
-Das Regelwerk erlaubt bei externen Schildpunkten grundsätzlich die Wahl,
-ob zuerst externer oder Basisschild entfernt wird. In dieser PWA wurde
-auf ausdrücklichen Wunsch stattdessen die Zusatzregel „Ausrüstung zuerst“
-umgesetzt.
+Die Stärkeboni aus v1.21 bleiben erhalten:
+Basisstärke + aktuell wirksame Ausrüstungsstärke nur für den Kampf.
 
-Service Worker v28.
+Service Worker v29.
 
 Zu ersetzen:
 - battlefield.js

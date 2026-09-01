@@ -605,6 +605,30 @@ function renderActions(){
     }
   }
   if(ph.id==='combat'){
+    if(state.pendingDamage){
+      const choice=E().currentShieldChoice(state);
+      if(choice){
+        const affected=state.players[choice.playerIndex];
+        const bez=affected.bezSlots[choice.bezSlot];
+        const info=document.createElement('span');
+        info.className='shield-choice-info';
+        info.innerHTML=`<strong>${esc(affected.name)}</strong>: ${esc(cardName(bez))} erhält noch <strong>${choice.remaining}</strong> ${choice.type==='physical'?'physischen':'ASTRAL'} Schaden. Wähle, von welcher Karte zuerst Schildpunkte entfernt werden.`;
+        root.appendChild(info);
+
+        choice.sources.forEach(src=>{
+          const b=document.createElement('button');
+          b.className='primary shield-source-button';
+          b.textContent=src.label;
+          b.addEventListener('click',()=>{
+            const rr=E().chooseShieldSource(state,src.source,src.kind);
+            saveRender(rr.msg||'Schildpunkte entfernt.');
+          });
+          root.appendChild(b);
+        });
+        return;
+      }
+    }
+
     if(state.attack){
       const a=p.bezSlots[state.attack.attackerSlot];
       const b=document.createElement('button');

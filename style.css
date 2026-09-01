@@ -780,3 +780,15 @@ h1{font-size:30px;margin:0 0 16px}
 .equip-slot .stat.astral,
 .equip-slot .stat.pshield,
 .equip-slot .stat.ashield{font-weight:700;}
+
+/* Gefecht v1.22 – regelkonforme Auswahl der Schildquelle */
+.shield-choice-info{
+  flex-basis:100%;
+  padding:7px 9px;
+  border:1px solid rgba(215,180,85,.55);
+  border-radius:8px;
+  background:rgba(215,180,85,.08);
+}
+.shield-source-button{
+  white-space:normal;
+}
