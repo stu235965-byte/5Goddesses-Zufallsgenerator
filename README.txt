@@ -1,21 +1,37 @@
-5Goddesses – Gefecht v1.8
+5Goddesses – Gefecht v1.9
 
-Korrektur der Einsatzverzögerung:
+Neuer Angriffsablauf in der Ansturmphase:
 
-Eine Karte ist jetzt NUR dann einsatzverzögert, wenn:
-1. sie KEINE Zuflucht ist,
-2. sie KEINE Entwicklungskarte ist,
-3. sie ein Herz-Attribut besitzt.
+1. Eigene einsatzbereite Bezwingerin direkt auf dem Spielfeld anklicken.
+2. Regelkonforme gegnerische Karten mit Herz-Attribut leuchten gold auf.
+3. Gewünschtes Ziel direkt auf dem Spielfeld anklicken.
+4. Erst danach erscheinen die Buttons:
+   - Physisch angreifen
+   - ASTRAL angreifen
+5. Nach Wahl der Angriffsart erhält der verteidigende Spieler eine Reaktionsabfrage.
+6. Er kann eine seiner verdeckten AZR-Karten aktivieren.
+7. Danach muss er ausdrücklich mit
+   „Okay – Angriff fortsetzen“ / „Angriff zulassen“
+   bestätigen.
+8. Erst dann wird in die Kampfphase gewechselt.
 
-Wichtig:
-- Herzen = 0 zählt ausdrücklich als vorhandenes Herz-Attribut.
-- ASTRAL- und Rüstkammerkarten ohne Herz-Attribut sind nie einsatzverzögert.
-- Entwicklungskarten sind nie einsatzverzögert.
-- Zufluchtkarten sind nie einsatzverzögert.
-- Nur tatsächlich einsatzverzögerte Karten werden um 180° gedreht.
-- Bei Karten ohne Einsatzverzögerung wird auch kein Hinweis
-  'EINSATZBEREIT' / 'Einsatzverzögerung' angezeigt.
+Kampf:
+- Physische Stärke wird mit physischem Schild verrechnet.
+- ASTRAL-Stärke wird mit ASTRAL-Schild verrechnet.
+- Nicht vom passenden Schild aufgefangener Schaden reduziert Herzen.
+- Karten mit 0 Herzen werden auf den Ablagestapel gelegt.
+- Zuflucht mit 0 Herzen beendet das Gefecht.
+- Einsatzverzögerte Karten können NICHT selbst angreifen.
+- Einsatzverzögerte Karten können weiterhin angegriffen werden.
 
-Drag & Drop aus v1.7 bleibt enthalten.
+Zusätzlich:
+- gegnerische Sekundärkarte mit Herzen kann Ziel sein
+- gegnerische Karte in der gemeinsamen Primärzone mit Herzen kann Ziel sein
+- Zuflucht bleibt nur unter den im Regelwerk vorgesehenen Grundbedingungen direkt angreifbar
 
-Service Worker: v15
+Noch nicht automatisch umgesetzt:
+- konkrete Effekte aktivierter verdeckter Karten
+- Primär-/Sekundärangriff als Karteneffekt
+- individuelle Kartentexte/Wunder
+
+Service Worker: v16

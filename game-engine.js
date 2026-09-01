@@ -250,27 +250,86 @@ function develop(state,kind,slot=null){
   return {ok:true};
 }
 function canAttack(runtime,p){
+  // Einsatzverzögerte Karten können angegriffen werden, aber selbst nicht angreifen.
   return !!runtime && runtime.ready && runtime.attackedTurn!==p.turnCount;
+}
+function hasHeartAttribute(runtime){
+  if(!runtime)return false;
+  const c=cardData(runtime);
+  return c?.herzen !== null && c?.herzen !== undefined;
+}
+function targetKey(t){
+  return `${t.type}:${t.slot??''}`;
 }
 function attackTargets(state,attackerSlot){
   const opp=opponent(state);
   const targets=[];
-  opp.bezSlots.forEach((r,i)=>{if(r)targets.push({type:'bez',slot:i,label:cardData(r)?.name||`Bezwingerin ${i+1}`})});
-  if(opp.primary)targets.push({type:'primary',label:cardData(opp.primary)?.name||'Primärbereich'});
-  // Zuflucht nur wenn keine gegnerische Bezwingerin auf dem Feld ODER Gegenüber frei.
+
+  // Jede gegnerische Bezwingerin mit Herz-Attribut ist grundsätzlich anwählbar.
+  opp.bezSlots.forEach((r,i)=>{
+    if(r && hasHeartAttribute(r)){
+      targets.push({type:'bez',slot:i,label:cardData(r)?.name||`Bezwingerin ${i+1}`});
+    }
+  });
+
+  // Sekundärbereich des Gegners, sofern dort eine Karte mit Herzen liegt.
+  if(opp.secondary && hasHeartAttribute(opp.secondary)){
+    targets.push({type:'secondary',label:cardData(opp.secondary)?.name||'Sekundärbereich'});
+  }
+
+  // Die gemeinsame Primärzone kann nur angegriffen werden, wenn dort eine
+  // gegnerische Karte mit Herz-Attribut liegt.
+  if(state.sharedPrimary &&
+     state.sharedPrimary.owner===opp.index &&
+     hasHeartAttribute(state.sharedPrimary)){
+    targets.push({type:'primary',label:cardData(state.sharedPrimary)?.name||'Primärbereich'});
+  }
+
+  // Zuflucht nur wenn keine gegnerische Bezwingerin auf dem Feld ODER der
+  // direkt gegenüberliegende Bezwingerinnenbereich frei ist.
   const noBez=opp.bezSlots.every(x=>!x);
-  if(noBez || !opp.bezSlots[attackerSlot])targets.push({type:'refuge',label:`Zuflucht von ${opp.name}`});
+  if((noBez || !opp.bezSlots[attackerSlot]) && hasHeartAttribute(opp.refuge)){
+    targets.push({type:'refuge',label:`Zuflucht von ${opp.name}`});
+  }
   return targets;
 }
 function prepareAttack(state,attackerSlot,target,attackType){
   if(currentPhase(state).id!=='rush')return {ok:false,msg:'Angriffe werden in der Ansturmphase festgelegt.'};
   const p=active(state),r=p.bezSlots[attackerSlot];
-  if(!canAttack(r,p))return {ok:false,msg:'Diese Bezwingerin ist nicht einsatzbereit oder hat bereits angegriffen.'};
+  if(!canAttack(r,p))return {ok:false,msg:'Diese Bezwingerin ist einsatzverzögert oder hat bereits angegriffen.'};
   if(!['physical','astral'].includes(attackType))return {ok:false,msg:'Ungültige Angriffsart.'};
-  const legal=attackTargets(state,attackerSlot).some(t=>t.type===target.type && t.slot===target.slot);
+  const legal=attackTargets(state,attackerSlot).some(t=>targetKey(t)===targetKey(target));
   if(!legal)return {ok:false,msg:'Dieses Angriffsziel ist nach der Grundregel nicht zulässig.'};
-  state.attack={attackerSlot,target,attackType};
-  log(state,`${p.name} legt Angreifer, Ziel und ${attackType==='physical'?'physischen':'ASTRAL'} Angriff fest.`);
+
+  state.attack={
+    attackerSlot,
+    target,
+    attackType,
+    defenderConfirmed:false,
+    revealedDuringDefense:false
+  };
+  log(state,`${p.name} kündigt mit ${cardData(r)?.name||'einer Bezwingerin'} einen ${attackType==='physical'?'physischen':'ASTRAL'} Angriff an.`);
+  return {ok:true};
+}
+function defenderFaceDownSlots(state){
+  if(!state.attack)return [];
+  const opp=opponent(state);
+  return opp.azr.map((r,i)=>r?.faceDown?i:null).filter(i=>i!==null);
+}
+function revealDefenderCard(state,slot){
+  if(currentPhase(state).id!=='rush' || !state.attack)return {ok:false,msg:'Es wartet kein Angriff auf die Reaktion des Verteidigers.'};
+  const opp=opponent(state),r=opp.azr[slot];
+  if(!r || !r.faceDown)return {ok:false,msg:'In diesem AZR-Feld liegt keine verdeckte Karte.'};
+  r.faceDown=false;
+  state.attack.revealedDuringDefense=true;
+  log(state,`${opp.name} aktiviert die verdeckte Karte in AZR ${slot+1}: ${cardData(r)?.name||'Karte'}.`);
+  return {ok:true};
+}
+function confirmAttack(state){
+  if(currentPhase(state).id!=='rush' || !state.attack)return {ok:false,msg:'Es ist kein Angriff vorbereitet.'};
+  state.attack.defenderConfirmed=true;
+  state.phaseIndex=6;
+  log(state,`${opponent(state).name} lässt den Angriff zu. Die Kampfphase beginnt.`);
   return {ok:true};
 }
 function applyDamage(runtime,amount,type){
@@ -285,17 +344,27 @@ function applyDamage(runtime,amount,type){
 }
 function killIfNeeded(state,playerIndex,kind,slot=null){
   const p=state.players[playerIndex];
-  const r=kind==='bez'?p.bezSlots[slot]:kind==='primary'?p.primary:p.refuge;
+  let r=null;
+  if(kind==='bez')r=p.bezSlots[slot];
+  else if(kind==='primary')r=state.sharedPrimary;
+  else if(kind==='secondary')r=p.secondary;
+  else r=p.refuge;
+
   if(!r || r.hearts>0)return false;
+
   if(kind==='refuge'){
     state.winner=1-playerIndex;
     log(state,`${p.name}s Zuflucht fällt auf 0 Herzen. ${state.players[state.winner].name} gewinnt das Gefecht.`);
     return true;
   }
-  for(const img of r.developmentStack)p.discard.push(img);
+
+  for(const img of r.developmentStack||[r.bild])p.discard.push(img);
+
   if(kind==='bez')p.bezSlots[slot]=null;
-  if(kind==='primary')p.primary=null;
-  log(state,`${cardData(r)?.name||'Eine Karte'} wird zerstört und auf den Ablagestapel gelegt.`);
+  if(kind==='primary')state.sharedPrimary=null;
+  if(kind==='secondary')p.secondary=null;
+
+  log(state,`${cardData(r)?.name||'Eine Karte'} fällt auf 0 Herzen und wird auf den Ablagestapel gelegt.`);
   return true;
 }
 function resolveCombat(state){
@@ -304,10 +373,13 @@ function resolveCombat(state){
   const a=p.bezSlots[state.attack.attackerSlot];
   if(!a)return {ok:false,msg:'Der Angreifer ist nicht mehr auf dem Feld.'};
 
+  if(!state.attack.defenderConfirmed)return {ok:false,msg:'Der verteidigende Spieler muss den Angriff zuerst zulassen.'};
+
   const target=state.attack.target;
   let d=null,defKind=target.type,defSlot=target.slot??null;
   if(target.type==='bez')d=opp.bezSlots[target.slot];
-  else if(target.type==='primary')d=opp.primary;
+  else if(target.type==='primary')d=state.sharedPrimary;
+  else if(target.type==='secondary')d=opp.secondary;
   else d=opp.refuge;
   if(!d)return {ok:false,msg:'Das Ziel ist nicht mehr vorhanden.'};
 
@@ -361,6 +433,7 @@ function advancePhase(state){
     if(nonempty && !p.drawDone)return {ok:false,msg:'In der Ziehphase muss zuerst eine Karte von einem Hauptstapel gezogen werden.'};
   }
   if(phase.id==='rush'){
+    if(state.attack)return {ok:false,msg:'Der angekündigte Angriff muss zuerst vom verteidigenden Spieler bestätigt oder durch eine verdeckte Karte beantwortet werden.'};
     // Kein Angriff geplant: direkt in NP.
     state.phaseIndex=7;
     beginPhase(state);
@@ -414,6 +487,7 @@ function clear(){localStorage.removeItem('5goddesses_active_game_v1')}
 window.G5Engine={
   PHASES,decks,validDeck,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,playOpenAzr,reveal,
-  availableDevelopment,develop,canAttack,attackTargets,prepareAttack,resolveCombat,returnToRush,cardData
+  availableDevelopment,develop,canAttack,hasHeartAttribute,attackTargets,prepareAttack,
+  defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,returnToRush,cardData
 };
 })();

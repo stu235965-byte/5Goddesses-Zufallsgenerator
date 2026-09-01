@@ -6,7 +6,7 @@ let state=null;
 let selectedHandIndex=null;
 let selectedAttacker=null;
 let selectedTarget=null;
-let selectedAttackType='physical';
+let selectedAttackType=null;
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function cardName(r){return r?E().cardData(r)?.name||'Karte':''}
@@ -133,7 +133,7 @@ function playerBoardHtml(p,isActive,isOpponent){
 
       <div class="playmat-center">
         <div class="secondary-row">
-          <div class="secondary-zone">
+          <div class="secondary-zone" data-secondary-target>
             <span class="area-title">SEKUNDÄRZONE</span>
             ${runtimeCardHtml(p.secondary||null,{small:true})}
           </div>
@@ -176,7 +176,7 @@ function renderSharedPrimary(){
   if(!root)return;
   const shared=state.sharedPrimary||null;
   root.innerHTML=shared
-    ? `<div class="shared-primary-card">${runtimeCardHtml(shared)}</div>`
+    ? `<div class="shared-primary-card" data-primary-target>${runtimeCardHtml(shared)}</div>`
     : `<div class="shared-primary-empty"><span>PRIMÄR</span><small>Frei</small></div>`;
 }
 
@@ -203,12 +203,39 @@ function renderBoards(){
   });
   document.querySelector('#playerBoard [data-refuge]')?.addEventListener('click',()=>handleRefuge());
 
-  // Gegnerische Ziele in AP anklickbar.
-  document.querySelectorAll('#opponentBoard [data-bez]').forEach(btn=>{
-    btn.disabled=false;
-    btn.addEventListener('click',()=>chooseTarget({type:'bez',slot:Number(btn.dataset.bez)}));
-  });
-  document.querySelector('#opponentBoard [data-refuge]')?.addEventListener('click',()=>chooseTarget({type:'refuge'}));
+  // Angriffsauswahl in der Ansturmphase.
+  if(phase()?.id==='rush' && !state.attack){
+    // Eigene einsatzbereite Bezwingerinnen hervorheben.
+    document.querySelectorAll('#playerBoard [data-bez]').forEach(btn=>{
+      const slot=Number(btn.dataset.bez);
+      const r=E().active(state).bezSlots[slot];
+      if(E().canAttack(r,E().active(state))){
+        btn.classList.add('attack-source-valid');
+        if(selectedAttacker===slot)btn.classList.add('attack-source-selected');
+      }
+    });
+
+    // Nach Wahl eines Angreifers nur legale gegnerische Karten mit Herzen hervorheben.
+    if(selectedAttacker!==null){
+      const targets=E().attackTargets(state,selectedAttacker);
+      const addTarget=(selector,target)=>{
+        const el=document.querySelector(selector);
+        if(!el)return;
+        const legal=targets.some(t=>t.type===target.type && t.slot===target.slot);
+        if(!legal)return;
+        el.classList.add('attack-target-valid');
+        if(selectedTarget && selectedTarget.type===target.type && selectedTarget.slot===target.slot){
+          el.classList.add('attack-target-selected');
+        }
+        el.addEventListener('click',()=>chooseTarget(target));
+      };
+
+      [0,1].forEach(i=>addTarget(`#opponentBoard [data-bez="${i}"]`,{type:'bez',slot:i}));
+      addTarget('#opponentBoard [data-refuge]',{type:'refuge'});
+      addTarget('#opponentBoard [data-secondary-target]',{type:'secondary'});
+      addTarget('#sharedPrimaryZone [data-primary-target]',{type:'primary'});
+    }
+  }
 
   wireDragAndDrop();
 }
@@ -325,65 +352,110 @@ function renderActions(){
   }
 
   if(ph.id==='rush'){
-    const attackers=p.bezSlots.map((r,i)=>E().canAttack(r,p)?i:null).filter(i=>i!==null);
-    if(!attackers.length){
-      const info=document.createElement('span');
-      info.textContent='Keine einsatzbereite Bezwingerin kann angreifen. Du kannst in die Nachschubphase wechseln.';
+    const opp=E().opponent(state);
+
+    if(state.attack){
+      const atk=p.bezSlots[state.attack.attackerSlot];
+      const targetLabel=(()=>{
+        const t=state.attack.target;
+        if(t.type==='bez')return cardName(opp.bezSlots[t.slot]);
+        if(t.type==='secondary')return cardName(opp.secondary);
+        if(t.type==='primary')return cardName(state.sharedPrimary);
+        return cardName(opp.refuge);
+      })();
+
+      const info=document.createElement('div');
+      info.className='defense-prompt';
+      info.innerHTML=`<strong>${esc(opp.name)} ist am Zug zur Reaktion.</strong><br>
+        ${esc(cardName(atk))} greift <strong>${esc(targetLabel)}</strong>
+        ${state.attack.attackType==='physical'?'physisch':'ASTRAL'} an.`;
       root.appendChild(info);
-    }else{
-      const lab=document.createElement('span');
-      lab.textContent='1. Angreifer wählen:';
-      root.appendChild(lab);
-      attackers.forEach(i=>{
-        const b=document.createElement('button');
-        b.textContent=cardName(p.bezSlots[i]);
-        b.classList.toggle('selected-action',selectedAttacker===i);
-        b.addEventListener('click',()=>{selectedAttacker=i;selectedTarget=null;renderActions();renderBoards();});
-        root.appendChild(b);
-      });
 
-      if(selectedAttacker!==null){
-        const typeP=document.createElement('button');
-        typeP.textContent='Physischer Angriff';
-        typeP.classList.toggle('selected-action',selectedAttackType==='physical');
-        typeP.addEventListener('click',()=>{selectedAttackType='physical';renderActions();});
-        const typeA=document.createElement('button');
-        typeA.textContent='ASTRAL-Angriff';
-        typeA.classList.toggle('selected-action',selectedAttackType==='astral');
-        typeA.addEventListener('click',()=>{selectedAttackType='astral';renderActions();});
-        root.append(typeP,typeA);
+      const hidden=E().defenderFaceDownSlots(state);
+      if(hidden.length){
+        const note=document.createElement('span');
+        note.textContent='Möchtest du vor dem Kampf eine verdeckte AZR-Karte aktivieren?';
+        root.appendChild(note);
 
-        const targets=E().attackTargets(state,selectedAttacker);
-        const tlabel=document.createElement('span');
-        tlabel.textContent='2. Ziel wählen:';
-        root.appendChild(tlabel);
-        targets.forEach(t=>{
+        hidden.forEach(slot=>{
           const b=document.createElement('button');
-          b.textContent=t.label;
-          const same=selectedTarget && selectedTarget.type===t.type && selectedTarget.slot===t.slot;
-          b.classList.toggle('selected-action',same);
-          b.addEventListener('click',()=>{selectedTarget={type:t.type,slot:t.slot};renderActions();});
+          b.textContent=`Verdeckte Karte in AZR ${slot+1} aktivieren`;
+          b.addEventListener('click',()=>{
+            const r=E().revealDefenderCard(state,slot);
+            saveRender(r.msg||'Verdeckte Karte aktiviert.');
+          });
           root.appendChild(b);
         });
+      }else{
+        const note=document.createElement('span');
+        note.textContent=state.attack.revealedDuringDefense
+          ?'Verdeckte Karte aktiviert. Prüfe den Effekt und bestätige anschließend den Angriff.'
+          :'Keine verdeckte AZR-Karte kann aktiviert werden.';
+        root.appendChild(note);
+      }
 
-        if(selectedTarget){
-          const prep=document.createElement('button');
-          prep.className='primary';
-          prep.textContent='Angriff festlegen → Kampfphase';
-          prep.addEventListener('click',()=>{
-            const r=E().prepareAttack(state,selectedAttacker,selectedTarget,selectedAttackType);
-            if(r.ok){
-              state.phaseIndex=6;
-              selectedAttacker=null;selectedTarget=null;
-            }
-            saveRender(r.msg||'Angriff festgelegt.');
-          });
-          root.appendChild(prep);
+      const allow=document.createElement('button');
+      allow.className='primary';
+      allow.textContent=state.attack.revealedDuringDefense
+        ?'Okay – Angriff fortsetzen'
+        :'Angriff zulassen';
+      allow.addEventListener('click',()=>{
+        const r=E().confirmAttack(state);
+        if(r.ok){
+          selectedAttacker=null;
+          selectedTarget=null;
+          selectedAttackType=null;
         }
+        saveRender(r.msg||'Kampfphase beginnt.');
+      });
+      root.appendChild(allow);
+
+      const warn=document.createElement('span');
+      warn.className='action-note';
+      warn.textContent='Die konkrete Wirkung aktivierter verdeckter Karten wird noch nicht automatisch ausgeführt.';
+      root.appendChild(warn);
+    }else{
+      const attackers=p.bezSlots.map((r,i)=>E().canAttack(r,p)?i:null).filter(i=>i!==null);
+
+      if(!attackers.length){
+        const info=document.createElement('span');
+        info.textContent='Keine einsatzbereite Bezwingerin kann angreifen. Einsatzverzögerte Karten dürfen weiterhin angegriffen werden.';
+        root.appendChild(info);
+      }else if(selectedAttacker===null){
+        const info=document.createElement('span');
+        info.textContent='Klicke auf eine eigene einsatzbereite Bezwingerin. Sie wird als Angreiferin ausgewählt.';
+        root.appendChild(info);
+      }else if(selectedTarget===null){
+        const info=document.createElement('span');
+        info.innerHTML=`Angreiferin: <strong>${esc(cardName(p.bezSlots[selectedAttacker]))}</strong>. Klicke jetzt auf eines der gold aufleuchtenden gegnerischen Ziele mit Herzpunkten.`;
+        root.appendChild(info);
+      }else{
+        const info=document.createElement('span');
+        info.innerHTML=`Ziel gewählt. Wähle jetzt die Angriffsart für <strong>${esc(cardName(p.bezSlots[selectedAttacker]))}</strong>.`;
+        root.appendChild(info);
+
+        const physical=document.createElement('button');
+        physical.className='primary';
+        physical.textContent='Physisch angreifen';
+        physical.addEventListener('click',()=>{
+          selectedAttackType='physical';
+          const r=E().prepareAttack(state,selectedAttacker,selectedTarget,'physical');
+          saveRender(r.msg||'Physischer Angriff angekündigt.');
+        });
+
+        const astral=document.createElement('button');
+        astral.className='primary';
+        astral.textContent='ASTRAL angreifen';
+        astral.addEventListener('click',()=>{
+          selectedAttackType='astral';
+          const r=E().prepareAttack(state,selectedAttacker,selectedTarget,'astral');
+          saveRender(r.msg||'ASTRAL-Angriff angekündigt.');
+        });
+
+        root.append(physical,astral);
       }
     }
   }
-
   if(ph.id==='combat'){
     if(state.attack){
       const a=p.bezSlots[state.attack.attackerSlot];
@@ -423,6 +495,19 @@ function renderActions(){
 function handleOwnBez(slot){
   const p=E().active(state),r=p.bezSlots[slot],ph=phase();
   if(!r)return;
+
+  if(ph.id==='rush' && !state.attack){
+    if(!E().canAttack(r,p)){
+      return message('Diese Bezwingerin ist einsatzverzögert oder hat in dieser Kampfrunde bereits angegriffen.','warn');
+    }
+    selectedAttacker=slot;
+    selectedTarget=null;
+    selectedAttackType=null;
+    renderBoards();
+    renderActions();
+    return message(`${cardName(r)} als Angreiferin gewählt. Wähle jetzt ein leuchtendes gegnerisches Ziel.`);
+  }
+
   if(['supply','resupply'].includes(ph.id)){
     if(E().readyEligibleBez(state,slot)){
       const rr=E().readyBez(state,slot);
@@ -460,7 +545,10 @@ function chooseTarget(target){
   const legal=E().attackTargets(state,selectedAttacker).some(t=>t.type===target.type&&t.slot===target.slot);
   if(!legal)return message('Dieses Ziel darf mit dieser Bezwingerin derzeit nicht angegriffen werden.','warn');
   selectedTarget=target;
+  selectedAttackType=null;
+  renderBoards();
   renderActions();
+  message('Angriffsziel gewählt. Wähle jetzt Physisch oder ASTRAL.');
 }
 
 function clearDropTargets(){

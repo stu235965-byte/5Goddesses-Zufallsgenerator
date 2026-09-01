@@ -561,3 +561,34 @@ h1{font-size:30px;margin:0 0 16px}
 .delayed-card>img{
   transform:rotate(180deg);
 }
+
+
+/* Gefecht v1.9 – Angriffsauswahl */
+.attack-source-valid{
+  outline:2px solid rgba(106,168,255,.85) !important;
+  outline-offset:3px;
+  cursor:pointer !important;
+}
+.attack-source-valid:hover,
+.attack-source-selected{
+  outline:4px solid #6aa8ff !important;
+  box-shadow:0 0 24px rgba(106,168,255,.55) !important;
+}
+.attack-target-valid{
+  outline:3px solid #d7bd77 !important;
+  outline-offset:4px;
+  box-shadow:0 0 25px rgba(215,189,119,.58) !important;
+  cursor:pointer !important;
+}
+.attack-target-valid:hover,
+.attack-target-selected{
+  outline:5px solid #f4dc91 !important;
+  box-shadow:0 0 34px rgba(244,220,145,.75) !important;
+}
+.defense-prompt{
+  padding:10px 12px;
+  border:1px solid rgba(215,189,119,.55);
+  border-radius:10px;
+  background:rgba(215,189,119,.08);
+  line-height:1.45;
+}
