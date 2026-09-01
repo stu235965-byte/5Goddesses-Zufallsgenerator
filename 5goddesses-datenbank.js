@@ -4193,7 +4193,7 @@ window.GODDESSES_DB = {
       "hauptattribut": "BEZWINGERIN",
       "kartentyp": "Bezwingerin",
       "entwicklungskarte": true,
-      "grundkarte_bild": null,
+      "grundkarte_bild": "Bezwingerin/1.02-13-32-a55290d6.webp",
       "fraktion": "Unterwelt",
       "stufe": 2,
       "klasse": "Kriegerin",

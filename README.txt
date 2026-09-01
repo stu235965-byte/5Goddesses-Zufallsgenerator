@@ -1,31 +1,36 @@
-5Goddesses – Gemeinsames Datenmodell
-Schema-Version: 1
+5Goddesses PWA – Update Zufallsgenerator mit Entwicklungsdeck
 
-Gesamtzahl Karten: 158
+Auf GitHub im Hauptverzeichnis ersetzen:
+- generator.js
+- service-worker.js
+- 5goddesses-datenbank.js
+- 5goddesses-datenbank.json
 
-Verteilung:
-- Zuflucht: 10
-- Bezwingerinnen: 30
-- Astral: 49
-- Rüstkammer: 50
-- Entwicklung: 19
+Neue Generatorlogik:
+- 1 Zuflucht
+- 3 Bezwingerinnen mit unterschiedlichen Klassen
+- 5 Astralkammer
+- 5 Rüstkammer
+- 5 Entwicklungskarten
 
-Wichtig:
-- Alle Kartengruppen verwenden jetzt exakt dieselben Schlüsselfelder.
-- Nicht relevante/nicht vorhandene Einzelwerte stehen als null.
-- Ein tatsächlicher Kartenwert 0 bleibt 0.
-- Entwicklungskarten sind über entwicklungskarte=true markiert.
-- Wenn möglich, verweist grundkarte_bild auf die gleichnamige Stufe-1-Karte.
-- effekte und tags sind bereits als leere Felder vorbereitet, damit wir später
-  Kartentexte und NPC-Logik ergänzen können, ohne das Schema erneut umzubauen.
+Alle Karten hängen vom persönlichen Kartenpool ab.
 
-Dateien:
-- 5goddesses-datenbank.json : empfohlene zentrale Datenbank inkl. Indizes/Deckregeln
-- karten_daten.json          : nur die Kartenliste
-- 5goddesses-datenbank.js   : direkt im Browser/PWA einbindbar
-- karten_daten.csv           : Kontrolltabelle
-- datenmodell_schema.json    : Erklärung aller Felder
+Pflichtregel:
+Die gezogene Stufe-1-Zuflucht wird nur aus Zufluchten gewählt, deren passende
+Stufe-2-Zuflucht ebenfalls im Kartenpool ausgewählt ist. Diese passende
+Stufe-2-Zuflucht ist immer eine der fünf Entwicklungskarten.
 
-Validierung:
-- Doppelte IDs: 0
-- Karten ohne Namen: 0
+Priorisierung:
+Für die übrigen vier Plätze werden zuerst verfügbare Stufe-2-Entwicklungskarten
+bevorzugt, deren Grundkarte tatsächlich im gerade generierten Deck liegt.
+Wenn danach noch Plätze frei sind, werden sie zufällig mit anderen ausgewählten
+Entwicklungskarten aufgefüllt.
+
+Hinweis zum aktuellen Datenbestand:
+Die derzeitige gemeinsame Datenbank enthält Entwicklungskarten für Zufluchten
+und Bezwingerinnen. Sobald später passende Stufe-2-Astral- oder
+Rüstkammerkarten in der Datenbank vorhanden sind, werden sie durch dieselbe
+Logik automatisch ebenfalls priorisiert.
+
+Service Worker:
+Cache-Version auf v6 erhöht, damit installierte PWAs die neue Logik laden.
