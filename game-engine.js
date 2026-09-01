@@ -77,6 +77,7 @@ function playerFromDeck(deck,index){
     name:`Spieler ${index+1}`,
     deckName:deck.name,
     turnCount:0,
+    honorGrantedTurn:null,
     refuge:makeRuntimeCard(k.zuflucht[0],index,-1),
     stacks:{
       bezwingerinnen:shuffle(k.bezwingerinnen),
@@ -146,16 +147,38 @@ function currentPhase(state){return PHASES[state.phaseIndex]}
 function honorEligible(runtime,p){
   if(!runtime)return false;
   const c=cardData(runtime);
-  return c?.ehre!==null && c?.ehre!==undefined && p.turnCount>runtime.enteredTurn;
+  // Für die Ehrungsphase zählt ausschließlich, ob die Karte ein Herz-Attribut
+  // besitzt. Auch ein gedruckter Herz-Wert von 0 zählt.
+  return c?.herzen !== null && c?.herzen !== undefined;
+}
+function honorCardsOfPlayer(state,p){
+  const cards=[
+    p.refuge,
+    ...p.bezSlots,
+    p.secondary,
+    ...p.azr,
+    state.sharedPrimary?.owner===p.index ? state.sharedPrimary : null
+  ];
+  return cards.filter(Boolean);
 }
 function grantHonor(state){
   const p=active(state);
+
+  // Schutz gegen doppelte Vergabe innerhalb derselben eigenen Kampfrunde.
+  if(p.honorGrantedTurn===p.turnCount)return 0;
+
   let n=0;
-  const cards=[p.refuge,...p.bezSlots,p.primary,...p.azr.filter(x=>x && !x.faceDown)];
-  for(const r of cards){
-    if(honorEligible(r,p)){r.honor+=1;n++}
+  for(const r of honorCardsOfPlayer(state,p)){
+    if(honorEligible(r,p)){
+      r.honor=(r.honor||0)+1;
+      n++;
+    }
   }
-  log(state,n?`${p.name} vergibt ${n} Ehrenpunkt${n===1?'':'e'} auf berechtigte Karten.`:`${p.name} hat derzeit keine Karte, die Ehre erhält.`);
+
+  p.honorGrantedTurn=p.turnCount;
+  log(state,n
+    ?`${p.name}: ${n} Karte${n===1?'':'n'} mit Herzanzahl erhalten jeweils 1 Ehre.`
+    :`${p.name} hat derzeit keine Karte mit Herzanzahl, die Ehre erhält.`);
   return n;
 }
 function readyEligibleBez(state,slot){
@@ -412,12 +435,16 @@ function beginPhase(state){
     state.attack=null;
   }
   if(phase.id==='honor'){
-    // Erste KR des Startspielers: EP wird übersprungen.
+    // Zusatzregel: Die allererste Ehrungsphase des Startspielers entfällt.
     if(state.firstTurn && state.activePlayer===state.startingPlayer){
       log(state,`${p.name}s erste Ehrungsphase wird übersprungen.`);
       state.phaseIndex=2;
       return beginPhase(state);
     }
+
+    // In jeder regulären Ehrungsphase erhält jede eigene Karte auf dem Feld
+    // mit vorhandenem Herz-Attribut automatisch genau 1 Ehre.
+    grantHonor(state);
   }
   if(phase.id==='supply_start'){
     log(state,`Anfang der Versorgungsphase von ${p.name}: zeitabhängige Karteneffekte sind noch nicht implementiert.`);
@@ -487,6 +514,7 @@ function migrateLoadedState(state){
 
   state.players.forEach((p,index)=>{
     if(p.index===undefined)p.index=index;
+    if(p.honorGrantedTurn===undefined)p.honorGrantedTurn=null;
     if(p.secondary===undefined)p.secondary=null;
     if(!Array.isArray(p.azr))p.azr=[null,null,null];
     while(p.azr.length<3)p.azr.push(null);

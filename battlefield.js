@@ -17,6 +17,8 @@ function saveRender(msg=''){
   render(msg);
 }
 function gamePageOpened(){
+  window.addEventListener('resize',updateStickyGameOffsets);
+
   fillDeckSelectors();
   const saved=E().load();
   document.getElementById('gameResume').hidden=!saved;
@@ -71,6 +73,8 @@ function newGame(){
   state=null;E().clear();
   document.getElementById('gameShell').hidden=true;
   document.getElementById('gameSetup').hidden=false;
+  window.addEventListener('resize',updateStickyGameOffsets);
+
   fillDeckSelectors();
 }
 function message(text,type=''){
@@ -316,11 +320,9 @@ function renderActions(){
   root.appendChild(title);
 
   if(ph.id==='honor'){
-    const b=document.createElement('button');
-    b.textContent='Ehre vergeben';
-    b.className='primary';
-    b.addEventListener('click',()=>{E().grantHonor(state);saveRender('Ehrungsphase abgewickelt.');});
-    root.appendChild(b);
+    const info=document.createElement('span');
+    info.textContent='Ehre wurde automatisch vergeben: Jede eigene Karte mit Herzanzahl erhält 1 Ehre.';
+    root.appendChild(info);
   }
 
   if(ph.id==='draw'){
@@ -654,6 +656,24 @@ function wireDragAndDrop(){
 function renderLog(){
   document.getElementById('gameLog').innerHTML=state.log.map(x=>`<div><span>KR ${x.turn}</span>${esc(x.text)}</div>`).join('');
 }
+
+function updateStickyGameOffsets(){
+  const toolbar=document.querySelector('#gameShell .game-toolbar');
+  const actions=document.getElementById('gameActions');
+  if(!toolbar || !actions)return;
+
+  const toolbarStyle=getComputedStyle(toolbar);
+  const toolbarTop=parseFloat(toolbarStyle.top)||0;
+  const toolbarHeight=toolbar.getBoundingClientRect().height;
+
+  // Die Aktionsleiste beginnt immer unterhalb der oberen Gefechtsleiste.
+  const gap=10;
+  document.documentElement.style.setProperty(
+    '--game-actions-sticky-top',
+    `${Math.ceil(toolbarTop+toolbarHeight+gap)}px`
+  );
+}
+
 function render(msg=''){
   if(!state)return;
   document.getElementById('gameSetup').hidden=true;
@@ -677,6 +697,7 @@ function render(msg=''){
   renderHand();
   renderActions();
   renderLog();
+  requestAnimationFrame(updateStickyGameOffsets);
 }
 
 document.getElementById('gameStart')?.addEventListener('click',startGame);
@@ -689,7 +710,9 @@ document.getElementById('gameNextPhase')?.addEventListener('click',()=>{
   saveRender(r.msg||'');
 });
 
-fillDeckSelectors();
+window.addEventListener('resize',updateStickyGameOffsets);
+
+  fillDeckSelectors();
 const saved=E().load();
 document.getElementById('gameResume').hidden=!saved;
 })();

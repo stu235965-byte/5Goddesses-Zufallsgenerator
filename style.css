@@ -597,8 +597,8 @@ h1{font-size:30px;margin:0 0 16px}
 /* Gefecht v1.10 – Phasen-/Aktionsleiste beim Scrollen sichtbar */
 #gameActions{
   position:sticky;
-  top:88px;
-  z-index:95;
+  top:var(--game-actions-sticky-top, 145px);
+  z-index:90;
   margin-top:10px;
   margin-bottom:12px;
   background:rgba(18,18,18,.98);
@@ -607,12 +607,6 @@ h1{font-size:30px;margin:0 0 16px}
   -webkit-backdrop-filter:blur(8px);
 }
 
-/* Etwas kompakter auf kleinen Displays. */
-@media(max-width:700px){
-  #gameActions{
-    top:76px;
-  }
-}
 
 .board-render-error{
   min-height:180px;
@@ -625,4 +619,13 @@ h1{font-size:30px;margin:0 0 16px}
   color:#ffb0b0;
   background:#241313;
   text-align:center;
+}
+
+
+/* Gefecht v1.13 – Sticky-Leisten stapeln statt überlagern */
+#gameShell .game-toolbar{
+  z-index:100;
+}
+#gameActions{
+  z-index:90;
 }

@@ -1,30 +1,36 @@
-5Goddesses – Gefecht v1.12
+5Goddesses – Gefecht v1.13
 
-ROBUSTER RENDER-FIX
+1. STICKY-LEISTEN
+- Die obere Gefechtsleiste und die darunterliegende Phasen-/Aktionsleiste
+  können sich nicht mehr gegenseitig überlagern.
+- Die Position der unteren Leiste wird dynamisch aus der tatsächlichen
+  Höhe und Position der oberen Leiste berechnet.
+- Das funktioniert auch bei unterschiedlichen Fensterbreiten und wenn
+  die obere Leiste auf kleinen Displays höher wird.
+- Bei einer Größenänderung des Fensters wird der Abstand neu berechnet.
 
-Die Ursache wurde weiter eingegrenzt:
-Die Darstellung der Karten war weiterhin von einer Funktion aus
-game-engine.js abhängig. Bei einem gemischten Browser-/Service-Worker-
-Cache konnte battlefield.js bereits die neue Version sein, während
-game-engine.js noch aus einer älteren Version kam. Dann brach das
-Rendern beim ersten Kartenfeld komplett ab.
+2. EHRUNGSPHASE
+- Die Ehrungsvergabe erfolgt nun automatisch beim Eintritt in die
+  Ehrungsphase.
+- Jede eigene Karte auf dem Spielfeld mit einem vorhandenen Herz-Attribut
+  erhält genau 1 Ehre.
+- Herzen = 0 zählt ausdrücklich als vorhandenes Herz-Attribut.
+- Berücksichtigt werden Zuflucht, Bezwingerinnen, AZR-Karten,
+  Sekundärkarte und eine eigene Karte in der gemeinsamen Primärzone.
+- Verdeckte Karten mit Herz-Attribut erhalten ebenfalls Ehre.
+- Die erste Ehrungsphase des Startspielers wird vollständig übersprungen.
+- Eine Sicherung verhindert doppelte Ehrungsvergabe in derselben
+  eigenen Kampfrunde.
+- Der bisherige Button „Ehre vergeben“ wurde entfernt, da die Vergabe
+  automatisch erfolgt.
 
-In v1.12:
-- battlefield.js besitzt die Einsatzverzögerungsprüfung jetzt selbst.
-- Das Rendern ist damit NICHT mehr von hasDeploymentDelay aus der Engine
-  abhängig.
-- Gegnerfeld und eigenes Spielfeld werden getrennt abgesichert gerendert.
-  Ein einzelner Fehler kann damit nicht mehr das komplette Gefechtsfeld
-  verschwinden lassen.
-- Die Engine exportiert hasDeploymentDelay trotzdem weiterhin korrekt.
-- Sticky Phasenleiste bleibt erhalten.
-- Service Worker v19.
+3. KOMPATIBILITÄT
+- Alte gespeicherte Gefechte erhalten beim Laden automatisch das neue
+  Feld für die Ehrungsvergabe.
+- Service Worker v20.
 
-Bitte bei diesem Fix ALLE vier Dateien ersetzen:
+Zu ersetzen:
 - battlefield.js
 - game-engine.js
 - style.css
 - service-worker.js
-
-Danach Browser/PWA vollständig schließen und neu öffnen.
-Wenn GitHub Pages verwendet wird, ggf. einmal Strg+F5 im Browser.
