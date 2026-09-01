@@ -592,3 +592,24 @@ h1{font-size:30px;margin:0 0 16px}
   background:rgba(215,189,119,.08);
   line-height:1.45;
 }
+
+
+/* Gefecht v1.10 – Phasen-/Aktionsleiste beim Scrollen sichtbar */
+#gameActions{
+  position:sticky;
+  top:88px;
+  z-index:95;
+  margin-top:10px;
+  margin-bottom:12px;
+  background:rgba(18,18,18,.98);
+  box-shadow:0 8px 22px rgba(0,0,0,.45);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+
+/* Etwas kompakter auf kleinen Displays. */
+@media(max-width:700px){
+  #gameActions{
+    top:76px;
+  }
+}
