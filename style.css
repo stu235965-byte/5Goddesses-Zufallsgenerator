@@ -773,3 +773,10 @@ h1{font-size:30px;margin:0 0 16px}
   outline-offset:3px;
   box-shadow:0 0 18px rgba(215,180,85,.55);
 }
+
+/* Gefecht v1.21 – externe Ausrüstungsschilde / temporäre Stärkeboni */
+.equip-slot .stat-row{font-size:.72em;}
+.equip-slot .stat.physical,
+.equip-slot .stat.astral,
+.equip-slot .stat.pshield,
+.equip-slot .stat.ashield{font-weight:700;}

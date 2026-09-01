@@ -10,6 +10,13 @@ let selectedAttackType=null;
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function cardName(r){return r?E().cardData(r)?.name||'Karte':''}
+function finishEquipmentChoice(result,bezSlot,kind){
+  if(!result?.ok || !result.needsShieldChoice)return result;
+  const physical=confirm('Chikaras Stahlherz: Welchen externen Schildpunkt erhält die Bezwingerin?\n\nOK = physischer Schild\nAbbrechen = ASTRAL-Schild');
+  const rr=E().chooseEquipmentShieldBonus(state,bezSlot,kind,physical?'physical':'astral');
+  if(!rr.ok)return rr;
+  return {ok:true,msg:rr.msg};
+}
 function cardImg(r){return r?E().cardData(r)?.bild||r.bild:''}
 function phase(){return state?E().currentPhase(state):null}
 function saveRender(msg=''){
@@ -98,9 +105,14 @@ function cardHasDeploymentDelay(c){
 function statLine(r){
   if(!r)return '';
   const c=E().cardData(r);
+  const isEq=E().isEquipmentCard?.(c);
+  const phys=isEq ? ((r.tempPhysicalBonus||0)+(r.attackPhysicalWhenAttacking||0)) : (r.physical ?? c?.physische_staerke ?? 0);
+  const astr=isEq ? ((r.tempAstralBonus||0)+(r.attackAstralWhenAttacking||0)) : (r.astral ?? c?.astrale_staerke ?? 0);
+  const physText=isEq && phys>0?`+${phys}`:phys;
+  const astrText=isEq && astr>0?`+${astr}`:astr;
   return `<span class="stat heart">♥ ${r.hearts}</span>
-    <span class="stat physical">⚔ ${c?.physische_staerke??0}</span>
-    <span class="stat astral">✦ ${c?.astrale_staerke??0}</span>
+    <span class="stat physical">⚔ ${physText}</span>
+    <span class="stat astral">✦ ${astrText}</span>
     <span class="stat pshield">◆ ${r.physicalShield}</span>
     <span class="stat ashield">◆ ${r.astralShield}</span>
     <span class="stat honor">● ${r.honor}</span>`;
@@ -385,7 +397,8 @@ function renderActions(){
         b.textContent=`An Bezwingerin ${bezSlot+1} anlegen`;
         b.disabled=!p.bezSlots[bezSlot];
         b.addEventListener('click',()=>{
-          const rr=E().equipFromAzr(state,pending.azrSlot,bezSlot,pending.kind);
+          let rr=E().equipFromAzr(state,pending.azrSlot,bezSlot,pending.kind);
+          if(rr.ok)rr=finishEquipmentChoice(rr,bezSlot,pending.kind);
           saveRender(rr.msg||'Ausrüstung angelegt.');
         });
         root.appendChild(b);
@@ -421,8 +434,11 @@ function renderActions(){
             b.textContent=`${c.kartentyp} an Bezwingerin ${bezSlot+1} anlegen`;
             b.disabled=!p.bezSlots[bezSlot];
             b.addEventListener('click',()=>{
-              const r=E().equipFromHand(state,selectedHandIndex,bezSlot,eqKind);
-              if(r.ok)selectedHandIndex=null;
+              let r=E().equipFromHand(state,selectedHandIndex,bezSlot,eqKind);
+              if(r.ok){
+                r=finishEquipmentChoice(r,bezSlot,eqKind);
+                selectedHandIndex=null;
+              }
               saveRender(r.msg||'Ausrüstung angelegt.');
             });
             root.appendChild(b);
@@ -678,15 +694,19 @@ function handleEquipmentSlot(kind,bezSlot){
   if(state.pendingEquipment && state.pendingEquipment.owner===state.activePlayer){
     const pending=state.pendingEquipment;
     if(kind!==pending.kind)return message('Diese aufgedeckte Ausrüstung gehört in einen anderen Ausrüstungsbereich.','warn');
-    const rr=E().equipFromAzr(state,pending.azrSlot,bezSlot,kind);
+    let rr=E().equipFromAzr(state,pending.azrSlot,bezSlot,kind);
+    if(rr.ok)rr=finishEquipmentChoice(rr,bezSlot,kind);
     return saveRender(rr.msg||'Ausrüstung angelegt.');
   }
 
   if(selectedHandIndex!==null){
     const c=handSelected();
     if(c && E().equipmentKind(c)){
-      const rr=E().equipFromHand(state,selectedHandIndex,bezSlot,kind);
-      if(rr.ok)selectedHandIndex=null;
+      let rr=E().equipFromHand(state,selectedHandIndex,bezSlot,kind);
+      if(rr.ok){
+        rr=finishEquipmentChoice(rr,bezSlot,kind);
+        selectedHandIndex=null;
+      }
       return saveRender(rr.msg||'Ausrüstung angelegt.');
     }
   }
@@ -802,7 +822,9 @@ function wireDragAndDrop(){
       if(target.dataset.bez!==undefined){
         r=E().recruit(state,idx,Number(target.dataset.bez));
       }else if(target.dataset.equip!==undefined){
-        r=E().equipFromHand(state,idx,Number(target.dataset.equipBez),target.dataset.equip);
+        const bezSlot=Number(target.dataset.equipBez),kind=target.dataset.equip;
+        r=E().equipFromHand(state,idx,bezSlot,kind);
+        if(r.ok)r=finishEquipmentChoice(r,bezSlot,kind);
       }else if(target.dataset.fieldArea!==undefined){
         r=E().playFieldFromHand(state,idx,target.dataset.fieldArea);
       }else{

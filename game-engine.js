@@ -124,6 +124,116 @@ function fieldArea(c){
 function equipmentLabel(kind){
   return ({weapon:'Waffe',shield:'Schild',armor:'Rüstung',helmet:'Kopfschutz'})[kind]||kind;
 }
+const EQUIPMENT_COMBAT_PROFILES={
+  'Kristallharnisch':            {astralShield:1},
+  'Legionsschild':               {physicalShield:1},
+  'Legionsbrustpanzer':          {physicalShield:1},
+  'Ubusa Brustpanzer':           {physicalShield:1,astralShield:1},
+  'Die strahlende Krone Gloria': {physicalShield:1,astralShield:1},
+  'Glorreicher Helm Victores':   {physicalShield:1},
+  'Energieschild':               {astralShield:1},
+  'Legionshelm':                 {physicalShield:1},
+  'Leichte Robe':                {astralShield:1},
+  'Holzschild':                  {physicalShield:1},
+  'Goldener Dorn':               {physicalShield:1,attackPhysicalWhenAttacking:1},
+  'Gedankenschleier Psythra':    {astralShield:1},
+  'Chikaras Stahlherz':          {shieldChoice:true},
+  'Die Abenddämmerung Hyde':     {tempAstral:1,untilNextSupply:true},
+  'Die Morgenröte Jakyl':        {tempPhysical:1,untilNextSupply:true},
+  'Instabiler Stab':             {tempAstral:1,untilNextSupply:true},
+  'Steinschwert':                {tempPhysical:1,untilNextSupply:true}
+};
+function equipmentCombatProfile(runtimeOrCard){
+  const c=runtimeOrCard?.bild
+    ? (runtimeOrCard.name ? runtimeOrCard : cardData(runtimeOrCard))
+    : runtimeOrCard;
+  return EQUIPMENT_COMBAT_PROFILES[c?.name]||{};
+}
+function initializeEquipmentCombatState(r,p,choice=null){
+  if(!r)return;
+  const prof=equipmentCombatProfile(r);
+  if(r.equipmentCombatInitialized!==true){
+    r.physicalShield=prof.physicalShield||0;
+    r.astralShield=prof.astralShield||0;
+    r.tempPhysicalBonus=prof.tempPhysical||0;
+    r.tempAstralBonus=prof.tempAstral||0;
+    r.attackPhysicalWhenAttacking=prof.attackPhysicalWhenAttacking||0;
+    r.attackAstralWhenAttacking=prof.attackAstralWhenAttacking||0;
+    r.tempBonusExpiresTurn=prof.untilNextSupply ? p.turnCount+1 : null;
+    r.equipmentCombatInitialized=true;
+  }
+  if(prof.shieldChoice && !r.shieldChoice){
+    if(choice==='physical'){
+      r.shieldChoice='physical';
+      r.physicalShield=1;
+      r.astralShield=0;
+    }else if(choice==='astral'){
+      r.shieldChoice='astral';
+      r.physicalShield=0;
+      r.astralShield=1;
+    }
+  }
+}
+function chooseEquipmentShieldBonus(state,bezSlot,kind,choice){
+  const p=active(state);
+  ensureEquipmentState(p);
+  const r=p.equipment[bezSlot]?.[kind];
+  if(!r)return {ok:false,msg:'Keine Ausrüstung vorhanden.'};
+  const prof=equipmentCombatProfile(r);
+  if(!prof.shieldChoice)return {ok:false,msg:'Diese Ausrüstung benötigt keine Schildauswahl.'};
+  if(r.shieldChoice)return {ok:false,msg:'Der Schildtyp wurde bereits gewählt.'};
+  if(!['physical','astral'].includes(choice))return {ok:false,msg:'Ungültiger Schildtyp.'};
+  initializeEquipmentCombatState(r,p,choice);
+  log(state,`${cardData(r)?.name||'Ausrüstung'} erhält 1 ${choice==='physical'?'physischen':'ASTRAL'} externen Schildpunkt.`);
+  return {ok:true};
+}
+function expireEquipmentCombatBonuses(state,p){
+  ensureEquipmentState(p);
+  for(const eq of p.equipment){
+    for(const kind of ['weapon','shield','armor','helmet']){
+      const r=eq[kind];
+      if(!r)continue;
+      initializeEquipmentCombatState(r,p);
+      if(r.tempBonusExpiresTurn!==null && r.tempBonusExpiresTurn!==undefined &&
+         p.turnCount>=r.tempBonusExpiresTurn){
+        if((r.tempPhysicalBonus||0)!==0 || (r.tempAstralBonus||0)!==0){
+          log(state,`${cardData(r)?.name||'Ein Ausrüstungseffekt'}: der zeitlich begrenzte Stärkebonus endet.`);
+        }
+        r.tempPhysicalBonus=0;
+        r.tempAstralBonus=0;
+        r.tempBonusExpiresTurn=null;
+      }
+    }
+  }
+}
+function equipmentStrengthBonus(state,playerIndex,bezSlot,type,isAttacking=false){
+  const p=state.players[playerIndex];
+  ensureEquipmentState(p);
+  let total=0;
+  for(const kind of ['weapon','shield','armor','helmet']){
+    const r=p.equipment[bezSlot]?.[kind];
+    if(!r)continue;
+    initializeEquipmentCombatState(r,p);
+    if(type==='physical'){
+      total+=r.tempPhysicalBonus||0;
+      if(isAttacking)total+=r.attackPhysicalWhenAttacking||0;
+    }else{
+      total+=r.tempAstralBonus||0;
+      if(isAttacking)total+=r.attackAstralWhenAttacking||0;
+    }
+  }
+  return total;
+}
+function combatStrength(state,playerIndex,bezSlot,type,isAttacking=false){
+  const p=state.players[playerIndex],r=p.bezSlots[bezSlot];
+  if(!r)return {base:0,equipment:0,total:0};
+  const c=cardData(r);
+  const base=type==='physical'
+    ? (r.physical ?? c?.physische_staerke ?? 0)
+    : (r.astral ?? c?.astrale_staerke ?? 0);
+  const equipment=equipmentStrengthBonus(state,playerIndex,bezSlot,type,isAttacking);
+  return {base,equipment,total:Math.max(0,base+equipment)};
+}
 function discardRuntime(p,r){
   if(!r)return;
   for(const img of r.developmentStack||[r.bild])p.discard.push(img);
@@ -343,8 +453,10 @@ function equipRuntimeToBez(state,p,r,bezSlot,kind){
 
   r.faceDown=false;
   p.equipment[bezSlot][kind]=r;
+  initializeEquipmentCombatState(r,p);
+  const prof=equipmentCombatProfile(r);
   log(state,`${p.name} legt ${c?.name||'eine Ausrüstung'} als ${equipmentLabel(kind)} an Bezwingerin ${bezSlot+1} an.`);
-  return {ok:true};
+  return {ok:true,needsShieldChoice:!!prof.shieldChoice && !r.shieldChoice};
 }
 function equipFromHand(state,handIndex,bezSlot,kind){
   const p=active(state);
@@ -563,6 +675,37 @@ function applyDamage(runtime,amount,type){
   runtime.hearts-=heartLoss;
   return {shield:shieldLoss,hearts:heartLoss};
 }
+function applyDamageToBez(state,playerIndex,bezSlot,amount,type){
+  const p=state.players[playerIndex],r=p.bezSlots[bezSlot];
+  if(!r || amount<=0)return {externalShield:0,baseShield:0,hearts:0};
+
+  ensureEquipmentState(p);
+  const shieldKey=type==='physical'?'physicalShield':'astralShield';
+  let externalShield=0;
+
+  // Projekt-Zusatzregel: Ausrüstungsschilde immer zuerst.
+  for(const kind of ['shield','armor','helmet','weapon']){
+    if(amount<=0)break;
+    const eq=p.equipment[bezSlot]?.[kind];
+    if(!eq)continue;
+    initializeEquipmentCombatState(eq,p);
+    const loss=Math.min(eq[shieldKey]||0,amount);
+    if(loss>0){
+      eq[shieldKey]-=loss;
+      amount-=loss;
+      externalShield+=loss;
+    }
+  }
+
+  const baseShieldLoss=Math.min(r[shieldKey]||0,amount);
+  r[shieldKey]-=baseShieldLoss;
+  amount-=baseShieldLoss;
+
+  const heartLoss=Math.min(r.hearts||0,amount);
+  r.hearts-=heartLoss;
+
+  return {externalShield,baseShield:baseShieldLoss,hearts:heartLoss};
+}
 function killIfNeeded(state,playerIndex,kind,slot=null){
   const p=state.players[playerIndex];
   let r=null;
@@ -616,18 +759,36 @@ function resolveCombat(state){
 
   const ac=cardData(a),dc=cardData(d);
   const type=state.attack.attackType;
-  const attackValue=type==='physical'?(ac?.physische_staerke??0):(ac?.astrale_staerke??0);
-  const counterValue=type==='physical'?(dc?.physische_staerke??0):(dc?.astrale_staerke??0);
 
-  const aBefore=a.hearts,dBefore=d.hearts;
-  const dmgToDef=applyDamage(d,attackValue,type);
-  const dmgToAtt=applyDamage(a,counterValue,type);
+  const atk=combatStrength(state,p.index,state.attack.attackerSlot,type,true);
+  const attackValue=atk.total;
+
+  let counterValue=0,counter={base:0,equipment:0,total:0};
+  if(target.type==='bez'){
+    counter=combatStrength(state,opp.index,target.slot,type,false);
+    counterValue=counter.total;
+  }else{
+    counterValue=type==='physical'
+      ? (d.physical ?? dc?.physische_staerke ?? 0)
+      : (d.astral ?? dc?.astrale_staerke ?? 0);
+    counter={base:counterValue,equipment:0,total:counterValue};
+  }
+
+  const dmgToDef=target.type==='bez'
+    ? applyDamageToBez(state,opp.index,target.slot,attackValue,type)
+    : (()=>{const x=applyDamage(d,attackValue,type);return {externalShield:0,baseShield:x.shield,hearts:x.hearts};})();
+
+  const dmgToAtt=applyDamageToBez(state,p.index,state.attack.attackerSlot,counterValue,type);
 
   a.attackedTurn=p.turnCount;
 
-  log(state,`${ac?.name||'Angreifer'} verursacht ${attackValue} ${type==='physical'?'physischen':'ASTRAL'} Schaden; ${dc?.name||'Ziel'} führt gleichzeitig einen Gegenangriff mit ${counterValue} Stärke aus.`);
-  if(dmgToDef.shield || dmgToDef.hearts || dmgToAtt.shield || dmgToAtt.hearts){
-    log(state,`Schaden: Verteidiger −${dmgToDef.shield} Schild/−${dmgToDef.hearts} Herzen, Angreifer −${dmgToAtt.shield} Schild/−${dmgToAtt.hearts} Herzen.`);
+  const atkBonus=atk.equipment?` (Basis ${atk.base} + Ausrüstung ${atk.equipment})`:'';
+  const counterBonus=counter.equipment?` (Basis ${counter.base} + Ausrüstung ${counter.equipment})`:'';
+  log(state,`${ac?.name||'Angreifer'} verursacht ${attackValue}${atkBonus} ${type==='physical'?'physischen':'ASTRAL'} Schaden; ${dc?.name||'Ziel'} führt gleichzeitig einen Gegenangriff mit ${counterValue}${counterBonus} Stärke aus.`);
+
+  const totalShield=x=>(x.externalShield||0)+(x.baseShield||0);
+  if(totalShield(dmgToDef) || dmgToDef.hearts || totalShield(dmgToAtt) || dmgToAtt.hearts){
+    log(state,`Schaden: Verteidiger −${dmgToDef.externalShield||0} Ausrüstungsschild/−${dmgToDef.baseShield||0} Basisschild/−${dmgToDef.hearts} Herzen; Angreifer −${dmgToAtt.externalShield||0} Ausrüstungsschild/−${dmgToAtt.baseShield||0} Basisschild/−${dmgToAtt.hearts} Herzen.`);
   }
 
   killIfNeeded(state,opp.index,defKind,defSlot);
@@ -655,7 +816,8 @@ function beginPhase(state){
     grantHonor(state);
   }
   if(phase.id==='supply_start'){
-    log(state,`Anfang der Versorgungsphase von ${p.name}: zeitabhängige Karteneffekte sind noch nicht implementiert.`);
+    expireEquipmentCombatBonuses(state,p);
+    log(state,`Anfang der Versorgungsphase von ${p.name}: unterstützte zeitlich begrenzte Ausrüstungsboni wurden geprüft.`);
   }
   return phase;
 }
@@ -755,7 +917,10 @@ function migrateLoadedState(state){
     normalizeRuntime(p.refuge,true);
     p.bezSlots.forEach(r=>normalizeRuntime(r,false));
     p.equipment.forEach(eq=>{
-      for(const k of ['weapon','shield','armor','helmet'])normalizeRuntime(eq[k],false);
+      for(const k of ['weapon','shield','armor','helmet']){
+        normalizeRuntime(eq[k],false);
+        if(eq[k])initializeEquipmentCombatState(eq[k],p);
+      }
     });
     p.azr.forEach(r=>normalizeRuntime(r,false));
     normalizeRuntime(p.secondary,false);
@@ -783,6 +948,7 @@ window.G5Engine={
   PHASES,decks,validDeck,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,playOpenAzr,reveal,
   equipmentKind,isEquipmentCard,fieldArea,playFieldFromHand,moveRevealedFieldCard,equipFromHand,equipFromAzr,discardEquipment,
+  chooseEquipmentShieldBonus,equipmentCombatProfile,combatStrength,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,hasHeartAttribute,attackTargets,prepareAttack,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,returnToRush,cardData
 };
