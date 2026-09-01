@@ -1,21 +1,19 @@
-5Goddesses – Gefecht v1.3
+5Goddesses – Gefecht v1.4
 
-Änderungen am Spielfeld:
-- Sekundärzone ergänzt.
-- Sekundärzone befindet sich oberhalb der eigenen Zuflucht.
-- Primärzone als gemeinsamer Bereich mittig zwischen beiden Spielfeldhälften ergänzt.
-- Primärzone kann später von beiden Spielern belegt werden.
-- Beide Zonen besitzen Kartenformat und sind nicht überstreckt.
-- Service Worker auf v11 erhöht.
-
-Hinweis:
-Die Zonen sind in dieser Version zunächst vollständig im Spielfeld vorhanden.
-Die eigentliche Ausspiellogik für Primär-/Sekundärkarten wird zusammen mit
-den Kartentyp-/Effektregeln ergänzt.
+Korrekturen:
+- Zuflucht und Ausrüstungszonen können sich nicht mehr überschneiden.
+- Jede Bezwingerinnen-Station bekommt eine feste Breite, die alle drei Kartenfelder
+  der mittleren Reihe (Waffe, Bezwingerin, Schild) vollständig aufnehmen kann.
+- Die Zuflucht besitzt eine eigene feste mittlere Spalte.
+- Auf kleineren Displays wird das Spielfeld horizontal scrollbar statt Felder
+  ineinander zu schieben oder zu überlagern.
+- Die gemeinsame PRIMÄRZONE liegt deutlich sichtbar exakt zwischen dem
+  gegnerischen und dem eigenen Spielfeld.
+- Primärzone ist zusätzlich beschriftet und besitzt ein vollständiges Kartenfeld.
+- Service Worker v12.
 
 Zu ersetzen:
 - index.html
 - battlefield.js
-- game-engine.js
 - style.css
 - service-worker.js

@@ -168,7 +168,7 @@ function renderSharedPrimary(){
   const shared=state.sharedPrimary||null;
   root.innerHTML=shared
     ? `<div class="shared-primary-card">${runtimeCardHtml(shared)}</div>`
-    : `<div class="shared-primary-empty">Frei</div>`;
+    : `<div class="shared-primary-empty"><span>PRIMÄR</span><small>Frei</small></div>`;
 }
 
 function renderBoards(){
