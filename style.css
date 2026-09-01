@@ -385,3 +385,162 @@ h1{font-size:30px;margin:0 0 16px}
     min-height:145px;
   }
 }
+
+
+/* Gefecht v1.5 – garantiert kollisionsfreies 7-Spalten-Raster */
+/* Jede Kartenposition besitzt eine eigene Grid-Zelle. Kein Element teilt sich
+   mehr eine geometrische Fläche mit Zuflucht oder Nachbarzonen. */
+.board-inner{
+  min-width:1260px;
+}
+.rule-board{
+  grid-template-columns:105px 980px 135px !important;
+  column-gap:18px !important;
+  align-items:center;
+}
+.playmat-center{
+  width:980px !important;
+  min-width:980px !important;
+}
+.combat-grid{
+  --slot-w:118px;
+  --slot-h:168px;
+  --slot-gap:14px;
+  width:max-content;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:repeat(7,var(--slot-w));
+  grid-template-rows:var(--slot-h) var(--slot-h) var(--slot-h);
+  gap:var(--slot-gap);
+  grid-template-areas:
+    ". helmetL . . . helmetR ."
+    "weaponL bezL shieldL refuge weaponR bezR shieldR"
+    ". armorL . . . armorR .";
+  align-items:center;
+  justify-items:center;
+}
+.combat-grid .cg{
+  width:var(--slot-w);
+  height:var(--slot-h);
+  min-width:var(--slot-w);
+  min-height:var(--slot-h);
+  max-width:var(--slot-w);
+  max-height:var(--slot-h);
+  margin:0 !important;
+  padding:0 !important;
+  position:relative;
+  box-sizing:border-box;
+}
+.combat-grid .l-helmet{grid-area:helmetL}
+.combat-grid .l-weapon{grid-area:weaponL}
+.combat-grid .l-bez{grid-area:bezL}
+.combat-grid .l-shield{grid-area:shieldL}
+.combat-grid .l-armor{grid-area:armorL}
+.combat-grid .refuge{grid-area:refuge}
+.combat-grid .r-helmet{grid-area:helmetR}
+.combat-grid .r-weapon{grid-area:weaponR}
+.combat-grid .r-bez{grid-area:bezR}
+.combat-grid .r-shield{grid-area:shieldR}
+.combat-grid .r-armor{grid-area:armorR}
+
+.combat-grid .equip-slot,
+.combat-grid .board-slot.bez-slot,
+.combat-grid .refuge-card{
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  max-width:none !important;
+  max-height:none !important;
+  box-sizing:border-box;
+  margin:0 !important;
+}
+.combat-grid .board-card,
+.combat-grid .board-card.back{
+  width:100%;
+  height:100%;
+  box-sizing:border-box;
+}
+.combat-grid .board-card>img,
+.combat-grid .board-card.back .real-card-back{
+  max-width:108px;
+  max-height:150px;
+}
+.combat-grid .board-empty{
+  height:100%;
+}
+.secondary-row,
+.azr-row{
+  width:980px !important;
+  min-width:980px !important;
+}
+
+/* Die Primärzone ist eine eigene, unübersehbare Mittelzone zwischen beiden Boards. */
+.shared-primary-wrap{
+  display:flex !important;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:220px !important;
+  padding:14px 0 !important;
+  border-top:3px solid #a88a42 !important;
+  border-bottom:3px solid #a88a42 !important;
+  background:radial-gradient(circle at center,rgba(150,118,47,.24),#0d0b07 62%,#050505 100%) !important;
+}
+.shared-primary-label{
+  display:block !important;
+  margin-bottom:10px;
+  font-size:13px !important;
+  color:#efd78a !important;
+}
+.shared-primary-zone{
+  display:grid !important;
+  width:118px !important;
+  height:168px !important;
+  min-width:118px !important;
+  min-height:168px !important;
+  border:2px dashed #d0ae58 !important;
+  box-sizing:border-box;
+}
+.shared-primary-empty span{
+  display:block;
+  font-size:13px;
+}
+.shared-primary-empty small{
+  display:block;
+  margin-top:5px;
+  color:#8d7b4e;
+}
+
+@media(max-width:1050px){
+  .player-board{
+    overflow-x:auto !important;
+  }
+  .board-inner{
+    min-width:1110px !important;
+  }
+  .rule-board{
+    grid-template-columns:75px 920px 90px !important;
+    column-gap:8px !important;
+  }
+  .playmat-center{
+    width:920px !important;
+    min-width:920px !important;
+  }
+  .combat-grid{
+    --slot-w:100px;
+    --slot-h:145px;
+    --slot-gap:12px;
+  }
+  .secondary-row,
+  .azr-row{
+    width:920px !important;
+    min-width:920px !important;
+  }
+  .shared-primary-zone{
+    width:100px !important;
+    height:145px !important;
+    min-width:100px !important;
+    min-height:145px !important;
+  }
+}

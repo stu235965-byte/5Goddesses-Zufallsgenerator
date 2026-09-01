@@ -111,20 +111,13 @@ function developmentHtml(p){
 function equipmentSlot(label,kind,bezIndex){
   return `<button class="equip-slot ${kind}" data-equip="${kind}" data-equip-bez="${bezIndex}" disabled><span>${label}</span></button>`;
 }
-function bezStation(r,i,isActive){
-  return `<div class="bez-station">
-    ${equipmentSlot('HELM','helmet',i)}
-    <div class="bez-middle">
-      ${equipmentSlot('WAFFE','weapon',i)}
-      <button class="board-slot bez-slot" data-bez="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN</span></button>
-      ${equipmentSlot('SCHILD','shield',i)}
-    </div>
-    ${equipmentSlot('RÜSTUNG','armor',i)}
-  </div>`;
+function bezCore(r,i,isActive){
+  return `<button class="board-slot bez-slot" data-bez="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN</span></button>`;
 }
 function playerBoardHtml(p,isActive,isOpponent){
   const azr=p.azr.map((r,i)=>`<button class="board-slot azr-slot" data-azr="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r,{hidden:isOpponent&&r?.faceDown})}<span class="slot-label">AZR ${i+1}</span></button>`).join('');
   const oppClass=isOpponent?' mirrored':'';
+
   return `<div class="board-inner${oppClass}">
     <div class="board-player-title">
       <strong>${esc(p.name)}${isActive?' · AM ZUG':''}</strong>
@@ -142,12 +135,24 @@ function playerBoardHtml(p,isActive,isOpponent){
           </div>
         </div>
 
-        <div class="main-line">
-          ${bezStation(p.bezSlots[0],0,isActive)}
-          <div class="refuge-column">
+        <div class="combat-grid">
+          <div class="cg l-helmet">${equipmentSlot('HELM','helmet',0)}</div>
+          <div class="cg r-helmet">${equipmentSlot('HELM','helmet',1)}</div>
+
+          <div class="cg l-weapon">${equipmentSlot('WAFFE','weapon',0)}</div>
+          <div class="cg l-bez">${bezCore(p.bezSlots[0],0,isActive)}</div>
+          <div class="cg l-shield">${equipmentSlot('SCHILD','shield',0)}</div>
+
+          <div class="cg refuge">
             <button class="refuge-card" data-refuge ${isActive?'':'disabled'}>${runtimeCardHtml(p.refuge)}<span class="slot-label">ZUFLUCHT</span></button>
           </div>
-          ${bezStation(p.bezSlots[1],1,isActive)}
+
+          <div class="cg r-weapon">${equipmentSlot('WAFFE','weapon',1)}</div>
+          <div class="cg r-bez">${bezCore(p.bezSlots[1],1,isActive)}</div>
+          <div class="cg r-shield">${equipmentSlot('SCHILD','shield',1)}</div>
+
+          <div class="cg l-armor">${equipmentSlot('RÜSTUNG','armor',0)}</div>
+          <div class="cg r-armor">${equipmentSlot('RÜSTUNG','armor',1)}</div>
         </div>
 
         <div class="azr-row">${azr}</div>
