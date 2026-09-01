@@ -479,15 +479,61 @@ function returnToRush(state){
   return {ok:true};
 }
 function save(state){localStorage.setItem('5goddesses_active_game_v1',JSON.stringify(state))}
+function migrateLoadedState(state){
+  if(!state || !Array.isArray(state.players))return state;
+
+  if(state.sharedPrimary===undefined)state.sharedPrimary=null;
+  if(state.attack===undefined)state.attack=null;
+
+  state.players.forEach((p,index)=>{
+    if(p.index===undefined)p.index=index;
+    if(p.secondary===undefined)p.secondary=null;
+    if(!Array.isArray(p.azr))p.azr=[null,null,null];
+    while(p.azr.length<3)p.azr.push(null);
+    if(!Array.isArray(p.bezSlots))p.bezSlots=[null,null];
+    while(p.bezSlots.length<2)p.bezSlots.push(null);
+
+    // Re-apply the deployment-delay rule to old runtime cards.
+    const normalizeRuntime=(r,isRefuge=false)=>{
+      if(!r)return;
+      const c=cardData(r);
+      if(isRefuge){
+        r.ready=true;
+      }else if(!hasDeploymentDelay(c)){
+        r.ready=true;
+      }else if(r.ready===undefined){
+        r.ready=false;
+      }
+    };
+
+    normalizeRuntime(p.refuge,true);
+    p.bezSlots.forEach(r=>normalizeRuntime(r,false));
+    p.azr.forEach(r=>normalizeRuntime(r,false));
+    normalizeRuntime(p.secondary,false);
+  });
+
+  if(state.sharedPrimary){
+    const c=cardData(state.sharedPrimary);
+    if(!hasDeploymentDelay(c))state.sharedPrimary.ready=true;
+  }
+
+  return state;
+}
 function load(){
-  try{return JSON.parse(localStorage.getItem('5goddesses_active_game_v1')||'null')}catch(e){return null}
+  try{
+    const state=JSON.parse(localStorage.getItem('5goddesses_active_game_v1')||'null');
+    return migrateLoadedState(state);
+  }catch(e){
+    console.error('Gespeichertes Gefecht konnte nicht geladen werden:',e);
+    return null;
+  }
 }
 function clear(){localStorage.removeItem('5goddesses_active_game_v1')}
 
 window.G5Engine={
   PHASES,decks,validDeck,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,playOpenAzr,reveal,
-  availableDevelopment,develop,canAttack,hasHeartAttribute,attackTargets,prepareAttack,
+  availableDevelopment,develop,hasDeploymentDelay,canAttack,hasHeartAttribute,attackTargets,prepareAttack,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,returnToRush,cardData
 };
 })();
