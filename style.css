@@ -544,3 +544,20 @@ h1{font-size:30px;margin:0 0 16px}
     min-height:145px !important;
   }
 }
+
+
+/* Gefecht v1.7 – Drag & Drop + Einsatzverzögerung */
+.hand-card[draggable="true"]{cursor:grab}
+.hand-card[draggable="true"]:active{cursor:grabbing}
+.drop-valid{
+  outline:3px solid #d7bd77 !important;
+  outline-offset:3px;
+  box-shadow:0 0 22px rgba(215,189,119,.55) !important;
+}
+.drop-hover{
+  outline:4px solid #f2d98b !important;
+  background:rgba(215,189,119,.12) !important;
+}
+.delayed-card>img{
+  transform:rotate(180deg);
+}

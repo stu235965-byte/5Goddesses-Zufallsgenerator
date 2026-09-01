@@ -94,7 +94,9 @@ function runtimeCardHtml(r,{hidden=false,small=false}={}){
   if(hidden || r.faceDown){
     return `<div class="board-card back ${small?'small':''}"><img class="real-card-back" src="icons/kartenrueckseite.png" alt="Kartenrückseite"></div>`;
   }
-  return `<div class="board-card ${small?'small':''}">
+  const isRefuge = c?.deck_bereich==='zuflucht' || c?.kartentyp==='Zuflucht';
+  const delayed = (r.ready===false && !isRefuge) ? ' delayed-card' : '';
+  return `<div class="board-card ${small?'small':''}${delayed}">
     <img src="${esc(c?.bild||r.bild)}" alt="${esc(c?.name||'Karte')}">
     <div class="board-card-meta"><strong>${esc(c?.name||'Karte')}</strong><div class="stat-row">${statLine(r)}</div>${r.ready?'<em>EINSATZBEREIT</em>':'<em class="delay">Einsatzverzögerung</em>'}</div>
   </div>`;
@@ -205,6 +207,8 @@ function renderBoards(){
     btn.addEventListener('click',()=>chooseTarget({type:'bez',slot:Number(btn.dataset.bez)}));
   });
   document.querySelector('#opponentBoard [data-refuge]')?.addEventListener('click',()=>chooseTarget({type:'refuge'}));
+
+  wireDragAndDrop();
 }
 function renderHand(){
   const p=E().active(state);
@@ -217,7 +221,16 @@ function renderHand(){
     const c=E().dbCard(bild);
     const el=document.createElement('button');
     el.className='hand-card'+(selectedHandIndex===i?' selected':'');
+    el.draggable=true;
+    el.dataset.handIndex=String(i);
     el.innerHTML=`<img src="${esc(bild)}" alt="${esc(c?.name||'Karte')}"><span>${esc(c?.name||'Karte')}</span>`;
+    el.addEventListener('dragstart',(ev)=>{
+      ev.dataTransfer.setData('text/plain',String(i));
+      ev.dataTransfer.effectAllowed='move';
+      selectedHandIndex=i;
+      markLegalDropTargets(i);
+    });
+    el.addEventListener('dragend',clearDropTargets);
     el.addEventListener('click',()=>{
       selectedHandIndex=selectedHandIndex===i?null:i;
       renderHand();renderActions();
@@ -447,6 +460,75 @@ function chooseTarget(target){
   selectedTarget=target;
   renderActions();
 }
+
+function clearDropTargets(){
+  document.querySelectorAll('.drop-valid,.drop-hover').forEach(el=>{
+    el.classList.remove('drop-valid','drop-hover');
+  });
+}
+function legalDropSelectors(handIndex){
+  const p=E().active(state);
+  const c=E().dbCard(p.hand[handIndex]);
+  const ph=phase();
+  if(!c || !['supply','resupply'].includes(ph?.id||''))return [];
+
+  const targets=[];
+  if(c.deck_bereich==='bezwingerinnen'){
+    if(!p.recruitedThisTurn){
+      [0,1].forEach(i=>{ if(!p.bezSlots[i]) targets.push(`[data-bez="${i}"]`); });
+    }
+    return targets;
+  }
+
+  if(['astral','ruestkammer'].includes(c.deck_bereich)){
+    [0,1,2].forEach(i=>{ if(!p.azr[i]) targets.push(`[data-azr="${i}"]`); });
+  }
+  return targets;
+}
+function markLegalDropTargets(handIndex){
+  clearDropTargets();
+  for(const sel of legalDropSelectors(handIndex)){
+    document.querySelectorAll(`#playerBoard ${sel}`).forEach(el=>el.classList.add('drop-valid'));
+  }
+}
+function wireDragAndDrop(){
+  document.querySelectorAll('#playerBoard [data-bez],#playerBoard [data-azr]').forEach(target=>{
+    target.addEventListener('dragover',ev=>{
+      const raw=ev.dataTransfer.getData('text/plain');
+      const idx=raw===''?selectedHandIndex:Number(raw);
+      const legal=legalDropSelectors(idx).some(sel=>target.matches(sel));
+      if(!legal)return;
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect='move';
+      target.classList.add('drop-hover');
+    });
+    target.addEventListener('dragleave',()=>target.classList.remove('drop-hover'));
+    target.addEventListener('drop',ev=>{
+      ev.preventDefault();
+      target.classList.remove('drop-hover');
+      const idx=Number(ev.dataTransfer.getData('text/plain'));
+      const legal=legalDropSelectors(idx).some(sel=>target.matches(sel));
+      if(!legal){
+        clearDropTargets();
+        return message('Diese Karte darf hier in der aktuellen Phase nicht ausgespielt werden.','warn');
+      }
+
+      let r;
+      if(target.dataset.bez!==undefined){
+        r=E().recruit(state,idx,Number(target.dataset.bez));
+      }else{
+        const slot=Number(target.dataset.azr);
+        const offen=confirm('Wie möchtest du die Karte setzen?\\n\\nOK = offen\\nAbbrechen = verdeckt');
+        r=offen ? E().playOpenAzr(state,idx,slot) : E().setFaceDown(state,idx,slot);
+      }
+
+      if(r.ok)selectedHandIndex=null;
+      clearDropTargets();
+      saveRender(r.msg||'Karte ausgespielt.');
+    });
+  });
+}
+
 function renderLog(){
   document.getElementById('gameLog').innerHTML=state.log.map(x=>`<div><span>KR ${x.turn}</span>${esc(x.text)}</div>`).join('');
 }
