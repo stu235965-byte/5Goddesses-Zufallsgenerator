@@ -355,6 +355,23 @@ function renderActions(){
   }
 
   if(['supply','resupply'].includes(ph.id)){
+    if(state.pendingFieldCard && state.pendingFieldCard.owner===state.activePlayer){
+      const pending=state.pendingFieldCard;
+      const r=p.azr[pending.azrSlot];
+      const b=document.createElement('button');
+      b.className='primary';
+      b.textContent=`${pending.area==='primary'?'Primär':'Sekundär'}bereich erneut prüfen`;
+      b.addEventListener('click',()=>{
+        const rr=E().moveRevealedFieldCard(state,pending.azrSlot);
+        saveRender(rr.msg||'Karte verschoben.');
+      });
+      root.appendChild(b);
+      const info=document.createElement('span');
+      info.textContent=`${cardName(r)} ist aufgedeckt und muss in den ${pending.area==='primary'?'Primär':'Sekundär'}bereich.`;
+      root.appendChild(info);
+      return;
+    }
+
     if(state.pendingEquipment && state.pendingEquipment.owner===state.activePlayer){
       const pending=state.pendingEquipment;
       const r=p.azr[pending.azrSlot];
@@ -412,6 +429,20 @@ function renderActions(){
           });
         }
 
+        const field=E().fieldArea(c);
+        if(field){
+          const fieldBtn=document.createElement('button');
+          fieldBtn.className='primary';
+          fieldBtn.textContent=`Offen in ${field==='primary'?'Primär':'Sekundär'}bereich spielen`;
+          fieldBtn.disabled=field==='primary' ? !!state.sharedPrimary : !!p.secondary;
+          fieldBtn.addEventListener('click',()=>{
+            const r=E().playFieldFromHand(state,selectedHandIndex,field);
+            if(r.ok)selectedHandIndex=null;
+            saveRender(r.msg||'Karte ausgespielt.');
+          });
+          root.appendChild(fieldBtn);
+        }
+
         [0,1,2].forEach(slot=>{
           const hiddenBtn=document.createElement('button');
           hiddenBtn.textContent=`Verdeckt in AZR ${slot+1}`;
@@ -423,7 +454,7 @@ function renderActions(){
           });
           root.appendChild(hiddenBtn);
 
-          if(!eqKind){
+          if(!eqKind && !field){
             const openBtn=document.createElement('button');
             openBtn.textContent=`Offen in AZR ${slot+1}`;
             openBtn.disabled=!!p.azr[slot];
@@ -440,7 +471,9 @@ function renderActions(){
         note.className='action-note';
         note.textContent=eqKind
           ?'Ausrüstungen werden offen direkt an eine Bezwingerin angelegt. In der AZR dürfen sie nur verdeckt gesetzt werden.'
-          :'Diese Karte kann offen oder verdeckt in die AZR gespielt werden. Individuelle Karteneffekte folgen später.';
+          :field
+            ?`Diese Karte gehört offen in den ${field==='primary'?'Primär':'Sekundär'}bereich. Alternativ darf sie verdeckt in die AZR gesetzt werden.`
+            :'Diese Karte kann offen oder verdeckt in die AZR gespielt werden. Individuelle Karteneffekte folgen später.';
         root.appendChild(note);
       }
     }else{
@@ -730,6 +763,9 @@ function legalDropSelectors(handIndex){
         if(p.bezSlots[i])targets.push(`[data-equip="${eqKind}"][data-equip-bez="${i}"]`);
       });
     }
+    const area=E().fieldArea(c);
+    if(area==='primary' && !state.sharedPrimary)targets.push('#sharedPrimaryZone [data-field-area="primary"]');
+    if(area==='secondary' && !p.secondary)targets.push('#playerBoard [data-field-area="secondary"]');
     [0,1,2].forEach(i=>{ if(!p.azr[i]) targets.push(`[data-azr="${i}"]`); });
   }
   return targets;
@@ -741,7 +777,7 @@ function markLegalDropTargets(handIndex){
   }
 }
 function wireDragAndDrop(){
-  document.querySelectorAll('#playerBoard [data-bez],#playerBoard [data-azr],#playerBoard [data-equip]').forEach(target=>{
+  document.querySelectorAll('#playerBoard [data-bez],#playerBoard [data-azr],#playerBoard [data-equip],#playerBoard [data-field-area="secondary"],#sharedPrimaryZone [data-field-area="primary"]').forEach(target=>{
     target.addEventListener('dragover',ev=>{
       const raw=ev.dataTransfer.getData('text/plain');
       const idx=raw===''?selectedHandIndex:Number(raw);
@@ -767,6 +803,8 @@ function wireDragAndDrop(){
         r=E().recruit(state,idx,Number(target.dataset.bez));
       }else if(target.dataset.equip!==undefined){
         r=E().equipFromHand(state,idx,Number(target.dataset.equipBez),target.dataset.equip);
+      }else if(target.dataset.fieldArea!==undefined){
+        r=E().playFieldFromHand(state,idx,target.dataset.fieldArea);
       }else{
         const slot=Number(target.dataset.azr);
         const c=E().dbCard(E().active(state).hand[idx]);

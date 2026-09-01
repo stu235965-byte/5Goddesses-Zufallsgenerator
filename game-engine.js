@@ -115,6 +115,12 @@ function equipmentKind(c){
   return EQUIPMENT_TYPE_TO_SLOT[c.kartentyp]||null;
 }
 function isEquipmentCard(c){return !!equipmentKind(c)}
+function fieldArea(c){
+  const b=String(c?.bereich||'').trim().toLowerCase();
+  if(b.includes('primär') || b.includes('primaer'))return 'primary';
+  if(b.includes('sekundär') || b.includes('sekundaer'))return 'secondary';
+  return null;
+}
 function equipmentLabel(kind){
   return ({weapon:'Waffe',shield:'Schild',armor:'Rüstung',helmet:'Kopfschutz'})[kind]||kind;
 }
@@ -170,6 +176,7 @@ function startGame(deck1,deck2,startPlayer){
     winner:null,
     attack:null,
     pendingEquipment:null,
+    pendingFieldCard:null,
     sharedPrimary:null,
     players:[playerFromDeck(deck1,0),playerFromDeck(deck2,1)],
     log:[]
@@ -270,11 +277,55 @@ function playOpenAzr(state,handIndex,slot){
   if(isEquipmentCard(c)){
     return {ok:false,msg:`${c.kartentyp} darf offen nicht in der AZR liegen. Spiele die Karte direkt an eine Bezwingerin oder setze sie verdeckt.`};
   }
+  const area=fieldArea(c);
+  if(area){
+    return {ok:false,msg:`Diese Karte gehört offen in den ${area==='primary'?'Primär':'Sekundär'}bereich. Alternativ kannst du sie verdeckt in die AZR setzen.`};
+  }
   p.hand.splice(handIndex,1);
   const r=makeRuntimeCard(bild,p.index,p.turnCount);
   r.faceDown=false;
   p.azr[slot]=r;
   log(state,`${p.name} spielt ${c.name} offen in die ASTRAL-/Rüstkammer-Zone. Der individuelle Karteneffekt ist noch nicht implementiert.`);
+  return {ok:true};
+}
+function playFieldFromHand(state,handIndex,area){
+  const p=active(state);
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Primär- und Sekundärkarten können nur in Versorgungs- oder Nachschubphase ausgespielt werden.'};
+  const bild=p.hand[handIndex],c=dbCard(bild);
+  if(!c || fieldArea(c)!==area)return {ok:false,msg:'Diese Karte gehört nicht in diesen Bereich.'};
+
+  if(area==='primary'){
+    if(state.sharedPrimary)return {ok:false,msg:'Der gemeinsame Primärbereich ist bereits belegt.'};
+  }else{
+    if(p.secondary)return {ok:false,msg:'Dein Sekundärbereich ist bereits belegt.'};
+  }
+
+  p.hand.splice(handIndex,1);
+  const r=makeRuntimeCard(bild,p.index,p.turnCount);
+  r.faceDown=false;
+
+  if(area==='primary')state.sharedPrimary=r;
+  else p.secondary=r;
+
+  log(state,`${p.name} spielt ${c.name} offen in den ${area==='primary'?'Primär':'Sekundär'}bereich.`);
+  return {ok:true};
+}
+function moveRevealedFieldCard(state,azrSlot){
+  const p=active(state),r=p.azr[azrSlot];
+  if(!r || r.faceDown)return {ok:false,msg:'Hier liegt keine aufgedeckte Karte.'};
+  const c=cardData(r),area=fieldArea(c);
+  if(!area)return {ok:false,msg:'Diese Karte gehört nicht in Primär- oder Sekundärbereich.'};
+
+  if(area==='primary'){
+    if(state.sharedPrimary)return {ok:false,msg:'Der gemeinsame Primärbereich ist bereits belegt. Die aufgedeckte Karte kann noch nicht verschoben werden.'};
+    state.sharedPrimary=r;
+  }else{
+    if(p.secondary)return {ok:false,msg:'Dein Sekundärbereich ist bereits belegt. Die aufgedeckte Karte kann noch nicht verschoben werden.'};
+    p.secondary=r;
+  }
+  p.azr[azrSlot]=null;
+  state.pendingFieldCard=null;
+  log(state,`${p.name} verschiebt ${c?.name||'die aufgedeckte Karte'} regelkonform in den ${area==='primary'?'Primär':'Sekundär'}bereich.`);
   return {ok:true};
 }
 function equipRuntimeToBez(state,p,r,bezSlot,kind){
@@ -345,6 +396,19 @@ function reveal(state,slot){
     state.pendingEquipment={owner:p.index,azrSlot:slot,kind:equipmentKind(c)};
     log(state,`${p.name} deckt ${c?.name||'eine Ausrüstung'} auf. Sie muss jetzt sofort an eine Bezwingerin angelegt werden.`);
     return {ok:true,needsEquipmentPlacement:true,kind:equipmentKind(c)};
+  }
+
+  const area=fieldArea(c);
+  if(area){
+    if(!['supply','resupply'].includes(currentPhase(state).id)){
+      return {ok:false,msg:'Diese Primär-/Sekundärkarte kann in der aktuellen Grundversion nur in Versorgungs- oder Nachschubphase aktiviert werden.'};
+    }
+    r.faceDown=false;
+    state.pendingFieldCard={owner:p.index,azrSlot:slot,area};
+    const moved=moveRevealedFieldCard(state,slot);
+    if(moved.ok)return moved;
+    log(state,`${p.name} deckt ${c?.name||'eine Karte'} auf. Sie muss in den ${area==='primary'?'Primär':'Sekundär'}bereich verschoben werden, sobald dieser frei ist.`);
+    return {ok:true,needsFieldPlacement:true,area,msg:moved.msg};
   }
 
   if(!['honor','supply','rush','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'In dieser Phase kann die gesetzte Karte in der Grundversion nicht aktiviert werden.'};
@@ -602,6 +666,9 @@ function advancePhase(state){
   if(state.pendingEquipment){
     return {ok:false,msg:'Die aufgedeckte Ausrüstung muss zuerst an eine Bezwingerin angelegt werden.'};
   }
+  if(state.pendingFieldCard){
+    return {ok:false,msg:'Die aufgedeckte Primär-/Sekundärkarte muss zuerst in ihren vorgesehenen Bereich verschoben werden.'};
+  }
 
   if(phase.id==='draw'){
     const nonempty=Object.values(p.stacks).some(a=>a.length);
@@ -660,6 +727,7 @@ function migrateLoadedState(state){
   if(state.sharedPrimary===undefined)state.sharedPrimary=null;
   if(state.attack===undefined)state.attack=null;
   if(state.pendingEquipment===undefined)state.pendingEquipment=null;
+  if(state.pendingFieldCard===undefined)state.pendingFieldCard=null;
 
   state.players.forEach((p,index)=>{
     if(p.index===undefined)p.index=index;
@@ -714,7 +782,7 @@ function clear(){localStorage.removeItem('5goddesses_active_game_v1')}
 window.G5Engine={
   PHASES,decks,validDeck,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,playOpenAzr,reveal,
-  equipmentKind,isEquipmentCard,equipFromHand,equipFromAzr,discardEquipment,
+  equipmentKind,isEquipmentCard,fieldArea,playFieldFromHand,moveRevealedFieldCard,equipFromHand,equipFromAzr,discardEquipment,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,hasHeartAttribute,attackTargets,prepareAttack,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,returnToRush,cardData
 };

@@ -1,33 +1,26 @@
-5Goddesses – Gefecht v1.19
-KARTEN PASSEND IN ALLEN ZONEN
+5Goddesses – Gefecht v1.20
+PRIMÄR- UND SEKUNDÄRKARTEN
 
-Problem:
-- Bei Ausrüstungsfeldern, insbesondere dem Helmfeld, konnte das Kartenbild
-  zusammen mit Name/Werten höher als das eigentliche Feld werden.
-- Das Feld hatte overflow:hidden; dadurch wurde ein Teil der Karte abgeschnitten.
-- Zusätzlich zielte eine ältere CSS-Regel auf .runtime-card, obwohl die
-  tatsächliche Kartenklasse .board-card heißt.
+Umgesetzt:
+- Das Datenbankfeld `bereich` bestimmt den Zielbereich:
+  * Primär -> gemeinsamer Primärbereich
+  * Sekundär -> eigener Sekundärbereich
+- Passende Karten können aus der Hand offen direkt in ihren Bereich
+  gespielt werden.
+- Drag & Drop hebt nur den korrekten Bereich als legales offenes Ziel hervor.
+- Primär-/Sekundärkarten können alternativ verdeckt in die AZR gesetzt werden.
+- Offen dürfen solche Karten nicht in der AZR verbleiben.
+- Beim Aufdecken einer verdeckten Primär-/Sekundärkarte wird sie automatisch
+  in ihren vorgesehenen Bereich verschoben, sofern dieser frei ist.
+- Ist der Bereich belegt, bleibt die aufgedeckte Karte vorübergehend in der
+  AZR und blockiert den Phasenwechsel, bis ihr Zielbereich frei ist.
+- Bereits vorhandene Kampfziel-Logik für Primär/Sekundär bleibt erhalten.
+- Individuelle Karteneffekte sind weiterhin ein separater nächster Schritt.
 
-Korrektur:
-- Kartenbilder werden nun immer vollständig mit object-fit: contain in die
-  jeweilige Zone eingepasst.
-- Name und aktuelle Werte werden als kompakte Einblendung über dem Kartenbild
-  dargestellt und vergrößern den Container nicht mehr.
-- Die Regel gilt für:
-  * Helm
-  * Waffe
-  * Schild
-  * Rüstung
-  * Bezwingerinnen
-  * Zuflucht
-  * AZR
-  * Sekundärzone
-  * gemeinsame Primärzone
-- Kartenrückseiten werden ebenfalls vollständig eingepasst.
-- Leere Felder behalten exakt ihre vorgesehenen Abmessungen.
-
-Service Worker: v26
+Service Worker v27.
 
 Zu ersetzen:
+- battlefield.js
+- game-engine.js
 - style.css
 - service-worker.js

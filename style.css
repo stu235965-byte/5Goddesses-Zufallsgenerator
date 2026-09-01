@@ -765,3 +765,11 @@ h1{font-size:30px;margin:0 0 16px}
   height:100%;
   min-height:0;
 }
+
+/* Gefecht v1.20 – Primär-/Sekundär-Platzierung */
+.secondary-zone.drop-valid,
+.shared-primary-zone.drop-valid{
+  outline:3px solid #d7b455;
+  outline-offset:3px;
+  box-shadow:0 0 18px rgba(215,180,85,.55);
+}
