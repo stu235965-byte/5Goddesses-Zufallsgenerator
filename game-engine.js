@@ -384,6 +384,19 @@ function resolveBezOnPlay(state,p,slot,r,c){
   const opp=opposingBez(state,p,slot);
   if(key==='martha'){
     if(!opp || (opp.hearts??0)<=(r.hearts??0)){r.honor=(r.honor||0)+1;log(state,`${c.name}: Ausspieleffekt → +1 Ehre.`)}
+  }else if(key==='menia'){
+    ensureEquipmentState(p);
+    const occupied=!!p.equipment?.[slot]?.weapon;
+    const matches=(p.stacks?.ruestkammer||[]).map((bild,i)=>({bild,i,c:dbCard(bild)}))
+      .filter(x=>String(x.c?.untertyp||'').toLowerCase()==='dolch');
+    if(!occupied && matches.length){
+      state.pendingBezEffect={type:'menia_dagger',sourcePlayer:p.index,sourceSlot:slot};
+      log(state,`${c.name}: passende Dolche im Rüstkammer-Stapel gefunden.`);
+    }else if(occupied){
+      log(state,`${c.name}: Dolchsuche nicht möglich, da der Waffenplatz bereits belegt ist.`);
+    }else{
+      log(state,`${c.name}: Kein Dolch im Rüstkammer-Stapel gefunden.`);
+    }
   }else if(key==='effrayer'){
     const hasVengeresse=p.bezSlots.some((x,i)=>i!==slot&&x&&String(cardData(x)?.untertyp||'').includes('Vengeresse'));
     if(hasVengeresse){r.honor=(r.honor||0)+1;log(state,`${c.name}: Ausspieleffekt → +1 Ehre.`)}
@@ -425,6 +438,10 @@ function activateBezEffect(state,slot,choice=null){
    return {ok:true,pending:true,msg:'Thal Ziris: Wähle eine eigene oder gegnerische Karte mit Kampfrundendauer.'};
  }
 
+ // Oberwelt-Wunder mit Zielauswahl: Kosten werden erst nach gültiger Zielwahl bezahlt.
+ if(sym==='wonder' && key==='zahira')return startZahiraWonder(state,slot);
+ if(sym==='wonder' && key==='cassandra')return startCassandraWonder(state,slot);
+
  // Bei normalen Effekten erst Validität prüfen, dann Ressourcen verbrauchen.
  if(key==='serinith'){
    if(choice==='astral_to_physical' && r.astralShield>=1){r.astralShield--;r.physicalShield++;}
@@ -456,6 +473,12 @@ function activateBezEffect(state,slot,choice=null){
  else if(key==='trix2'){
    if(choice==='astral_to_physical'){r.astral--;r.physical++;}
    else {r.physical--;r.astral++;}
+ }else if(key==='martha2'){
+   r.effectRoundsRemaining=Number(c.wunder?.dauer_kr||1);
+   r.effectDisabled=false;
+   r.effectState=r.effectState||{};
+   r.effectState.physicalImmune=true;
+   log(state,`${c.name}: physischer Schaden wird für ${r.effectRoundsRemaining} Kampfrunde ignoriert.`);
  }else {log(state,`${c.name}: Effekt aktiviert. Ziel-/Such-/Tokenauflösung muss entsprechend dem Kartentext ausgeführt werden.`);return {ok:true,manual:true,msg:`${c.name}: ${c.effekt_text}`};}
  log(state,`${c.name}: Effekt aktiviert.`);return {ok:true,msg:`Effekt von ${c.name} ausgeführt.`};
 }
@@ -510,8 +533,52 @@ function resolveThalZiris(state,targetId,delta){
 function cancelPendingBezEffect(state){state.pendingBezEffect=null;return {ok:true,msg:'Effektauswahl abgebrochen.'};}
 
 
+
+function startZahiraWonder(state,slot){
+  const p=active(state),r=p.bezSlots[slot];
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+  if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+  if((r.honor||0)<1)return {ok:false,msg:'Zahira benötigt 1 Ehre.'};
+  if(!p.bezSlots.some((x,i)=>x&&i!==slot))return {ok:false,msg:'Es gibt keine andere eigene Bezwingerin als Ziel.'};
+  state.pendingBezEffect={type:'zahira',sourcePlayer:p.index,sourceSlot:slot};
+  return {ok:true,pending:true,msg:'Wähle eine andere eigene Bezwingerin für +1 Ehre.'};
+}
+function startCassandraWonder(state,slot){
+  const p=active(state),r=p.bezSlots[slot];
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+  if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+  if((r.honor||0)<3)return {ok:false,msg:'Cassandra benötigt 3 Ehre.'};
+  state.pendingBezEffect={type:'cassandra',sourcePlayer:p.index,sourceSlot:slot};
+  return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin für +1 Herz.'};
+}
+function meniaDaggerTargets(state){
+  const pend=state.pendingBezEffect;if(!pend||pend.type!=='menia_dagger')return [];
+  const p=state.players[pend.sourcePlayer];
+  return (p.stacks?.ruestkammer||[]).map((bild,i)=>({bild,i,c:dbCard(bild)}))
+    .filter(x=>String(x.c?.untertyp||'').toLowerCase()==='dolch')
+    .map(x=>({id:String(x.i),name:x.c?.name||'Dolch',bild:x.bild}));
+}
+function resolveMeniaDagger(state,index){
+  const pend=state.pendingBezEffect;if(!pend||pend.type!=='menia_dagger')return {ok:false,msg:'Keine Menia-Dolchsuche aktiv.'};
+  const p=state.players[pend.sourcePlayer],menia=p.bezSlots[pend.sourceSlot];
+  if(!menia){state.pendingBezEffect=null;return {ok:false,msg:'Menia ist nicht mehr auf dem Spielfeld.'};}
+  ensureEquipmentState(p);
+  if(p.equipment?.[pend.sourceSlot]?.weapon){state.pendingBezEffect=null;return {ok:false,msg:'Menias Waffenplatz ist nicht mehr frei.'};}
+  const i=Number(index),bild=p.stacks?.ruestkammer?.[i],c=dbCard(bild);
+  if(!bild||String(c?.untertyp||'').toLowerCase()!=='dolch')return {ok:false,msg:'Dieser Dolch befindet sich nicht mehr an der erwarteten Position im Stapel.'};
+  p.stacks.ruestkammer.splice(i,1);
+  const r=makeRuntimeCard(bild,p.index,p.turnCount);
+  r.effectState=r.effectState||{};r.effectState.permanentMeniaDagger=true;
+  const rr=equipRuntimeToBez(state,p,r,pend.sourceSlot,'weapon');
+  if(!rr.ok){p.stacks.ruestkammer.splice(i,0,bild);return rr;}
+  state.pendingBezEffect=null;
+  log(state,`${c?.name||'Dolch'} wurde durch Menias Effekt dauerhaft ausgerüstet. Der Rüstkammer-Stapel wurde nicht gemischt.`);
+  return {ok:true,msg:`${c?.name||'Dolch'} wurde dauerhaft an Menia ausgerüstet.`};
+}
 function checkedEffectTargets(state){
  const pend=state.pendingBezEffect;if(!pend)return [];const p=state.players[pend.sourcePlayer],enemy=state.players[1-pend.sourcePlayer];
+ if(pend.type==='zahira')return p.bezSlots.map((r,i)=>r&&i!==pend.sourceSlot?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
+ if(pend.type==='cassandra')return p.bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
  if(pend.type==='mira')return enemy.bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
  if(pend.type==='talisia2')return enemy.bezSlots.map((r,i)=>r&&(r.astralShield||0)>0?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
  if(pend.type==='talisia1_source'){const a=[];p.bezSlots.forEach((r,i)=>{if(r&&(r.astralShield||0)>0)a.push({id:`bez:${i}`,name:cardData(r)?.name||'Bezwingerin'})});if(p.refuge&&(p.refuge.astralShield||0)>0)a.push({id:'refuge',name:cardData(p.refuge)?.name||'Zuflucht'});return a;}
@@ -520,6 +587,18 @@ function checkedEffectTargets(state){
 function resolveCheckedEffectTarget(state,id){
  const pend=state.pendingBezEffect;if(!pend)return {ok:false,msg:'Keine Effektauswahl aktiv.'};const p=state.players[pend.sourcePlayer],enemy=state.players[1-pend.sourcePlayer],src=p.bezSlots[pend.sourceSlot],c=cardData(src);
  if(!src){state.pendingBezEffect=null;return {ok:false,msg:'Quellkarte ist nicht mehr auf dem Spielfeld.'};}
+ if(pend.type==='zahira'){
+   const t=p.bezSlots[Number(id)];if(!t||Number(id)===pend.sourceSlot)return {ok:false,msg:'Zahira muss eine andere eigene Bezwingerin wählen.'};
+   if((src.honor||0)<1)return {ok:false,msg:'Zahira besitzt nicht mehr genügend Ehre.'};
+   src.honor--;src.wonderTurn=p.turnCount;t.honor=(t.honor||0)+1;state.pendingBezEffect=null;
+   log(state,`${c.name}: ${cardData(t)?.name} erhält 1 Ehre.`);return {ok:true,msg:'1 Ehre hinzugefügt.'};
+ }
+ if(pend.type==='cassandra'){
+   const t=p.bezSlots[Number(id)];if(!t)return {ok:false,msg:'Ungültiges Ziel.'};
+   if((src.honor||0)<3)return {ok:false,msg:'Cassandra besitzt nicht mehr genügend Ehre.'};
+   src.honor-=3;src.wonderTurn=p.turnCount;t.hearts=(t.hearts||0)+1;state.pendingBezEffect=null;
+   log(state,`${c.name}: ${cardData(t)?.name} erhält 1 Herz.`);return {ok:true,msg:'1 Herz hinzugefügt.'};
+ }
  if(pend.type==='mira'){const t=enemy.bezSlots[Number(id)];if(!t)return {ok:false,msg:'Ungültiges Ziel.'};t.ready=false;t.effectState=t.effectState||{};t.effectState.delayLockedUntilSupply={sourcePlayer:pend.sourcePlayer,sourceTurn:p.turnCount+1};state.pendingBezEffect=null;log(state,`${c.name}: ${cardData(t)?.name} bleibt bis zum Beginn der nächsten eigenen VP in Einsatzverzögerung.`);return {ok:true,msg:'Einsatzverzögerung erzwungen.'};}
  if(pend.type==='talisia2'){const t=enemy.bezSlots[Number(id)];if(!t||(t.astralShield||0)<1)return {ok:false,msg:'Ziel besitzt keinen ASTRAL-Schild.'};t.astralShield--;src.astralShield=(src.astralShield||0)+1;state.pendingBezEffect=null;log(state,`${c.name}: 1 ASTRAL-Schild übernommen.`);return {ok:true,msg:'1 ASTRAL-Schild auf Talisia übertragen.'};}
  if(pend.type==='talisia1_source'){let s=id==='refuge'?p.refuge:(String(id).startsWith('bez:')?p.bezSlots[Number(String(id).split(':')[1])]:null);if(!s||(s.astralShield||0)<1)return {ok:false,msg:'Quelle besitzt keinen ASTRAL-Schild.'};state.pendingBezEffect={...pend,type:'talisia1_target',sourceCardId:id};return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin, die 1 Herz erhält.'};}
@@ -533,7 +612,19 @@ function releaseMiraDelayLocks(state){const p=active(state);p.bezSlots.forEach(r
 function jeanneForcedTarget(state,attackerSource){const src=attackerKindAndSlot(attackerSource);if(src.kind!=='bez')return null;const p=active(state),opp=opponent(state),attacker=p.bezSlots[src.slot];if(!attacker)return null;const js=opp.bezSlots.map((r,i)=>r&&cardData(r)?.effekte?.[0]?.engine_key==='jeanne_taunt'?{r,slot:i}:null).filter(Boolean);for(const j of js){const n=Number(cardData(j.r)?.effekte?.[0]?.forced_attackers||0);if(n>=2)return {type:'bez',slot:j.slot,label:cardData(j.r)?.name};if(n===1&&p.bezSlots.filter(x=>x&&x.attackedTurn===p.turnCount).length===0)return {type:'bez',slot:j.slot,label:cardData(j.r)?.name};}return null;}
 
 function tickBezEffectDurations(state){
- for(const p of state.players)for(const r of p.bezSlots){if(!r||r.effectDisabled||r.effectRoundsRemaining===null)continue;r.effectRoundsRemaining--;if(r.effectRoundsRemaining<=0){r.effectRoundsRemaining=0;r.effectDisabled=true;log(state,`${cardData(r)?.name||'Ein Effekt'} ist nach Ablauf der Kampfrunden deaktiviert.`)}}
+ for(const p of state.players)for(const r of p.bezSlots){
+   if(!r||r.effectDisabled||r.effectRoundsRemaining===null)continue;
+   r.effectRoundsRemaining--;
+   if(r.effectRoundsRemaining<=0){
+     const c=cardData(r);
+     if(c?.effekte?.[0]?.engine_key==='martha2'){
+       r.effectRoundsRemaining=null;r.effectState=r.effectState||{};r.effectState.physicalImmune=false;r.effectDisabled=false;
+       log(state,`${c.name}: Schutz vor physischem Schaden ist abgelaufen und kann in einer späteren Kampfrunde erneut gewirkt werden.`);
+     }else{
+       r.effectRoundsRemaining=0;r.effectDisabled=true;log(state,`${c?.name||'Ein Effekt'} ist nach Ablauf der Kampfrunden deaktiviert.`);
+     }
+   }
+ }
 }
 
 function setFaceDown(state,handIndex,slot){
@@ -617,6 +708,7 @@ function equipRuntimeToBez(state,p,r,bezSlot,kind){
   if(!actualKind || actualKind!==kind)return {ok:false,msg:'Diese Ausrüstung gehört nicht in diesen Bereich.'};
 
   const previous=p.equipment[bezSlot][kind];
+  if(previous?.effectState?.permanentMeniaDagger)return {ok:false,msg:'Menias dauerhaft ausgerüsteter Dolch kann nicht ersetzt werden.'};
   if(previous){
     discardRuntime(p,previous);
     log(state,`${cardData(previous)?.name||'Die bisherige Ausrüstung'} wird ersetzt und auf den Ablagestapel gelegt.`);
@@ -661,6 +753,7 @@ function discardEquipment(state,bezSlot,kind){
   ensureEquipmentState(p);
   const r=p.equipment[bezSlot]?.[kind];
   if(!r)return {ok:false,msg:'In diesem Ausrüstungsbereich liegt keine Karte.'};
+  if(r.effectState?.permanentMeniaDagger)return {ok:false,msg:'Dieser Dolch wurde durch Menia dauerhaft ausgerüstet und kann nicht freiwillig abgelegt werden.'};
   discardRuntime(p,r);
   p.equipment[bezSlot][kind]=null;
   log(state,`${p.name} legt ${cardData(r)?.name||'eine Ausrüstung'} freiwillig auf den Ablagestapel.`);
@@ -918,6 +1011,7 @@ function confirmAttack(state){
 }
 function applyDamage(runtime,amount,type){
   if(!runtime || amount<=0)return {shield:0,hearts:0};
+  if(type==='physical' && runtime.effectState?.physicalImmune)return {shield:0,hearts:0};
   const shieldKey=type==='physical'?'physicalShield':'astralShield';
   const shieldLoss=Math.min(runtime[shieldKey]||0,amount);
   runtime[shieldKey]-=shieldLoss;
@@ -1011,6 +1105,11 @@ function currentShieldChoice(state){
     if(packet.remaining<=0){
       pd.packetIndex++;
       continue;
+    }
+    const affected=state.players[packet.playerIndex]?.bezSlots?.[packet.bezSlot];
+    if(packet.type==='physical' && affected?.effectState?.physicalImmune){
+      log(state,`${cardData(affected)?.name||'Bezwingerin'} bleibt von physischem Schaden unberührt.`);
+      packet.remaining=0;pd.packetIndex++;continue;
     }
     const sources=shieldSourcesForBez(state,packet.playerIndex,packet.bezSlot,packet.type);
     if(sources.length===0){
@@ -1383,6 +1482,7 @@ window.G5Engine={
   refugeWonderAvailable,activateRefugeWonder,resolveWonderDraw,chooseRefugeStage2Bonus,
   bezEffectInfo,activateBezEffect,thalZirisTargets,resolveThalZiris,cancelPendingBezEffect,
   checkedEffectTargets,resolveCheckedEffectTarget,startTalisia1Wonder,jeanneForcedTarget,
+  startZahiraWonder,startCassandraWonder,meniaDaggerTargets,resolveMeniaDagger,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,currentShieldChoice,chooseShieldSource,returnToRush,cardData
 };
 })();

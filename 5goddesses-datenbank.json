@@ -891,15 +891,21 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Falls beim Rekrutieren keine Bezwingerin gegenübersteht oder die gegenüberliegende gleich viele oder weniger Herzen hat, erhält Martha 1 Ehre.",
-          "engine_key": "martha"
+          "engine_key": "martha",
+          "condition": "no_opposing_bez_or_opposing_hearts_lte_self",
+          "resource": "honor",
+          "amount": 1
         }
       ],
-      "tags": [],
+      "tags": [
+        "ausspieleffekt",
+        "gegenueber",
+        "ehre"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Falls beim Rekrutieren keine Bezwingerin gegenübersteht oder die gegenüberliegende gleich viele oder weniger Herzen hat, erhält Martha 1 Ehre."
+      "effekt_text": "Falls beim Rekrutieren keine gegnerische Bezwingerin gegenübersteht oder die gegenüberliegende gegnerische Bezwingerin gleich viele oder weniger Herzen hat, erhält Martha 1 Ehre."
     },
     {
       "id": "1.03-14-32-a55b62d5",
@@ -926,20 +932,26 @@
       "ehre": 0,
       "wunder": {
         "kosten_ehre": 3,
-        "text": "Füge einer Bezwingerin 1 Herz hinzu."
+        "text": "Füge einer eigenen Bezwingerin 1 Herz hinzu."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Füge einer Bezwingerin 1 Herz hinzu.",
-          "engine_key": "cassandra"
+          "engine_key": "cassandra",
+          "target": "own_bez",
+          "resource": "hearts",
+          "amount": 1
         }
       ],
-      "tags": [],
+      "tags": [
+        "wunder",
+        "herz",
+        "eigene_bezwingerin"
+      ],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Füge einer Bezwingerin 1 Herz hinzu."
+      "effekt_text": "Füge einer eigenen Bezwingerin 1 Herz hinzu."
     },
     {
       "id": "1.03-15-32-8f475f93",
@@ -966,20 +978,26 @@
       "ehre": 0,
       "wunder": {
         "kosten_ehre": 1,
-        "text": "Füge einer anderen Bezwingerin 1 Ehre hinzu."
+        "text": "Füge einer anderen eigenen Bezwingerin 1 Ehre hinzu."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Füge einer anderen Bezwingerin 1 Ehre hinzu.",
-          "engine_key": "zahira"
+          "engine_key": "zahira",
+          "target": "other_own_bez",
+          "resource": "honor",
+          "amount": 1
         }
       ],
-      "tags": [],
+      "tags": [
+        "wunder",
+        "ehre",
+        "andere_eigene_bezwingerin"
+      ],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Füge einer anderen Bezwingerin 1 Ehre hinzu."
+      "effekt_text": "Füge einer anderen eigenen Bezwingerin 1 Ehre hinzu."
     },
     {
       "id": "1.03-24-32-a280cfe8",
@@ -1045,15 +1063,27 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Suche aus dem Rüstkammer-Stapel einen Dolch und rüste diese Bezwingerin damit aus, falls möglich.",
-          "engine_key": "menia"
+          "engine_key": "menia",
+          "optional": true,
+          "source": "own_ruestkammer_stack",
+          "criterion": {
+            "untertyp": "Dolch"
+          },
+          "equip_to": "self",
+          "persistent": true,
+          "preserve_stack_order": true
         }
       ],
-      "tags": [],
+      "tags": [
+        "ausspieleffekt",
+        "ruestkammer_suche",
+        "dolch",
+        "dauerhaft_ausruesten"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Suche aus dem Rüstkammer-Stapel einen Dolch und rüste diese Bezwingerin damit aus, falls möglich."
+      "effekt_text": "Du kannst dir aus dem Rüstkammer-Stapel einen DOLCH suchen und Menia dauerhaft damit ausrüsten, falls möglich."
     },
     {
       "id": "1.03-26-32-a941d44f",
@@ -4665,19 +4695,29 @@
       "physischer_schild": 1,
       "astraler_schild": 1,
       "ehre": 0,
-      "wunder": null,
+      "wunder": {
+        "kosten_ehre": 3,
+        "text": "Diese Bezwingerin bleibt für 1 Kampfrunde von physischem Schaden unberührt.",
+        "dauer_kr": 1
+      },
       "effekte": [
         {
-          "trigger": "duration",
-          "text": "Diese Bezwingerin bleibt von physischem Schaden unberührt.",
-          "engine_key": "martha2"
+          "trigger": "wonder",
+          "engine_key": "martha2",
+          "duration_rounds": 1,
+          "physical_damage_immunity": true
         }
       ],
-      "tags": [],
-      "effekt_symbol": "duration",
+      "tags": [
+        "wunder",
+        "kampfrundendauer",
+        "physischer_schaden",
+        "immunitaet"
+      ],
+      "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
-      "effekt_dauer_kr": 1,
-      "effekt_text": "Diese Bezwingerin bleibt von physischem Schaden unberührt."
+      "effekt_dauer_kr": null,
+      "effekt_text": "Diese Bezwingerin bleibt für 1 Kampfrunde von physischem Schaden unberührt."
     },
     {
       "id": "1.03-23-32-25356d67",

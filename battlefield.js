@@ -409,8 +409,14 @@ function handSelected(){
 function renderActions(){
   const root=document.getElementById('gameActions');
   root.innerHTML='';
-  if(state.pendingBezEffect && ['mira','talisia2','talisia1_source','talisia1_target'].includes(state.pendingBezEffect.type)){
-    const labels={mira:'Mira Masako – gegnerische Bezwingerin wählen',talisia2:'Talisia II – gegnerische Bezwingerin wählen',talisia1_source:'Talisia – ASTRAL-Schild-Quelle wählen',talisia1_target:'Talisia – Empfängerin für 1 Herz wählen'};
+  if(state.pendingBezEffect?.type==='menia_dagger'){
+    const title=document.createElement('strong');title.textContent='Menia – Dolch aus dem Rüstkammer-Stapel wählen';root.appendChild(title);
+    const info=document.createElement('span');info.textContent='Nur passende Dolche werden angezeigt. Nicht gewählte Karten behalten ihre Reihenfolge im Stapel.';root.appendChild(info);
+    E().meniaDaggerTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveMeniaDagger(state,t.id);saveRender(rr.msg);});root.appendChild(b);});
+    const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Nicht nutzen';cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg||'Menias Suche wurde nicht genutzt.');});root.appendChild(cancel);return;
+  }
+  if(state.pendingBezEffect && ['zahira','cassandra','mira','talisia2','talisia1_source','talisia1_target'].includes(state.pendingBezEffect.type)){
+    const labels={zahira:'Zahira – andere eigene Bezwingerin wählen',cassandra:'Cassandra – eigene Bezwingerin wählen',mira:'Mira Masako – gegnerische Bezwingerin wählen',talisia2:'Talisia II – gegnerische Bezwingerin wählen',talisia1_source:'Talisia – ASTRAL-Schild-Quelle wählen',talisia1_target:'Talisia – Empfängerin für 1 Herz wählen'};
     const title=document.createElement('strong');title.textContent=labels[state.pendingBezEffect.type];root.appendChild(title);
     E().checkedEffectTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveCheckedEffectTarget(state,t.id);saveRender(rr.msg);});root.appendChild(b);});
     const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Abbrechen';cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg);});root.appendChild(cancel);return;
