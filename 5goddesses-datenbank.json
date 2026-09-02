@@ -494,7 +494,7 @@
       "kartentyp": "Bezwingerin",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Astralwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": "Assassine",
       "bereich": null,
@@ -511,15 +511,23 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Diese Bezwingerin erhält einmalig für einen Kampf einen Primärangriff. Du entscheidest in welcher Kampfrunde; Aktivierung in der Ansturmphase.",
-          "engine_key": "death"
+          "engine_key": "death",
+          "primary_attack_uses": 1,
+          "activation_phase": "rush",
+          "duration": "one_combat"
         }
       ],
-      "tags": [],
+      "tags": [
+        "fraktionslos",
+        "ausspieleffekt",
+        "primärangriff",
+        "einmalig"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Diese Bezwingerin erhält einmalig für einen Kampf einen Primärangriff. Du entscheidest in welcher Kampfrunde; Aktivierung in der Ansturmphase."
+      "effekt_text": "Diese Bezwingerin erhält einmalig für einen Kampf einen Primärangriff. Du entscheidest, in welcher Kampfrunde du diesen Effekt aktivieren möchtest; allerdings muss der Effekt in der Ansturmphase aktiviert werden.",
+      "fraktionslos": true
     },
     {
       "id": "1.04-19-32-426aa886",
@@ -1040,7 +1048,7 @@
       "kartentyp": "Bezwingerin",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Oberwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": "Heilerin",
       "bereich": null,
@@ -1057,15 +1065,27 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Füge deiner Hand eine Z.E.R.O. ATK oder Z.E.R.O. ASTRAL aus dem Bezwingerinnen-Stapel hinzu.",
-          "engine_key": "queen"
+          "engine_key": "queen",
+          "source": "own_bez_stack",
+          "names": [
+            "Z.E.R.O. ATK",
+            "Z.E.R.O. ASTRAL"
+          ],
+          "destination": "hand",
+          "preserve_stack_order": true
         }
       ],
-      "tags": [],
+      "tags": [
+        "fraktionslos",
+        "ausspieleffekt",
+        "bezwingerinnen_stapel",
+        "zero"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Füge deiner Hand eine Z.E.R.O. ATK oder Z.E.R.O. ASTRAL aus dem Bezwingerinnen-Stapel hinzu."
+      "effekt_text": "Füge deiner Hand eine Z.E.R.O. ATK oder Z.E.R.O. ASTRAL aus dem eigenen Bezwingerinnen-Stapel hinzu.",
+      "fraktionslos": true
     },
     {
       "id": "1.03-25-32-c8153e7a",
@@ -1126,7 +1146,7 @@
       "kartentyp": "Bezwingerin",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Oberwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": "Beschützerin",
       "bereich": null,
@@ -1143,15 +1163,23 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Füge einer anderen Bezwingerin 1 physischen Schild hinzu.",
-          "engine_key": "shield"
+          "engine_key": "shield",
+          "target": "other_own_bez",
+          "resource": "physicalShield",
+          "amount": 1
         }
       ],
-      "tags": [],
+      "tags": [
+        "fraktionslos",
+        "ausspieleffekt",
+        "anderes_eigenes_ziel",
+        "physischer_schild"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Füge einer anderen Bezwingerin 1 physischen Schild hinzu."
+      "effekt_text": "Füge einer anderen eigenen Bezwingerin 1 physischen Schild hinzu.",
+      "fraktionslos": true
     },
     {
       "id": "1.02-13-32-a55290d6",
@@ -1237,7 +1265,7 @@
       "kartentyp": "Bezwingerin",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Unterwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": "Magierin",
       "bereich": null,
@@ -1252,11 +1280,15 @@
       "ehre": 0,
       "wunder": null,
       "effekte": [],
-      "tags": [],
+      "tags": [
+        "fraktionslos",
+        "storytext"
+      ],
       "effekt_symbol": "none",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Storytext; kein Karteneffekt."
+      "effekt_text": "",
+      "fraktionslos": true
     },
     {
       "id": "1.02-24-32-96bd7e4f",
@@ -1447,7 +1479,7 @@
       "kartentyp": "Bezwingerin",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Zwischenwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": "Unterstützerin",
       "bereich": null,
@@ -1464,15 +1496,21 @@
       "effekte": [
         {
           "trigger": "permanent",
-          "text": "Die erste gegnerische Bezwingerin, die angreifen möchte, muss 1 Ehre zahlen, um angreifen zu können.",
-          "engine_key": "zero_police"
+          "engine_key": "zero_police",
+          "first_enemy_bez_attack_tax": 1
         }
       ],
-      "tags": [],
+      "tags": [
+        "fraktionslos",
+        "permanent",
+        "angriffskosten",
+        "ehre"
+      ],
       "effekt_symbol": "permanent",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Die erste gegnerische Bezwingerin, die angreifen möchte, muss 1 Ehre zahlen, um angreifen zu können."
+      "effekt_text": "Die erste gegnerische Bezwingerin, die angreifen möchte, muss 1 Ehre zahlen, um angreifen zu können.",
+      "fraktionslos": true
     },
     {
       "id": "1.05-19-32-6137cea7",
@@ -4906,7 +4944,7 @@
       "kartentyp": "Bezwingerin",
       "entwicklungskarte": true,
       "grundkarte_bild": "Bezwingerin/1.03-24-32-a280cfe8.webp",
-      "fraktion": "Oberwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 2,
       "klasse": "Heilerin",
       "bereich": null,
@@ -4921,20 +4959,33 @@
       "ehre": 0,
       "wunder": {
         "kosten_ehre": 2,
-        "text": "Nimm aus dem Ablagestapel eine Z.E.R.O. ATK oder Z.E.R.O. ASTRAL auf deine Hand. Die aktuellen Wunder-Kosten steigen um 1 Ehre."
+        "text": "Nimm aus deiner Ablage eine Z.E.R.O. ATK oder Z.E.R.O. ASTRAL auf deine Hand. Die aktuellen Wunder-Kosten steigen um 1 Ehre."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Nimm aus dem Ablagestapel eine Z.E.R.O. ATK oder Z.E.R.O. ASTRAL auf deine Hand. Die aktuellen Wunder-Kosten steigen um 1 Ehre.",
-          "engine_key": "queen2"
+          "engine_key": "queen2",
+          "source": "own_discard",
+          "names": [
+            "Z.E.R.O. ATK",
+            "Z.E.R.O. ASTRAL"
+          ],
+          "destination": "hand",
+          "increase_future_cost": 1
         }
       ],
-      "tags": [],
+      "tags": [
+        "fraktionslos",
+        "wunder",
+        "ablage",
+        "zero",
+        "steigende_kosten"
+      ],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Nimm aus dem Ablagestapel eine Z.E.R.O. ATK oder Z.E.R.O. ASTRAL auf deine Hand. Die aktuellen Wunder-Kosten steigen um 1 Ehre."
+      "effekt_text": "Nimm aus deiner Ablage eine Z.E.R.O. ATK oder Z.E.R.O. ASTRAL auf deine Hand. Die aktuellen Wunder-Kosten steigen um 1 Ehre.",
+      "fraktionslos": true
     },
     {
       "id": "1.02-12-32-36ff280d",

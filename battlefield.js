@@ -412,6 +412,22 @@ function handSelected(){
 function renderActions(){
   const root=document.getElementById('gameActions');
   root.innerHTML='';
+  if(state.pendingBezEffect?.type==='queen_search'){
+    const title=document.createElement('strong');title.textContent='Q.U.E.E.N. – Z.E.R.O. aus Bezwingerinnen-Stapel wählen';root.appendChild(title);
+    E().queenStackTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{
+      const b=document.createElement('button');b.type='button';b.textContent=t.name;
+      b.addEventListener('click',()=>{const rr=E().resolveQueenSearch(state,t.id);saveRender(rr.msg);});root.appendChild(b);
+    });
+    return;
+  }
+  if(state.pendingBezEffect?.type==='queen2_discard'){
+    const title=document.createElement('strong');title.textContent='Q.U.E.E.N. Stufe 2 – Z.E.R.O. aus Ablage wählen';root.appendChild(title);
+    E().queenDiscardTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{
+      const b=document.createElement('button');b.type='button';b.textContent=t.name;
+      b.addEventListener('click',()=>{const rr=E().resolveQueen2Discard(state,t.id);saveRender(rr.msg);});root.appendChild(b);
+    });
+    return;
+  }
   if(state.pendingBezEffect?.type==='keyla_search' || state.pendingBezEffect?.type==='keyla2_search'){
     const title=document.createElement('strong');title.textContent='Keyla Dorn – ASTRALFRAGMENT aus Rüstkammer wählen';root.appendChild(title);
     E().keylaSearchTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{
@@ -451,8 +467,8 @@ function renderActions(){
     E().meniaDaggerTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveMeniaDagger(state,t.id);saveRender(rr.msg);});root.appendChild(b);});
     const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Nicht nutzen';cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg||'Menias Suche wurde nicht genutzt.');});root.appendChild(cancel);return;
   }
-  if(state.pendingBezEffect && ['psilo','fragment_reward','zahira','cassandra','mira','talisia2','talisia1_source','talisia1_target'].includes(state.pendingBezEffect.type)){
-    const labels={psilo:'Psilo Cybe – KREATUR wählen',fragment_reward:`${state.pendingBezEffect.cardName||'ASTRALFRAGMENT'} – eigene Bezwingerin für Zerstörungseffekt wählen`,zahira:'Zahira – andere eigene Bezwingerin wählen',cassandra:'Cassandra – eigene Bezwingerin wählen',mira:'Mira Masako – gegnerische Bezwingerin wählen',talisia2:'Talisia II – gegnerische Bezwingerin wählen',talisia1_source:'Talisia – ASTRAL-Schild-Quelle wählen',talisia1_target:'Talisia – Empfängerin für 1 Herz wählen'};
+  if(state.pendingBezEffect && ['shield','psilo','fragment_reward','zahira','cassandra','mira','talisia2','talisia1_source','talisia1_target'].includes(state.pendingBezEffect.type)){
+    const labels={shield:'S.H.I.E.L.D. – andere eigene Bezwingerin wählen',psilo:'Psilo Cybe – KREATUR wählen',fragment_reward:`${state.pendingBezEffect.cardName||'ASTRALFRAGMENT'} – eigene Bezwingerin für Zerstörungseffekt wählen`,zahira:'Zahira – andere eigene Bezwingerin wählen',cassandra:'Cassandra – eigene Bezwingerin wählen',mira:'Mira Masako – gegnerische Bezwingerin wählen',talisia2:'Talisia II – gegnerische Bezwingerin wählen',talisia1_source:'Talisia – ASTRAL-Schild-Quelle wählen',talisia1_target:'Talisia – Empfängerin für 1 Herz wählen'};
     const title=document.createElement('strong');title.textContent=labels[state.pendingBezEffect.type];root.appendChild(title);
     E().checkedEffectTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveCheckedEffectTarget(state,t.id);saveRender(rr.msg);});root.appendChild(b);});
     const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Abbrechen';cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg);});root.appendChild(cancel);return;
@@ -891,6 +907,13 @@ function handleOwnBez(slot){
   if(ph.id==='rush' && !state.attack){
     if(!E().canAttack(r,p)){
       return message('Diese Bezwingerin ist einsatzverzögert oder hat in dieser Kampfrunde bereits angegriffen.','warn');
+    }
+    const c=E().cardData(r);
+    if(c?.effekte?.[0]?.engine_key==='death' && (r.effectState?.primaryAttackUses||0)>0 && !r.effectState?.primaryAttackActive){
+      if(confirm('D.E.A.T.H.: Den einmaligen Primärangriff für den nächsten Kampf aktivieren?')){
+        const pr=E().activateDeathPrimaryAttack(state,slot);
+        if(!pr.ok)return message(pr.msg,'warn');
+      }
     }
     selectedAttacker=slot;
     selectedTarget=null;

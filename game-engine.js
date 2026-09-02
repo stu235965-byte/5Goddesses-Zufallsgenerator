@@ -384,7 +384,21 @@ function countOwnAzrCards(p){return (p.azr||[]).filter(Boolean).length}
 function resolveBezOnPlay(state,p,slot,r,c){
   const key=c?.effekte?.[0]?.engine_key;
   const opp=opposingBez(state,p,slot);
-  if(key==='martha'){
+  if(key==='shield'){
+    const targets=p.bezSlots.map((x,i)=>x&&i!==slot?i:null).filter(i=>i!==null);
+    if(targets.length)state.pendingBezEffect={type:'shield',sourcePlayer:p.index,sourceSlot:slot};
+    else log(state,`${c.name}: keine andere eigene Bezwingerin als Ziel vorhanden.`);
+  }else if(key==='death'){
+    r.effectState=r.effectState||{};
+    r.effectState.primaryAttackUses=1;
+    r.effectState.primaryAttackActive=false;
+    log(state,`${c.name}: 1 einmaliger Primärangriff wurde gespeichert.`);
+  }else if(key==='queen'){
+    const targets=(p.stacks?.bezwingerinnen||[]).map((bild,i)=>({bild,i,c:dbCard(bild)}))
+      .filter(x=>['Z.E.R.O. ATK','Z.E.R.O. ASTRAL'].includes(x.c?.name));
+    if(targets.length)state.pendingBezEffect={type:'queen_search',sourcePlayer:p.index,sourceSlot:slot};
+    else log(state,`${c.name}: weder Z.E.R.O. ATK noch Z.E.R.O. ASTRAL im Bezwingerinnen-Stapel gefunden.`);
+  }else if(key==='martha'){
     if(!opp || (opp.hearts??0)<=(r.hearts??0)){r.honor=(r.honor||0)+1;log(state,`${c.name}: Ausspieleffekt → +1 Ehre.`)}
   }else if(key==='keyla'){
     const matches=(p.stacks?.ruestkammer||[]).map((bild,i)=>({bild,i,c:dbCard(bild)}))
@@ -454,6 +468,7 @@ function activateBezEffect(state,slot,choice=null){
  if(sym==='wonder' && key==='zahira')return startZahiraWonder(state,slot);
  if(sym==='wonder' && key==='cassandra')return startCassandraWonder(state,slot);
  if(sym==='wonder' && key==='psilo')return startPsiloWonder(state,slot);
+ if(sym==='wonder' && key==='queen2')return startQueen2Wonder(state,slot);
 
  // Bei normalen Effekten erst Validität prüfen, dann Ressourcen verbrauchen.
  if(key==='serinith'){
@@ -548,6 +563,94 @@ function cancelPendingBezEffect(state){state.pendingBezEffect=null;return {ok:tr
 
 
 
+
+function startQueen2Wonder(state,slot){
+  const p=active(state),r=p.bezSlots[slot],c=cardData(r);
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+  if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+  const cost=Number(r.wonderCostCurrent ?? c?.wunder?.kosten_ehre ?? 2);
+  if((r.honor||0)<cost)return {ok:false,msg:`Q.U.E.E.N. benötigt ${cost} Ehre.`};
+  const targets=queenDiscardTargets(state,p.index);
+  if(!targets.length)return {ok:false,msg:'Weder Z.E.R.O. ATK noch Z.E.R.O. ASTRAL liegt in deiner Ablage.'};
+  state.pendingBezEffect={type:'queen2_discard',sourcePlayer:p.index,sourceSlot:slot};
+  return {ok:true,pending:true,msg:'Wähle Z.E.R.O. ATK oder Z.E.R.O. ASTRAL aus deiner Ablage.'};
+}
+function queenStackTargets(state,playerIndex){
+  const p=state.players[playerIndex];
+  return (p.stacks?.bezwingerinnen||[]).map((bild,i)=>({bild,i,c:dbCard(bild)}))
+    .filter(x=>['Z.E.R.O. ATK','Z.E.R.O. ASTRAL'].includes(x.c?.name))
+    .map(x=>({id:String(x.i),name:x.c.name}));
+}
+function resolveQueenSearch(state,index){
+  const pend=state.pendingBezEffect;if(!pend||pend.type!=='queen_search')return {ok:false,msg:'Keine Q.U.E.E.N.-Suche aktiv.'};
+  const p=state.players[pend.sourcePlayer],i=Number(index),bild=p.stacks?.bezwingerinnen?.[i],c=dbCard(bild);
+  if(!bild||!['Z.E.R.O. ATK','Z.E.R.O. ASTRAL'].includes(c?.name))return {ok:false,msg:'Diese Karte ist kein gültiges Z.E.R.O.-Ziel mehr.'};
+  p.stacks.bezwingerinnen.splice(i,1);p.hand.push(bild);state.pendingBezEffect=null;
+  log(state,`${c.name} wurde aus dem Bezwingerinnen-Stapel auf die Hand genommen. Der Stapel wurde nicht gemischt.`);
+  return {ok:true,msg:`${c.name} auf die Hand genommen.`};
+}
+function queenDiscardTargets(state,playerIndex){
+  const p=state.players[playerIndex];
+  return (p.discard||[]).map((entry,i)=>{
+    const bild=typeof entry==='string'?entry:entry?.bild,c=dbCard(bild);
+    return ['Z.E.R.O. ATK','Z.E.R.O. ASTRAL'].includes(c?.name)?{id:String(i),name:c.name}:null;
+  }).filter(Boolean);
+}
+function resolveQueen2Discard(state,index){
+  const pend=state.pendingBezEffect;if(!pend||pend.type!=='queen2_discard')return {ok:false,msg:'Keine Q.U.E.E.N.-Ablageauswahl aktiv.'};
+  const p=state.players[pend.sourcePlayer],src=p.bezSlots[pend.sourceSlot],i=Number(index),entry=p.discard?.[i];
+  const bild=typeof entry==='string'?entry:entry?.bild,c=dbCard(bild);
+  if(!src||!entry||!['Z.E.R.O. ATK','Z.E.R.O. ASTRAL'].includes(c?.name))return {ok:false,msg:'Ungültiges Z.E.R.O.-Ziel.'};
+  const cost=Number(src.wonderCostCurrent ?? cardData(src)?.wunder?.kosten_ehre ?? 2);
+  if((src.honor||0)<cost)return {ok:false,msg:'Q.U.E.E.N. besitzt nicht mehr genügend Ehre.'};
+  src.honor-=cost;src.wonderTurn=p.turnCount;src.wonderCostCurrent=cost+1;
+  p.discard.splice(i,1);p.hand.push(bild);state.pendingBezEffect=null;
+  log(state,`${c.name} wurde aus der Ablage auf die Hand genommen. Q.U.E.E.N.s nächste Wunderkosten: ${src.wonderCostCurrent} Ehre.`);
+  return {ok:true,msg:`${c.name} auf die Hand genommen. Nächste Wunderkosten: ${src.wonderCostCurrent} Ehre.`};
+}
+function activateDeathPrimaryAttack(state,slot){
+  const p=active(state),r=p.bezSlots[slot],c=cardData(r);
+  if(currentPhase(state).id!=='rush')return {ok:false,msg:'D.E.A.T.H.s Primärangriff muss in der Ansturmphase aktiviert werden.'};
+  if(c?.effekte?.[0]?.engine_key!=='death')return {ok:false,msg:'Diese Bezwingerin besitzt D.E.A.T.H.s Primärangriff nicht.'};
+  r.effectState=r.effectState||{};
+  if((r.effectState.primaryAttackUses||0)<=0)return {ok:false,msg:'Der einmalige Primärangriff wurde bereits verbraucht.'};
+  if(r.effectState.primaryAttackActive)return {ok:false,msg:'Der Primärangriff ist bereits aktiviert.'};
+  r.effectState.primaryAttackUses--;
+  r.effectState.primaryAttackActive=true;
+  r.effectState.primaryAttackActivatedTurn=p.turnCount;
+  log(state,`${c.name}: Primärangriff für den nächsten Kampf dieser Kampfrunde aktiviert.`);
+  return {ok:true,msg:'Primärangriff aktiviert.'};
+}
+function hasPrimaryAttack(r){return !!r?.effectState?.primaryAttackActive}
+function hasSecondaryAttack(r){return !!r?.effectState?.secondaryAttackActive}
+function combatTiming(attacker,defender){
+  const aP=hasPrimaryAttack(attacker),aS=hasSecondaryAttack(attacker);
+  const dP=hasPrimaryAttack(defender),dS=hasSecondaryAttack(defender);
+  const attackerFirst=(aP&&!aS)||(dS&&!dP);
+  const defenderFirst=(aS&&!aP)||(dP&&!dS);
+  if(attackerFirst===defenderFirst)return 'simultaneous';
+  return attackerFirst?'attacker_first':'defender_first';
+}
+function expireDeathPrimaryAttack(state){
+  for(const p of state.players)for(const r of p.bezSlots||[]){
+    if(r?.effectState?.primaryAttackActive){
+      r.effectState.primaryAttackActive=false;
+      log(state,`${cardData(r)?.name||'Primärangriff'}: aktivierter Primärangriff verfällt am Ende der Kampfrunde.`);
+    }
+  }
+}
+function policeTaxRequired(state,attackerPlayerIndex){
+  const enemy=state.players[1-attackerPlayerIndex];
+  return enemy?.bezSlots?.some(r=>r&&cardData(r)?.effekte?.[0]?.engine_key==='zero_police');
+}
+function applyPoliceAttackTax(state,attackerPlayer,attacker){
+  if(!policeTaxRequired(state,attackerPlayer.index))return {ok:true};
+  if(attackerPlayer.policeTaxTurn===attackerPlayer.turnCount)return {ok:true};
+  if((attacker.honor||0)<1)return {ok:false,msg:'Z.E.R.O. P.O.L.I.C.E.: Die erste angreifende gegnerische Bezwingerin benötigt 1 Ehre.'};
+  attacker.honor--;attackerPlayer.policeTaxTurn=attackerPlayer.turnCount;
+  log(state,`Z.E.R.O. P.O.L.I.C.E.: ${cardData(attacker)?.name} zahlt 1 Ehre für den ersten Bezwingerinnen-Angriff dieser Kampfrunde.`);
+  return {ok:true};
+}
 function isCreatureCard(c){
   return String(c?.kartentyp||'').toLowerCase()==='kreatur' || String(c?.untertyp||'').toLowerCase()==='kreatur';
 }
@@ -797,6 +900,7 @@ function resolveMeniaDagger(state,index){
 }
 function checkedEffectTargets(state){
  const pend=state.pendingBezEffect;if(!pend)return [];const p=state.players[pend.sourcePlayer],enemy=state.players[1-pend.sourcePlayer];
+ if(pend.type==='shield')return p.bezSlots.map((r,i)=>r&&i!==pend.sourceSlot?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
  if(pend.type==='psilo')return psiloTargets(state);
  if(pend.type==='fragment_reward')return fragmentRewardTargets(state);
  if(pend.type==='zahira')return p.bezSlots.map((r,i)=>r&&i!==pend.sourceSlot?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
@@ -809,6 +913,11 @@ function checkedEffectTargets(state){
 function resolveCheckedEffectTarget(state,id){
  const pend=state.pendingBezEffect;if(!pend)return {ok:false,msg:'Keine Effektauswahl aktiv.'};const p=state.players[pend.sourcePlayer],enemy=state.players[1-pend.sourcePlayer],src=p.bezSlots[pend.sourceSlot],c=cardData(src);
  if(!src){state.pendingBezEffect=null;return {ok:false,msg:'Quellkarte ist nicht mehr auf dem Spielfeld.'};}
+ if(pend.type==='shield'){
+   const t=p.bezSlots[Number(id)];if(!t||Number(id)===pend.sourceSlot)return {ok:false,msg:'S.H.I.E.L.D. muss eine andere eigene Bezwingerin wählen.'};
+   t.physicalShield=(t.physicalShield||0)+1;state.pendingBezEffect=null;
+   log(state,`${c.name}: ${cardData(t)?.name} erhält 1 physischen Schild.`);return {ok:true,msg:'1 physischer Schild hinzugefügt.'};
+ }
  if(pend.type==='psilo')return resolvePsiloTarget(state,id);
  if(pend.type==='fragment_reward')return resolveFragmentReward(state,id);
  if(pend.type==='zahira'){
@@ -1196,6 +1305,9 @@ function prepareAttack(state,attackerSource,target,attackType){
     if(!canRefugeAttack(state,p.index))return {ok:false,msg:'Die Zuflucht kann nur angreifen, wenn auf deiner Spielfeldseite keine Bezwingerin vorhanden ist.'};
   }else if(!canAttack(r,p)){
     return {ok:false,msg:'Diese Bezwingerin ist einsatzverzögert oder hat bereits angegriffen.'};
+  }else{
+    const tax=applyPoliceAttackTax(state,p,r);
+    if(!tax.ok)return tax;
   }
   if(!['physical','astral'].includes(attackType))return {ok:false,msg:'Ungültige Angriffsart.'};
   const legal=attackTargets(state,attackerSource).some(t=>targetKey(t)===targetKey(target));
@@ -1327,6 +1439,21 @@ function currentShieldChoice(state){
   while(pd.packetIndex<pd.packets.length){
     const packet=pd.packets[pd.packetIndex];
     if(packet.remaining<=0){
+      if(pd.combatTiming==='attacker_first' && packet.role==='defender'){
+        const victim=state.players[packet.playerIndex]?.bezSlots?.[packet.bezSlot];
+        if(victim && (victim.hearts||0)<=0){
+          const counterPacket=pd.packets.find(x=>x.role==='attacker');
+          if(counterPacket)counterPacket.remaining=0;
+          log(state,'Primärangriff zerstört die verteidigende Bezwingerin vor ihrem Gegenangriff.');
+        }
+      }else if(pd.combatTiming==='defender_first' && packet.role==='attacker'){
+        const victim=state.players[packet.playerIndex]?.bezSlots?.[packet.bezSlot];
+        if(victim && (victim.hearts||0)<=0){
+          const attackPacket=pd.packets.find(x=>x.role==='defender');
+          if(attackPacket)attackPacket.remaining=0;
+          log(state,'Der zuerst ausgeführte Gegenangriff zerstört die angreifende Bezwingerin vor ihrem Angriff.');
+        }
+      }
       pd.packetIndex++;
       continue;
     }
@@ -1467,11 +1594,15 @@ function resolveCombat(state){
 
   const atkBonus=atk.equipment?` (Basis ${atk.base} + Ausrüstung ${atk.equipment})`:'';
   const counterBonus=counter.equipment?` (Basis ${counter.base} + Ausrüstung ${counter.equipment})`:'';
-  log(state,`${ac?.name||'Angreifer'} verursacht ${attackValue}${atkBonus} ${type==='physical'?'physischen':'ASTRAL'} Schaden; ${dc?.name||'Ziel'} führt gleichzeitig einen Gegenangriff mit ${counterValue}${counterBonus} Stärke aus.`);
+  const timing=target.type==='bez'?combatTiming(a,d):'simultaneous';
+  const timingText=timing==='attacker_first'?' – Primärangriff: Angreifer schlägt zuerst':timing==='defender_first'?' – Verteidiger schlägt zuerst':'';
+  log(state,`${ac?.name||'Angreifer'} verursacht ${attackValue}${atkBonus} ${type==='physical'?'physischen':'ASTRAL'} Schaden; ${dc?.name||'Ziel'} hat ${counterValue}${counterBonus} Gegenangriff${timingText}.`);
 
   a.attackedTurn=p.turnCount;
   if(type==='physical')consumePsiloBonus(a);
   if(target.type==='bez' && type==='physical')consumePsiloBonus(d);
+  if(a?.effectState?.primaryAttackActive)a.effectState.primaryAttackActive=false;
+  if(target.type==='bez' && d?.effectState?.primaryAttackActive)d.effectState.primaryAttackActive=false;
 
   // Primär/Sekundär/Zuflucht haben keine anliegende Bezwingerinnen-Ausrüstung
   // und werden deshalb weiterhin direkt abgewickelt.
@@ -1483,33 +1614,18 @@ function resolveCombat(state){
   }
 
   const packets=[];
-  if(target.type==='bez' && attackValue>0){
-    packets.push({
-      role:'defender',
-      playerIndex:opp.index,
-      bezSlot:target.slot,
-      type,
-      remaining:attackValue,
-      shieldLoss:0,
-      heartLoss:0
-    });
+  const defenderPacket=target.type==='bez' && attackValue>0 ? {
+    role:'defender',playerIndex:opp.index,bezSlot:target.slot,type,remaining:attackValue,shieldLoss:0,heartLoss:0
+  }:null;
+  const attackerPacket=counterValue>0 && attackerKind!=='refuge' ? {
+    role:'attacker',playerIndex:p.index,bezSlot:state.attack.attackerSlot,type,remaining:counterValue,shieldLoss:0,heartLoss:0
+  }:null;
+  if(attackerKind==='refuge' && counterValue>0){
+    const dmg=applyDamage(a,counterValue,type);
+    if(dmg.shield||dmg.hearts)log(state,`Angreifende Zuflucht: −${dmg.shield} Basisschild/−${dmg.hearts} Herzen durch Gegenangriff.`);
   }
-  if(counterValue>0){
-    if(attackerKind==='refuge'){
-      const dmg=applyDamage(a,counterValue,type);
-      if(dmg.shield||dmg.hearts)log(state,`Angreifende Zuflucht: −${dmg.shield} Basisschild/−${dmg.hearts} Herzen durch Gegenangriff.`);
-    }else{
-      packets.push({
-        role:'attacker',
-        playerIndex:p.index,
-        bezSlot:state.attack.attackerSlot,
-        type,
-        remaining:counterValue,
-        shieldLoss:0,
-        heartLoss:0
-      });
-    }
-  }
+  if(timing==='defender_first'){if(attackerPacket)packets.push(attackerPacket);if(defenderPacket)packets.push(defenderPacket);}
+  else {if(defenderPacket)packets.push(defenderPacket);if(attackerPacket)packets.push(attackerPacket);}
 
   state.pendingDamage={
     attackerIndex:p.index,
@@ -1519,7 +1635,8 @@ function resolveCombat(state){
     defKind,
     defSlot,
     packetIndex:0,
-    packets
+    packets,
+    combatTiming:target.type==='bez'?timing:'simultaneous'
   };
 
   const choice=currentShieldChoice(state);
@@ -1606,6 +1723,7 @@ function advancePhase(state){
   }
   if(phase.id==='end'){
     expirePsiloBonuses(state);
+    expireDeathPrimaryAttack(state);
     p.turnCount+=1;
     state.activePlayer=1-state.activePlayer;
     state.roundSerial+=1;
@@ -1653,6 +1771,7 @@ function migrateLoadedState(state){
   state.players.forEach((p,index)=>{
     if(p.index===undefined)p.index=index;
     if(p.honorGrantedTurn===undefined)p.honorGrantedTurn=null;
+    if(p.policeTaxTurn===undefined)p.policeTaxTurn=null;
     if(p.secondary===undefined)p.secondary=null;
     ensureEquipmentState(p);
     if(!Array.isArray(p.azr))p.azr=[null,null,null];
@@ -1721,6 +1840,8 @@ window.G5Engine={
   checkedEffectTargets,resolveCheckedEffectTarget,startTalisia1Wonder,jeanneForcedTarget,
   startZahiraWonder,startCassandraWonder,meniaDaggerTargets,resolveMeniaDagger,
   startPsiloWonder,psiloTargets,resolvePsiloTarget,keylaSearchTargets,resolveKeylaSearch,
+  startQueen2Wonder,queenStackTargets,resolveQueenSearch,queenDiscardTargets,resolveQueen2Discard,
+  activateDeathPrimaryAttack,hasPrimaryAttack,hasSecondaryAttack,
   keyla2DestroyTargets,keyla2DiscardTargets,resolveKeyla2Choice,resolveKeyla2Destroy,resolveKeyla2Discard,
   fragmentRewardTargets,resolveFragmentReward,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,currentShieldChoice,chooseShieldSource,returnToRush,cardData
