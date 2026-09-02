@@ -1208,15 +1208,16 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Wenn beim Rekrutieren bereits eine andere Vengeresse-Bezwingerin auf deiner Spielfeldseite liegt, erhält diese Bezwingerin 1 Ehre.",
-          "engine_key": "effrayer"
+          "engine_key": "baronesse",
+          "requires_other_own_subtype": "Vengeresse",
+          "honor_gain": 1
         }
       ],
       "tags": [],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Wenn beim Rekrutieren bereits eine andere Vengeresse-Bezwingerin auf deiner Spielfeldseite liegt, erhält diese Bezwingerin 1 Ehre."
+      "effekt_text": "Wenn du diese Bezwingerin rekrutierst und sich bereits eine andere Vengeresse-Bezwingerin auf deiner Spielfeldseite befindet, erhält diese Bezwingerin 1 Ehre."
     },
     {
       "id": "1.02-14-32-08775875",
@@ -1245,15 +1246,16 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Diese Bezwingerin kann einmalig einem Gegenangriff ausweichen; Aktivierung in der Versorgungsphase, gilt für eine gewählte Kampfrunde.",
-          "engine_key": "alice"
+          "engine_key": "alice",
+          "counterattack_dodge_uses": 1,
+          "activation_phase": "supply"
         }
       ],
       "tags": [],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Diese Bezwingerin kann einmalig einem Gegenangriff ausweichen; Aktivierung in der Versorgungsphase, gilt für eine gewählte Kampfrunde."
+      "effekt_text": "Diese Bezwingerin kann einmalig einem Gegenangriff ausweichen. Du kannst entscheiden, in welcher deiner Kampfrunden du diesen Effekt aktivieren möchtest; allerdings muss der Effekt in deiner Versorgungsphase aktiviert werden."
     },
     {
       "id": "1.02-15-32-da3f87a2",
@@ -1319,7 +1321,7 @@
       "effekt_symbol": "none",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Storytext; kein Karteneffekt."
+      "effekt_text": ""
     },
     {
       "id": "1.02-25-32-8d1099b4",
@@ -1348,15 +1350,18 @@
       "effekte": [
         {
           "trigger": "duration",
-          "text": "Die erste Bezwingerin, die kämpft, muss mit der physischen Angriffsart angreifen, falls möglich.",
-          "engine_key": "arcadia"
+          "engine_key": "arcadia",
+          "duration_rounds": 3,
+          "force_first_enemy_bez_attack": true,
+          "force_target_self": true,
+          "force_attack_type": "physical"
         }
       ],
       "tags": [],
       "effekt_symbol": "duration",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": 3,
-      "effekt_text": "Die erste Bezwingerin, die kämpft, muss mit der physischen Angriffsart angreifen, falls möglich."
+      "effekt_text": "Die erste gegnerische Bezwingerin, die kämpft, muss Arcadia mit der physischen Angriffsart angreifen, falls möglich."
     },
     {
       "id": "1.02-26-32-14091659",
@@ -1385,15 +1390,17 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Die gegenüberliegende Bezwingerin erhält -1 Ehre; negative Ehre als Schaden ist erlaubt.",
-          "engine_key": "lilith"
+          "engine_key": "lilith",
+          "target": "opposing_bez",
+          "honor_delta": -1,
+          "allow_negative_honor": true
         }
       ],
       "tags": [],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Die gegenüberliegende Bezwingerin erhält -1 Ehre; negative Ehre als Schaden ist erlaubt."
+      "effekt_text": "Die gegnerische Bezwingerin, die sich gegenüber dieser Lilith befindet, wird um 1 Ehre verringert. Negative Ehre-Werte sind ebenfalls erlaubt."
     },
     {
       "id": "1.05-03-32-8b1bc93e",
@@ -5100,20 +5107,24 @@
       "ehre": 0,
       "wunder": {
         "kosten_ehre": 2,
-        "text": "Wenn diese Bezwingerin in der Ansturmphase angreift und ihr Gegenüber weniger Herzen als ihr Basiswert hat, erhält sie für diesen Kampf +1 physische Stärke und auch nur in dieser Kampfrunde."
+        "text": "Wenn diese Bezwingerin eine gegnerische Bezwingerin in ihrer Ansturmphase angreift und diese weniger aktuelle Herzen als ihren Basiswert hat, erhält diese Bezwingerin für diesen Kampf +1 physische Stärke."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Wenn diese Bezwingerin in der Ansturmphase angreift und ihr Gegenüber weniger Herzen als ihr Basiswert hat, erhält sie für diesen Kampf +1 physische Stärke und auch nur in dieser Kampfrunde.",
-          "engine_key": "effrayer2"
+          "engine_key": "baronesse2",
+          "requires_attack_phase": "rush",
+          "target_type": "enemy_bez",
+          "condition": "target_current_hearts_below_base",
+          "physical_bonus": 1,
+          "duration": "one_combat"
         }
       ],
       "tags": [],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Wenn diese Bezwingerin in der Ansturmphase angreift und ihr Gegenüber weniger Herzen als ihr Basiswert hat, erhält sie für diesen Kampf +1 physische Stärke und auch nur in dieser Kampfrunde."
+      "effekt_text": "Wenn diese Bezwingerin eine gegnerische Bezwingerin in ihrer Ansturmphase angreift und diese weniger aktuelle Herzen als ihren Basiswert hat, erhält diese Bezwingerin für diesen Kampf +1 physische Stärke."
     },
     {
       "id": "1.02-23-32-660efa74",
@@ -5188,21 +5199,30 @@
       "astraler_schild": 1,
       "ehre": 0,
       "wunder": {
-        "kosten_ehre": 4,
-        "text": "Wähle eine Bezwingerin aus dem Ablagestapel, rekrutiere sie auf eine freie Feldposition und setze ihre Basiswerte auf 2 Herzen und alle anderen Basiswerte auf 0. Lege alle Entwicklungen dieser Bezwingerin zurück ins Entwicklungsdeck. Die aktuellen Wunder-Kosten steigen um 1 Ehre."
+        "kosten_ehre": 3,
+        "text": "Wähle eine Bezwingerin der Stufe 1 aus deiner Ablage. Rekrutiere sie auf eine freie Bezwingerinnen-Feldposition. Setze ihre Basiswerte auf Herzen 2, physische Stärke 0 und Ehre 0. Lege eine ihrer Entwicklungen zurück in dein Entwicklungsdeck. Die aktuellen Wunder-Kosten steigen um 1 Ehre."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Wähle eine Bezwingerin aus dem Ablagestapel, rekrutiere sie auf eine freie Feldposition und setze ihre Basiswerte auf 2 Herzen und alle anderen Basiswerte auf 0. Lege alle Entwicklungen dieser Bezwingerin zurück ins Entwicklungsdeck. Die aktuellen Wunder-Kosten steigen um 1 Ehre.",
-          "engine_key": "lilou2"
+          "engine_key": "lilou2",
+          "source": "own_discard",
+          "filter_stage": 1,
+          "destination": "free_bez_slot",
+          "override_base": {
+            "hearts": 2,
+            "physical": 0,
+            "honor": 0
+          },
+          "return_one_matching_development_to_development_deck": true,
+          "increase_future_cost": 1
         }
       ],
       "tags": [],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Wähle eine Bezwingerin aus dem Ablagestapel, rekrutiere sie auf eine freie Feldposition und setze ihre Basiswerte auf 2 Herzen und alle anderen Basiswerte auf 0. Lege alle Entwicklungen dieser Bezwingerin zurück ins Entwicklungsdeck. Die aktuellen Wunder-Kosten steigen um 1 Ehre."
+      "effekt_text": "Wähle eine Bezwingerin der Stufe 1 aus deiner Ablage, falls möglich. Rekrutiere diese auf eine freie Bezwingerinnen-Feldposition auf deinem Spielfeld und passe die Basiswerte an: Herzen = 2, physische Stärke = 0 und Ehre = 0. Lege eine ihrer Entwicklungen zurück in dein Entwicklungsdeck. Die aktuellen Wunder-Kosten steigen um 1 Ehre."
     },
     {
       "id": "1.05-05-32-3a672987",

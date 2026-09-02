@@ -412,6 +412,11 @@ function handSelected(){
 function renderActions(){
   const root=document.getElementById('gameActions');
   root.innerHTML='';
+  if(state.pendingBezEffect?.type==='lilou2_discard'){
+    const title=document.createElement('strong');title.textContent='Lilou Guerir Stufe 2 – Stufe-1-Bezwingerin aus Ablage wählen';root.appendChild(title);
+    E().lilou2Targets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveLilou2Discard(state,t.id);saveRender(rr.msg);});root.appendChild(b);});
+    return;
+  }
   if(state.pendingBezEffect?.type==='queen_search'){
     const title=document.createElement('strong');title.textContent='Q.U.E.E.N. – Z.E.R.O. aus Bezwingerinnen-Stapel wählen';root.appendChild(title);
     E().queenStackTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{
@@ -542,6 +547,14 @@ function renderActions(){
     root.appendChild(info);
   }
 
+  if(ph.id==='supply'){
+    const c=E().cardData(r);
+    if(c?.effekte?.[0]?.engine_key==='alice'&&(r.effectState?.counterDodgeUses||0)>0&&!r.effectState?.counterDodgeActive){
+      if(confirm('Alice Merveilleux: Einmaliges Ausweichen gegen einen Gegenangriff für diese Kampfrunde aktivieren?')){
+        const ar=E().activateAliceDodge(state,slot);if(!ar.ok)return message(ar.msg,'warn');saveRender(ar.msg);return;
+      }
+    }
+  }
   if(['supply','resupply'].includes(ph.id)){
     if(state.pendingFieldCard && state.pendingFieldCard.owner===state.activePlayer){
       const pending=state.pendingFieldCard;

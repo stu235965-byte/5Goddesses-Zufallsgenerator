@@ -383,6 +383,7 @@ function opposingBez(state,p,slot){return state.players[1-p.index]?.bezSlots?.[s
 function countOwnAzrCards(p){return (p.azr||[]).filter(Boolean).length}
 function resolveBezOnPlay(state,p,slot,r,c){
   const key=c?.effekte?.[0]?.engine_key;
+  if(key==='arcadia'&&(r.effectRoundsRemaining===null||r.effectRoundsRemaining===undefined)){r.effectRoundsRemaining=3;r.effectDisabled=false;}
   const opp=opposingBez(state,p,slot);
   if(key==='shield'){
     const targets=p.bezSlots.map((x,i)=>x&&i!==slot?i:null).filter(i=>i!==null);
@@ -435,6 +436,13 @@ function resolveBezOnPlay(state,p,slot,r,c){
   else if(key==='lilith' && opp){opp.honor=(opp.honor||0)-1;log(state,`${c.name}: Gegenüber verliert 1 Ehre.`)}
   else if(key==='trix'){
     const n=countOwnAzrCards(p); const add=n>=3?2:n>=2?1:0; r.honor=(r.honor||0)+add;if(add)log(state,`${c.name}: ${n} eigene AZR-Karten → +${add} Ehre.`)
+  }else if(key==='alice'){
+    r.effectState=r.effectState||{};r.effectState.counterDodgeUses=1;r.effectState.counterDodgeActive=false;log(state,`${c.name}: einmaliges Ausweichen gespeichert.`);
+  }else if(key==='lilith'){
+    const oi=oppositeBezSlot(slot),t=state.players[1-p.index].bezSlots?.[oi];
+    if(t){t.honor=Number(t.honor||0)-1;log(state,`${c.name}: ${cardData(t)?.name||'gegnerische Bezwingerin'} verliert 1 Ehre (${t.honor}).`);}else log(state,`${c.name}: keine gegnerische Bezwingerin direkt gegenüber.`);
+  }else if(key==='baronesse'){
+    if(ownSubtypeCount(p,'Vengeresse',slot)>0){r.honor=Number(r.honor||0)+1;log(state,`${c.name}: andere eigene Vengeresse vorhanden → +1 Ehre.`);}
   }else if(key==='skorpia'){
     const n=countOwnAzrCards(p);
     if(n>=2){
@@ -480,6 +488,8 @@ function activateBezEffect(state,slot,choice=null){
  if(sym==='wonder' && key==='psilo')return startPsiloWonder(state,slot);
  if(sym==='wonder' && key==='queen2')return startQueen2Wonder(state,slot);
  if(sym==='wonder' && key==='nemesis')return startNemesisWonder(state,slot);
+ if(sym==='wonder' && key==='lilou2')return startLilou2Wonder(state,slot);
+ if(sym==='wonder' && key==='baronesse2')return startBaronesse2Wonder(state,slot);
 
  // Bei normalen Effekten erst Validität prüfen, dann Ressourcen verbrauchen.
  if(key==='serinith'){
@@ -536,6 +546,67 @@ function allRuntimeCards(state){
  return out;
 }
 
+
+function oppositeBezSlot(slot){return Number(slot)===0?1:0}
+function currentBaseHearts(runtime){const c=cardData(runtime);return Number(runtime?.effectState?.baseHeartsOverride ?? c?.herzen ?? runtime?.hearts ?? 0)}
+function ownSubtypeCount(p,subtype,excludeSlot=null){return (p.bezSlots||[]).filter((r,i)=>r&&i!==excludeSlot&&String(cardData(r)?.untertyp||'').toLowerCase()===String(subtype).toLowerCase()).length}
+function firstEnemyBezFightUsed(state,playerIndex){const p=state.players[playerIndex];return (p.bezSlots||[]).some(r=>r&&r.attackedTurn===p.turnCount)}
+function activeArcadiaConstraint(state,attackerPlayerIndex){
+  const opp=state.players[1-attackerPlayerIndex];
+  for(let i=0;i<(opp.bezSlots||[]).length;i++){const r=opp.bezSlots[i],c=cardData(r);if(r&&c?.effekte?.some(e=>e.engine_key==='arcadia')&&!r.effectDisabled&&Number(r.effectRoundsRemaining)>0)return {slot:i,r,c};}
+  return null;
+}
+function activateAliceDodge(state,slot){
+  const p=active(state),r=p.bezSlots[slot],c=cardData(r);
+  if(currentPhase(state).id!=='supply')return {ok:false,msg:'Alice kann ihren Effekt nur in der Versorgungsphase aktivieren.'};
+  if(c?.effekte?.[0]?.engine_key!=='alice')return {ok:false,msg:'Diese Bezwingerin besitzt Alices Effekt nicht.'};
+  r.effectState=r.effectState||{};
+  if((r.effectState.counterDodgeUses||0)<=0)return {ok:false,msg:'Alices einmaliges Ausweichen wurde bereits verbraucht.'};
+  r.effectState.counterDodgeUses--;r.effectState.counterDodgeActive=true;r.effectState.counterDodgeActivatedTurn=p.turnCount;
+  log(state,`${c.name}: Ausweichen gegen den nächsten Gegenangriff dieser Kampfrunde aktiviert.`);
+  return {ok:true,msg:'Alices Ausweichen aktiviert.'};
+}
+function expireAliceDodge(state){for(const p of state.players)for(const r of p.bezSlots||[])if(r?.effectState?.counterDodgeActive){r.effectState.counterDodgeActive=false;log(state,`${cardData(r)?.name||'Alice'}: aktiviertes Ausweichen verfällt am Ende der Kampfrunde.`);}}
+function lilou2Targets(state,playerIndex){
+  const p=state.players[playerIndex];
+  return (p.discard||[]).map((entry,i)=>{const bild=typeof entry==='string'?entry:entry?.bild,c=dbCard(bild);return c?.deck_bereich==='bezwingerinnen'&&Number(c?.stufe)===1?{id:String(i),name:c.name,bild}:null}).filter(Boolean);
+}
+function matchingDevelopmentsForBase(baseBild){return DB.filter(c=>c.deck_bereich==='entwicklung'&&c.grundkarte_bild===baseBild)}
+function startLilou2Wonder(state,slot){
+  const p=active(state),r=p.bezSlots[slot],c=cardData(r);
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+  if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+  if(!(p.bezSlots||[]).some(x=>!x))return {ok:false,msg:'Keine freie Bezwingerinnen-Feldposition.'};
+  if(!lilou2Targets(state,p.index).length)return {ok:false,msg:'Keine Bezwingerin der Stufe 1 in deiner Ablage.'};
+  const cost=Number(r.wonderCostCurrent??c?.wunder?.kosten_ehre??3);if((r.honor||0)<cost)return {ok:false,msg:`Lilou benötigt ${cost} Ehre.`};
+  state.pendingBezEffect={type:'lilou2_discard',sourcePlayer:p.index,sourceSlot:slot};return {ok:true,pending:true,msg:'Wähle eine Bezwingerin der Stufe 1 aus deiner Ablage.'};
+}
+function resolveLilou2Discard(state,index){
+  const pend=state.pendingBezEffect;if(!pend||pend.type!=='lilou2_discard')return {ok:false,msg:'Keine Lilou-Auswahl aktiv.'};
+  const p=state.players[pend.sourcePlayer],src=p.bezSlots[pend.sourceSlot],i=Number(index),entry=p.discard?.[i],bild=typeof entry==='string'?entry:entry?.bild,c=dbCard(bild);
+  if(!src||!entry||c?.deck_bereich!=='bezwingerinnen'||Number(c?.stufe)!==1)return {ok:false,msg:'Ungültige Stufe-1-Bezwingerin.'};
+  const free=(p.bezSlots||[]).map((x,j)=>!x?j:null).filter(j=>j!==null);if(!free.length)return {ok:false,msg:'Keine freie Bezwingerinnen-Feldposition mehr.'};
+  const cost=Number(src.wonderCostCurrent??cardData(src)?.wunder?.kosten_ehre??3);if((src.honor||0)<cost)return {ok:false,msg:'Lilou besitzt nicht mehr genügend Ehre.'};
+  src.honor-=cost;src.wonderTurn=p.turnCount;src.wonderCostCurrent=cost+1;p.discard.splice(i,1);
+  const r=makeRuntimeCard(bild,p.index,p.turnCount);r.hearts=2;r.physical=0;r.honor=0;r.ready=false;r.effectState=r.effectState||{};r.effectState.baseHeartsOverride=2;r.effectState.basePhysicalOverride=0;r.effectState.baseHonorOverride=0;
+  p.bezSlots[free[0]]=r;
+  const devs=matchingDevelopmentsForBase(bild);
+  const di=(p.discard||[]).findIndex(e=>{const b=typeof e==='string'?e:e?.bild;return devs.some(d=>d.bild===b)});
+  if(di>=0){const de=p.discard.splice(di,1)[0],devBild=typeof de==='string'?de:de?.bild;if(devBild)p.development.push(devBild);}
+  state.pendingBezEffect=null;log(state,`${c.name} wurde durch Lilou wiederbelebt. Basis: Herzen 2, physische Stärke 0, Ehre 0. Nächste Wunderkosten ${src.wonderCostCurrent}.`);
+  return {ok:true,msg:`${c.name} wiederbelebt. Nächste Lilou-Wunderkosten: ${src.wonderCostCurrent} Ehre.`};
+}
+function startBaronesse2Wonder(state,slot){
+  const p=active(state),r=p.bezSlots[slot],c=cardData(r);
+  if(currentPhase(state).id!=='rush')return {ok:false,msg:'Baronesse kann dieses Wunder nur in der Ansturmphase vorbereiten.'};
+  if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+  const cost=Number(r.wonderCostCurrent??c?.wunder?.kosten_ehre??2);if((r.honor||0)<cost)return {ok:false,msg:`Baronesse benötigt ${cost} Ehre.`};
+  r.effectState=r.effectState||{};r.effectState.baronesse2Armed=true;return {ok:true,msg:'Baronesse-Wunder bereit. Greife eine verletzte gegnerische Bezwingerin an.'};
+}
+function baronesse2CanBuff(state,attackerSlot,target){
+  const p=active(state),r=p.bezSlots[attackerSlot],c=cardData(r),d=target?.type==='bez'?opponent(state).bezSlots[target.slot]:null;
+  return c?.effekte?.[0]?.engine_key==='baronesse2'&&currentPhase(state).id==='rush'&&!!d&&Number(d.hearts)<currentBaseHearts(d);
+}
 function thalZirisStage1Targets(state,playerIndex){
  return allRuntimeCards(state).filter(x=>x.playerIndex===playerIndex && x.r?.effectRoundsRemaining!==null && x.r?.effectRoundsRemaining!==undefined && !x.r.effectDisabled)
    .filter(x=>!(x.zone==='equipment' && x.kind==='weapon'))
@@ -1412,7 +1483,9 @@ function prepareAttack(state,attackerSource,target,attackType){
     if(!tax.ok)return tax;
   }
   if(!['physical','astral'].includes(attackType))return {ok:false,msg:'Ungültige Angriffsart.'};
-  const legal=attackTargets(state,attackerSource).some(t=>targetKey(t)===targetKey(target));
+  const legalTarget=attackTargets(state,attackerSource).find(t=>targetKey(t)===targetKey(target));
+  if(legalTarget?.forcedAttackType && attackType!==legalTarget.forcedAttackType)return {ok:false,msg:'Arcadia erzwingt für diesen Kampf einen physischen Angriff.'};
+  const legal=!!legalTarget;
   if(!legal)return {ok:false,msg:'Dieses Angriffsziel ist nach der Grundregel nicht zulässig.'};
 
   state.attack={
@@ -1701,7 +1774,11 @@ function resolveCombat(state){
   const atk=attackerKind==='refuge'
     ? {base:type==='physical'?(a.physical ?? ac?.physische_staerke ?? 0):(a.astral ?? ac?.astrale_staerke ?? 0),equipment:0,total:type==='physical'?(a.physical ?? ac?.physische_staerke ?? 0):(a.astral ?? ac?.astrale_staerke ?? 0)}
     : combatStrength(state,p.index,state.attack.attackerSlot,type,true);
-  const attackValue=atk.total;
+  let attackValue=atk.total;
+  if(attackerKind==='bez'&&type==='physical'&&a?.effectState?.baronesse2Armed&&baronesse2CanBuff(state,state.attack.attackerSlot,target)){
+    const cost=Number(a.wonderCostCurrent??cardData(a)?.wunder?.kosten_ehre??2);
+    if((a.honor||0)>=cost){a.honor-=cost;a.wonderTurn=p.turnCount;a.effectState.baronesse2Armed=false;attackValue+=1;log(state,`${cardData(a)?.name}: +1 physische Stärke für diesen Kampf.`);}
+  }
 
   let counterValue=0,counter={base:0,equipment:0,total:0};
   if(target.type==='bez'){
@@ -1739,9 +1816,10 @@ function resolveCombat(state){
   const defenderPacket=target.type==='bez' && attackValue>0 ? {
     role:'defender',playerIndex:opp.index,bezSlot:target.slot,type,remaining:attackValue,shieldLoss:0,heartLoss:0
   }:null;
-  const attackerPacket=counterValue>0 && attackerKind!=='refuge' ? {
+  let attackerPacket=counterValue>0 && attackerKind!=='refuge' ? {
     role:'attacker',playerIndex:p.index,bezSlot:state.attack.attackerSlot,type,remaining:counterValue,shieldLoss:0,heartLoss:0
   }:null;
+  if(attackerPacket&&a?.effectState?.counterDodgeActive){a.effectState.counterDodgeActive=false;attackerPacket=null;log(state,`${cardData(a)?.name}: weicht dem Gegenangriff vollständig aus.`);}
   if(attackerKind==='refuge' && counterValue>0){
     const dmg=applyDamage(a,counterValue,type);
     if(dmg.shield||dmg.hearts)log(state,`Angreifende Zuflucht: −${dmg.shield} Basisschild/−${dmg.hearts} Herzen durch Gegenangriff.`);
@@ -1846,6 +1924,7 @@ function advancePhase(state){
   if(phase.id==='end'){
     expirePsiloBonuses(state);
     expireDeathPrimaryAttack(state);
+    expireAliceDodge(state);
     p.turnCount+=1;
     state.activePlayer=1-state.activePlayer;
     state.roundSerial+=1;
@@ -1965,6 +2044,7 @@ window.G5Engine={
   startPsiloWonder,psiloTargets,resolvePsiloTarget,keylaSearchTargets,resolveKeylaSearch,
   startQueen2Wonder,queenStackTargets,resolveQueenSearch,queenDiscardTargets,resolveQueen2Discard,
   activateDeathPrimaryAttack,hasPrimaryAttack,hasSecondaryAttack,
+  activateAliceDodge,startLilou2Wonder,lilou2Targets,resolveLilou2Discard,startBaronesse2Wonder,
   keyla2DestroyTargets,keyla2DiscardTargets,resolveKeyla2Choice,resolveKeyla2Destroy,resolveKeyla2Discard,
   fragmentRewardTargets,resolveFragmentReward,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,currentShieldChoice,chooseShieldSource,returnToRush,cardData
