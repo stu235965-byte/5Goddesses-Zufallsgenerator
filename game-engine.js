@@ -823,7 +823,10 @@ function applyPoliceAttackTax(state,attackerPlayer,attacker){
   return {ok:true};
 }
 function isCreatureCard(c){
-  return String(c?.kartentyp||'').toLowerCase()==='kreatur' || String(c?.untertyp||'').toLowerCase()==='kreatur';
+  if(!c)return false;
+  return c.kreatur===true ||
+    String(c.kartentyp||'').toLowerCase()==='kreatur' ||
+    String(c.untertyp||'').toLowerCase()==='kreatur';
 }
 function startPsiloWonder(state,slot){
   const p=active(state),r=p.bezSlots[slot];

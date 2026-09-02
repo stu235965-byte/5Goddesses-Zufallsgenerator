@@ -2962,9 +2962,12 @@
         ]
       }
     ],
-    "tags": [],
+    "tags": [
+      "brut"
+    ],
     "effekt_symbol": "permanent",
-    "effekt_text": "Schaden, der „Geißel der Galaxie Nemesis“ zugefügt wird, kann auf diese Karte umgeleitet werden. Überschüssiger Schaden wird „Geißel der Galaxie Nemesis“ zugefügt. Du kannst diese Karte auch im SEKUNDÄR- oder in einem freien ASTRAL-Rüstkammer-Bereich spielen, falls möglich."
+    "effekt_text": "Schaden, der „Geißel der Galaxie Nemesis“ zugefügt wird, kann auf diese Karte umgeleitet werden. Überschüssiger Schaden wird „Geißel der Galaxie Nemesis“ zugefügt. Du kannst diese Karte auch im SEKUNDÄR- oder in einem freien ASTRAL-Rüstkammer-Bereich spielen, falls möglich.",
+    "kreatur": true
   },
   {
     "id": "1.05-26-32-b63b093a",
