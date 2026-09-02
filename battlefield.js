@@ -174,8 +174,11 @@ function bezEffectBadge(r){
   let detail='';
   if(symbol==='charges' && r.effectUsesRemaining!==null && r.effectUsesRemaining!==undefined){
     detail=` ${r.effectUsesRemaining}`;
-  }else if(symbol==='duration' && r.effectRoundsRemaining!==null && r.effectRoundsRemaining!==undefined){
-    detail=` ${r.effectRoundsRemaining}`;
+  }else if(r.effectRoundsRemaining!==null && r.effectRoundsRemaining!==undefined){
+    detail+=` ⏱${r.effectRoundsRemaining}`;
+  }
+  if((r.berserkerMarks||0)>0 || c?.effekte?.some?.(e=>e.engine_key==='evelyn_berserker')){
+    detail+=` ◇${r.berserkerMarks||0}`;
   }
   return ` <span class="bez-effect-badge" title="${esc(c.effekt_text||'Karteneffekt')}">${icon}${detail}</span>`;
 }
@@ -409,14 +412,47 @@ function handSelected(){
 function renderActions(){
   const root=document.getElementById('gameActions');
   root.innerHTML='';
+  if(state.pendingBezEffect?.type==='keyla_search' || state.pendingBezEffect?.type==='keyla2_search'){
+    const title=document.createElement('strong');title.textContent='Keyla Dorn – ASTRALFRAGMENT aus Rüstkammer wählen';root.appendChild(title);
+    E().keylaSearchTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{
+      const b=document.createElement('button');b.type='button';b.textContent=t.name;
+      b.addEventListener('click',()=>{const rr=E().resolveKeylaSearch(state,t.id);saveRender(rr.msg);});root.appendChild(b);
+    });
+    const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Nicht nutzen';
+    cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg);});root.appendChild(cancel);return;
+  }
+  if(state.pendingBezEffect?.type==='keyla2_choice'){
+    const title=document.createElement('strong');title.textContent='Keyla Dorn Stufe 2 – Aktion wählen';root.appendChild(title);
+    [['destroy','Offene Reliquie zerstören'],['search','ASTRALFRAGMENT im Rüstkammer-Stapel suchen'],['discard','ASTRALFRAGMENT aus eigener Ablage nehmen']].forEach(([id,label])=>{
+      const b=document.createElement('button');b.type='button';b.textContent=label;
+      b.addEventListener('click',()=>{const rr=E().resolveKeyla2Choice(state,id);saveRender(rr.msg);});root.appendChild(b);
+    });
+    return;
+  }
+  if(state.pendingBezEffect?.type==='keyla2_destroy'){
+    const title=document.createElement('strong');title.textContent='Keyla Dorn – offene Reliquie zerstören';root.appendChild(title);
+    E().keyla2DestroyTargets(state).forEach(t=>{
+      const b=document.createElement('button');b.type='button';b.textContent=`${t.own?'Eigene':'Gegnerische'}: ${t.name}`;
+      b.addEventListener('click',()=>{const rr=E().resolveKeyla2Destroy(state,t.id);saveRender(rr.msg);});root.appendChild(b);
+    });
+    return;
+  }
+  if(state.pendingBezEffect?.type==='keyla2_discard'){
+    const title=document.createElement('strong');title.textContent='Keyla Dorn – ASTRALFRAGMENT aus Ablage wählen';root.appendChild(title);
+    E().keyla2DiscardTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{
+      const b=document.createElement('button');b.type='button';b.textContent=t.name;
+      b.addEventListener('click',()=>{const rr=E().resolveKeyla2Discard(state,t.id);saveRender(rr.msg);});root.appendChild(b);
+    });
+    return;
+  }
   if(state.pendingBezEffect?.type==='menia_dagger'){
     const title=document.createElement('strong');title.textContent='Menia – Dolch aus dem Rüstkammer-Stapel wählen';root.appendChild(title);
     const info=document.createElement('span');info.textContent='Nur passende Dolche werden angezeigt. Nicht gewählte Karten behalten ihre Reihenfolge im Stapel.';root.appendChild(info);
     E().meniaDaggerTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveMeniaDagger(state,t.id);saveRender(rr.msg);});root.appendChild(b);});
     const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Nicht nutzen';cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg||'Menias Suche wurde nicht genutzt.');});root.appendChild(cancel);return;
   }
-  if(state.pendingBezEffect && ['zahira','cassandra','mira','talisia2','talisia1_source','talisia1_target'].includes(state.pendingBezEffect.type)){
-    const labels={zahira:'Zahira – andere eigene Bezwingerin wählen',cassandra:'Cassandra – eigene Bezwingerin wählen',mira:'Mira Masako – gegnerische Bezwingerin wählen',talisia2:'Talisia II – gegnerische Bezwingerin wählen',talisia1_source:'Talisia – ASTRAL-Schild-Quelle wählen',talisia1_target:'Talisia – Empfängerin für 1 Herz wählen'};
+  if(state.pendingBezEffect && ['psilo','fragment_reward','zahira','cassandra','mira','talisia2','talisia1_source','talisia1_target'].includes(state.pendingBezEffect.type)){
+    const labels={psilo:'Psilo Cybe – KREATUR wählen',fragment_reward:`${state.pendingBezEffect.cardName||'ASTRALFRAGMENT'} – eigene Bezwingerin für Zerstörungseffekt wählen`,zahira:'Zahira – andere eigene Bezwingerin wählen',cassandra:'Cassandra – eigene Bezwingerin wählen',mira:'Mira Masako – gegnerische Bezwingerin wählen',talisia2:'Talisia II – gegnerische Bezwingerin wählen',talisia1_source:'Talisia – ASTRAL-Schild-Quelle wählen',talisia1_target:'Talisia – Empfängerin für 1 Herz wählen'};
     const title=document.createElement('strong');title.textContent=labels[state.pendingBezEffect.type];root.appendChild(title);
     E().checkedEffectTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveCheckedEffectTarget(state,t.id);saveRender(rr.msg);});root.appendChild(b);});
     const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Abbrechen';cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg);});root.appendChild(cancel);return;

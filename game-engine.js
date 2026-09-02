@@ -72,6 +72,8 @@ function makeRuntimeCard(bild,owner,enteredTurn=-1){
     attackedTurn:null,
     developedTurn:null,
     wonderTurn:null,
+    wonderCostCurrent:Number(c.wunder?.kosten_ehre ?? 0),
+    berserkerMarks:0,
     effectUsedTurn:null,
     effectUsesRemaining:(c.effekt_zaehler_max ?? null),
     effectRoundsRemaining:(c.effekt_dauer_kr ?? null),
@@ -236,7 +238,7 @@ function combatStrength(state,playerIndex,bezSlot,type,isAttacking=false){
   if(!r)return {base:0,equipment:0,total:0};
   const c=cardData(r);
   const base=type==='physical'
-    ? (r.physical ?? c?.physische_staerke ?? 0)
+    ? ((r.physical ?? c?.physische_staerke ?? 0) + Number(r.effectState?.psiloPhysicalBonus||0))
     : (r.astral ?? c?.astrale_staerke ?? 0);
   const equipment=equipmentStrengthBonus(state,playerIndex,bezSlot,type,isAttacking);
   return {base,equipment,total:Math.max(0,base+equipment)};
@@ -384,6 +386,16 @@ function resolveBezOnPlay(state,p,slot,r,c){
   const opp=opposingBez(state,p,slot);
   if(key==='martha'){
     if(!opp || (opp.hearts??0)<=(r.hearts??0)){r.honor=(r.honor||0)+1;log(state,`${c.name}: Ausspieleffekt → +1 Ehre.`)}
+  }else if(key==='keyla'){
+    const matches=(p.stacks?.ruestkammer||[]).map((bild,i)=>({bild,i,c:dbCard(bild)}))
+      .filter(x=>x.c?.kartentyp==='Reliquie' && String(x.c?.untertyp||'').toLowerCase()==='astralfragment');
+    if(matches.length){
+      state.pendingBezEffect={type:'keyla_search',sourcePlayer:p.index,sourceSlot:slot};
+      log(state,`${c.name}: passende ASTRALFRAGMENT-Reliquien im Rüstkammer-Stapel gefunden.`);
+    }else log(state,`${c.name}: keine passende ASTRALFRAGMENT-Reliquie im Rüstkammer-Stapel.`);
+  }else if(key==='keyla2'){
+    state.pendingBezEffect={type:'keyla2_choice',sourcePlayer:p.index,sourceSlot:slot};
+    log(state,`${c.name}: Wähle eine der drei Aktionen.`);
   }else if(key==='menia'){
     ensureEquipmentState(p);
     const occupied=!!p.equipment?.[slot]?.weapon;
@@ -441,6 +453,7 @@ function activateBezEffect(state,slot,choice=null){
  // Oberwelt-Wunder mit Zielauswahl: Kosten werden erst nach gültiger Zielwahl bezahlt.
  if(sym==='wonder' && key==='zahira')return startZahiraWonder(state,slot);
  if(sym==='wonder' && key==='cassandra')return startCassandraWonder(state,slot);
+ if(sym==='wonder' && key==='psilo')return startPsiloWonder(state,slot);
 
  // Bei normalen Effekten erst Validität prüfen, dann Ressourcen verbrauchen.
  if(key==='serinith'){
@@ -448,7 +461,7 @@ function activateBezEffect(state,slot,choice=null){
    else if(choice==='physical_to_astral' && r.physicalShield>=1){r.physicalShield--;r.astralShield++;}
    else return {ok:false,msg:'Wähle eine gültige Schild-Umwandlung.'};
  }else if(key==='evelyn'){
-   if((r.physicalShield||0)<3)return {ok:false,msg:'Evelyn benötigt 3 physische Schilde.'};
+   if((r.berserkerMarks||0)<3)return {ok:false,msg:'Evelyn benötigt 3 Berserkermarken.'};
  }else if(key==='trix2'){
    if(!((choice==='astral_to_physical' && r.astral>=1)||(choice==='physical_to_astral' && r.physical>=1)))
      return {ok:false,msg:'Wähle eine gültige Stärke-Umwandlung.'};
@@ -457,7 +470,7 @@ function activateBezEffect(state,slot,choice=null){
  if(sym==='wonder'){
    if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
    if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
-   const cost=Number(c.wunder?.kosten_ehre||0);if((r.honor||0)<cost)return {ok:false,msg:`Benötigt ${cost} Ehre.`};
+   const cost=Number(r.wonderCostCurrent ?? c.wunder?.kosten_ehre ?? 0);if((r.honor||0)<cost)return {ok:false,msg:`Benötigt ${cost} Ehre.`};
    r.honor-=cost;r.wonderTurn=p.turnCount;
  }else if(sym==='charges'){
    if(r.effectUsedTurn===p.turnCount)return {ok:false,msg:'Dieser Effekt wurde in dieser Kampfrunde bereits aktiviert.'};
@@ -468,8 +481,8 @@ function activateBezEffect(state,slot,choice=null){
  if(key==='serinith'){
    if(choice==='astral_to_physical'){r.astralShield--;r.physicalShield++;}
    else {r.physicalShield--;r.astralShield++;}
- }else if(key==='evelyn'){r.physicalShield-=3;r.hearts+=1;}
- else if(key==='saphira2'){r.astral=(r.astral||0)+1;c.wunder.kosten_ehre=Number(c.wunder.kosten_ehre||4)+1;}
+ }else if(key==='evelyn'){r.berserkerMarks-=3;r.hearts+=1;}
+ else if(key==='saphira2'){r.astral=(r.astral||0)+1;r.wonderCostCurrent=Number(r.wonderCostCurrent ?? c.wunder?.kosten_ehre ?? 4)+1;}
  else if(key==='trix2'){
    if(choice==='astral_to_physical'){r.astral--;r.physical++;}
    else {r.physical--;r.astral++;}
@@ -534,6 +547,213 @@ function cancelPendingBezEffect(state){state.pendingBezEffect=null;return {ok:tr
 
 
 
+
+function isCreatureCard(c){
+  return String(c?.kartentyp||'').toLowerCase()==='kreatur' || String(c?.untertyp||'').toLowerCase()==='kreatur';
+}
+function startPsiloWonder(state,slot){
+  const p=active(state),r=p.bezSlots[slot];
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+  if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+  const cost=Number(r.wonderCostCurrent ?? cardData(r)?.wunder?.kosten_ehre ?? 2);
+  if((r.honor||0)<cost)return {ok:false,msg:`Psilo benötigt ${cost} Ehre.`};
+  const targets=allRuntimeCards(state).filter(x=>isCreatureCard(cardData(x.r)));
+  if(!targets.length)return {ok:false,msg:'Es liegt keine offene KREATUR als Ziel auf dem Spielfeld.'};
+  state.pendingBezEffect={type:'psilo',sourcePlayer:p.index,sourceSlot:slot};
+  return {ok:true,pending:true,msg:'Wähle eine offene KREATUR für +1 physische Stärke für einen Kampf.'};
+}
+function psiloTargets(state){
+  return allRuntimeCards(state).filter(x=>isCreatureCard(cardData(x.r))).map(x=>({
+    id:`${x.playerIndex}|${x.zone}|${x.slot??''}|${x.kind||''}`,
+    name:cardData(x.r)?.name||'Kreatur',
+    own:x.playerIndex===state.pendingBezEffect?.sourcePlayer
+  }));
+}
+function resolvePsiloTarget(state,id){
+  const pend=state.pendingBezEffect;if(!pend||pend.type!=='psilo')return {ok:false,msg:'Keine Psilo-Auswahl aktiv.'};
+  const p=state.players[pend.sourcePlayer],src=p.bezSlots[pend.sourceSlot];
+  if(!src)return {ok:false,msg:'Psilo ist nicht mehr vorhanden.'};
+  const target=allRuntimeCards(state).find(x=>`${x.playerIndex}|${x.zone}|${x.slot??''}|${x.kind||''}`===id);
+  if(!target||!isCreatureCard(cardData(target.r)))return {ok:false,msg:'Ungültige Kreatur.'};
+  const cost=Number(src.wonderCostCurrent ?? cardData(src)?.wunder?.kosten_ehre ?? 2);
+  if((src.honor||0)<cost)return {ok:false,msg:'Psilo besitzt nicht mehr genügend Ehre.'};
+  src.honor-=cost;src.wonderTurn=p.turnCount;
+  target.r.effectState=target.r.effectState||{};
+  target.r.effectState.psiloPhysicalBonus=1;
+  target.r.effectState.psiloBonusRoundSerial=state.roundSerial;
+  state.pendingBezEffect=null;
+  log(state,`${cardData(target.r)?.name}: +1 physische Stärke für den nächsten Kampf dieser Kampfrunde.`);
+  return {ok:true,msg:'Psilos Bonus wurde vergeben.'};
+}
+function expirePsiloBonuses(state){
+  allRuntimeCards(state).forEach(x=>{
+    if(x.r?.effectState?.psiloPhysicalBonus){
+      delete x.r.effectState.psiloPhysicalBonus;
+      delete x.r.effectState.psiloBonusRoundSerial;
+    }
+  });
+}
+function consumePsiloBonus(runtime){
+  if(!runtime?.effectState?.psiloPhysicalBonus)return 0;
+  const n=Number(runtime.effectState.psiloPhysicalBonus||0);
+  delete runtime.effectState.psiloPhysicalBonus;
+  delete runtime.effectState.psiloBonusRoundSerial;
+  return n;
+}
+function isAstralFragment(c){
+  return c?.kartentyp==='Reliquie' && String(c?.untertyp||'').toLowerCase()==='astralfragment';
+}
+function keylaSearchTargets(state,playerIndex){
+  const p=state.players[playerIndex];
+  return (p.stacks?.ruestkammer||[]).map((bild,i)=>({bild,i,c:dbCard(bild)}))
+    .filter(x=>isAstralFragment(x.c))
+    .map(x=>({id:String(x.i),name:x.c?.name||'ASTRALFRAGMENT'}));
+}
+function resolveKeylaSearch(state,index){
+  const pend=state.pendingBezEffect;
+  if(!pend||!['keyla_search','keyla2_search'].includes(pend.type))return {ok:false,msg:'Keine Keyla-Suche aktiv.'};
+  const p=state.players[pend.sourcePlayer],i=Number(index),bild=p.stacks?.ruestkammer?.[i],c=dbCard(bild);
+  if(!bild||!isAstralFragment(c))return {ok:false,msg:'Diese Karte ist keine passende ASTRALFRAGMENT-Reliquie mehr.'};
+  p.stacks.ruestkammer.splice(i,1);p.hand.push(bild);state.pendingBezEffect=null;
+  log(state,`${c.name} wurde aus dem Rüstkammer-Stapel auf die Hand genommen. Der Stapel wurde nicht gemischt.`);
+  return {ok:true,msg:`${c.name} auf die Hand genommen.`};
+}
+function keyla2DestroyTargets(state){
+  return allRuntimeCards(state).filter(x=>cardData(x.r)?.kartentyp==='Reliquie').map(x=>({
+    id:`${x.playerIndex}|${x.zone}|${x.slot??''}|${x.kind||''}`,
+    name:cardData(x.r)?.name||'Reliquie',
+    own:x.playerIndex===state.pendingBezEffect?.sourcePlayer
+  }));
+}
+function keyla2DiscardTargets(state,playerIndex){
+  const p=state.players[playerIndex];
+  return (p.discard||[]).map((r,i)=>{
+    const bild=typeof r==='string'?r:r?.bild;
+    const c=dbCard(bild);
+    return isAstralFragment(c)?{id:String(i),name:c.name}:null;
+  }).filter(Boolean);
+}
+function removeRuntimeFromZone(state,target){
+  const p=state.players[target.playerIndex];
+  if(target.zone==='azr')p.azr[target.slot]=null;
+  else if(target.zone==='secondary')p.secondary=null;
+  else if(target.zone==='primary')state.sharedPrimary=null;
+  else if(target.zone==='equipment' && p.equipment?.[target.slot])p.equipment[target.slot][target.kind]=null;
+  else return false;
+  return true;
+}
+function queueFragmentReward(state,ownerIndex,cardRuntime){
+  const c=cardData(cardRuntime),reward=c?.effekte?.[0]?.on_destroy_reward;
+  if(!reward)return;
+  state.fragmentRewardQueue=state.fragmentRewardQueue||[];
+  state.fragmentRewardQueue.push({ownerIndex,cardName:c.name,reward});
+  startNextFragmentReward(state);
+}
+function startNextFragmentReward(state){
+  if(state.pendingBezEffect || !state.fragmentRewardQueue?.length)return;
+  const next=state.fragmentRewardQueue.shift(),p=state.players[next.ownerIndex];
+  if(!p?.bezSlots?.some(Boolean)){
+    log(state,`${next.cardName}: Zerstörungseffekt hat keine eigene Bezwingerin als gültiges Ziel.`);
+    return startNextFragmentReward(state);
+  }
+  state.pendingBezEffect={type:'fragment_reward',sourcePlayer:next.ownerIndex,reward:next.reward,cardName:next.cardName};
+}
+function destroyFieldRuntime(state,target,reason='zerstört'){
+  const r=target.r,p=state.players[target.playerIndex],c=cardData(r);
+  if(!removeRuntimeFromZone(state,target))return {ok:false,msg:'Diese Karte kann aus ihrer Zone nicht zerstört werden.'};
+  p.discard.push(r);
+  log(state,`${c?.name||'Karte'} wird ${reason} und auf die Ablage gelegt.`);
+  if(isAstralFragment(c))queueFragmentReward(state,target.playerIndex,r);
+  return {ok:true,msg:`${c?.name||'Reliquie'} wurde zerstört.`};
+}
+function resolveKeyla2Choice(state,choice){
+  const pend=state.pendingBezEffect;if(!pend||pend.type!=='keyla2_choice')return {ok:false,msg:'Keine Keyla-Auswahl aktiv.'};
+  const p=state.players[pend.sourcePlayer];
+  if(choice==='destroy'){
+    const targets=keyla2DestroyTargets(state);
+    if(!targets.length){state.pendingBezEffect=null;return {ok:false,msg:'Keine offene Reliquie zum Zerstören vorhanden.'};}
+    state.pendingBezEffect={...pend,type:'keyla2_destroy'};return {ok:true,pending:true,msg:'Wähle eine offene Reliquie.'};
+  }
+  if(choice==='search'){
+    const targets=keylaSearchTargets(state,pend.sourcePlayer);
+    if(!targets.length){state.pendingBezEffect=null;return {ok:false,msg:'Keine ASTRALFRAGMENT-Reliquie im Rüstkammer-Stapel.'};}
+    state.pendingBezEffect={...pend,type:'keyla2_search'};return {ok:true,pending:true,msg:'Wähle eine ASTRALFRAGMENT-Reliquie aus dem Rüstkammer-Stapel.'};
+  }
+  if(choice==='discard'){
+    const targets=keyla2DiscardTargets(state,pend.sourcePlayer);
+    if(!targets.length){state.pendingBezEffect=null;return {ok:false,msg:'Keine ASTRALFRAGMENT-Reliquie in der eigenen Ablage.'};}
+    state.pendingBezEffect={...pend,type:'keyla2_discard'};return {ok:true,pending:true,msg:'Wähle eine ASTRALFRAGMENT-Reliquie aus deiner Ablage.'};
+  }
+  return {ok:false,msg:'Ungültige Keyla-Aktion.'};
+}
+function resolveKeyla2Destroy(state,id){
+  const pend=state.pendingBezEffect;if(!pend||pend.type!=='keyla2_destroy')return {ok:false,msg:'Keine Reliquien-Zerstörung aktiv.'};
+  const target=allRuntimeCards(state).find(x=>`${x.playerIndex}|${x.zone}|${x.slot??''}|${x.kind||''}`===id);
+  if(!target||cardData(target.r)?.kartentyp!=='Reliquie')return {ok:false,msg:'Ungültige Reliquie.'};
+  state.pendingBezEffect=null;
+  const rr=destroyFieldRuntime(state,target,'durch Keyla zerstört');
+  startNextFragmentReward(state);
+  return rr;
+}
+function resolveKeyla2Discard(state,index){
+  const pend=state.pendingBezEffect;if(!pend||pend.type!=='keyla2_discard')return {ok:false,msg:'Keine Ablageauswahl aktiv.'};
+  const p=state.players[pend.sourcePlayer],i=Number(index),entry=p.discard?.[i],bild=typeof entry==='string'?entry:entry?.bild,c=dbCard(bild);
+  if(!entry||!isAstralFragment(c))return {ok:false,msg:'Ungültige ASTRALFRAGMENT-Reliquie.'};
+  p.discard.splice(i,1);p.hand.push(bild);state.pendingBezEffect=null;
+  return {ok:true,msg:`${c.name} wurde aus der Ablage auf die Hand genommen.`};
+}
+function fragmentRewardTargets(state){
+  const pend=state.pendingBezEffect;if(!pend||pend.type!=='fragment_reward')return [];
+  return state.players[pend.sourcePlayer].bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
+}
+function resolveFragmentReward(state,id){
+  const pend=state.pendingBezEffect;if(!pend||pend.type!=='fragment_reward')return {ok:false,msg:'Kein ASTRALFRAGMENT-Zerstörungseffekt aktiv.'};
+  const p=state.players[pend.sourcePlayer],t=p.bezSlots[Number(id)];if(!t)return {ok:false,msg:'Ungültige eigene Bezwingerin.'};
+  const rw=pend.reward||{};
+  if(rw.hearts)t.hearts=(t.hearts||0)+rw.hearts;
+  if(rw.honor)t.honor=(t.honor||0)+rw.honor;
+  if(rw.physicalShield)t.physicalShield=(t.physicalShield||0)+rw.physicalShield;
+  if(rw.astralShield)t.astralShield=(t.astralShield||0)+rw.astralShield;
+  log(state,`${pend.cardName}: Zerstörungseffekt auf ${cardData(t)?.name} angewandt.`);
+  state.pendingBezEffect=null;startNextFragmentReward(state);
+  return {ok:true,msg:'ASTRALFRAGMENT-Zerstörungseffekt ausgeführt.'};
+}
+function tickFieldDurations(state){
+  const targets=allRuntimeCards(state).filter(x=>x.zone!=='bez' && x.r?.effectRoundsRemaining!==null && x.r?.effectRoundsRemaining!==undefined && !x.r.effectDisabled);
+  for(const x of targets){
+    x.r.effectRoundsRemaining--;
+    if(x.r.effectRoundsRemaining<=0){
+      const c=cardData(x.r);
+      if(isAstralFragment(c)){
+        x.r.effectRoundsRemaining=0;
+        destroyFieldRuntime(state,x,'nach Ablauf der Kampfrundendauer zerstört');
+      }else{
+        x.r.effectRoundsRemaining=0;x.r.effectDisabled=true;
+      }
+    }
+  }
+  startNextFragmentReward(state);
+}
+function awardEvelynBerserkerMarks(state,attackSnapshot){
+  if(!attackSnapshot)return;
+  const refs=[];
+  const ap=state.players[attackSnapshot.attackerPlayer];
+  if(attackSnapshot.attackerKind==='bez'){
+    const r=ap?.bezSlots?.[attackSnapshot.attackerSlot];if(r)refs.push(r);
+  }
+  if(attackSnapshot.targetType==='bez'){
+    const dp=state.players[attackSnapshot.defenderPlayer];
+    const r=dp?.bezSlots?.[attackSnapshot.defenderSlot];if(r)refs.push(r);
+  }
+  const seen=new Set();
+  refs.forEach(r=>{
+    if(seen.has(r))return;seen.add(r);
+    if(cardData(r)?.effekte?.some(e=>e.engine_key==='evelyn_berserker')){
+      r.berserkerMarks=(r.berserkerMarks||0)+1;
+      log(state,`${cardData(r).name}: +1 Berserkermarke am Ende der Kampfphase (${r.berserkerMarks}).`);
+    }
+  });
+}
 function startZahiraWonder(state,slot){
   const p=active(state),r=p.bezSlots[slot];
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
@@ -577,6 +797,8 @@ function resolveMeniaDagger(state,index){
 }
 function checkedEffectTargets(state){
  const pend=state.pendingBezEffect;if(!pend)return [];const p=state.players[pend.sourcePlayer],enemy=state.players[1-pend.sourcePlayer];
+ if(pend.type==='psilo')return psiloTargets(state);
+ if(pend.type==='fragment_reward')return fragmentRewardTargets(state);
  if(pend.type==='zahira')return p.bezSlots.map((r,i)=>r&&i!==pend.sourceSlot?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
  if(pend.type==='cassandra')return p.bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
  if(pend.type==='mira')return enemy.bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
@@ -587,6 +809,8 @@ function checkedEffectTargets(state){
 function resolveCheckedEffectTarget(state,id){
  const pend=state.pendingBezEffect;if(!pend)return {ok:false,msg:'Keine Effektauswahl aktiv.'};const p=state.players[pend.sourcePlayer],enemy=state.players[1-pend.sourcePlayer],src=p.bezSlots[pend.sourceSlot],c=cardData(src);
  if(!src){state.pendingBezEffect=null;return {ok:false,msg:'Quellkarte ist nicht mehr auf dem Spielfeld.'};}
+ if(pend.type==='psilo')return resolvePsiloTarget(state,id);
+ if(pend.type==='fragment_reward')return resolveFragmentReward(state,id);
  if(pend.type==='zahira'){
    const t=p.bezSlots[Number(id)];if(!t||Number(id)===pend.sourceSlot)return {ok:false,msg:'Zahira muss eine andere eigene Bezwingerin wählen.'};
    if((src.honor||0)<1)return {ok:false,msg:'Zahira besitzt nicht mehr genügend Ehre.'};
@@ -1133,6 +1357,10 @@ function finalizePendingCombat(state){
 
   const attack=state.attack;
   if(attack){
+    awardEvelynBerserkerMarks(state,{
+      attackerPlayer:pd.attackerIndex,attackerKind:pd.attackerKind||'bez',attackerSlot:pd.attackerSlot,
+      defenderPlayer:pd.defenderIndex,targetType:pd.defKind,defenderSlot:pd.defSlot
+    });
     killIfNeeded(state,pd.defenderIndex,pd.defKind,pd.defSlot);
     killIfNeeded(state,pd.attackerIndex,pd.attackerKind||'bez',pd.attackerSlot);
   }
@@ -1242,6 +1470,8 @@ function resolveCombat(state){
   log(state,`${ac?.name||'Angreifer'} verursacht ${attackValue}${atkBonus} ${type==='physical'?'physischen':'ASTRAL'} Schaden; ${dc?.name||'Ziel'} führt gleichzeitig einen Gegenangriff mit ${counterValue}${counterBonus} Stärke aus.`);
 
   a.attackedTurn=p.turnCount;
+  if(type==='physical')consumePsiloBonus(a);
+  if(target.type==='bez' && type==='physical')consumePsiloBonus(d);
 
   // Primär/Sekundär/Zuflucht haben keine anliegende Bezwingerinnen-Ausrüstung
   // und werden deshalb weiterhin direkt abgewickelt.
@@ -1309,6 +1539,7 @@ function beginPhase(state){
   if(phase.id==='supply')releaseMiraDelayLocks(state);
   if(phase.id==='start'){
     tickBezEffectDurations(state);
+    tickFieldDurations(state);
     p.recruitedThisTurn=false;
     p.drawDone=false;
     state.attack=null;
@@ -1374,6 +1605,7 @@ function advancePhase(state){
     return {ok:true};
   }
   if(phase.id==='end'){
+    expirePsiloBonuses(state);
     p.turnCount+=1;
     state.activePlayer=1-state.activePlayer;
     state.roundSerial+=1;
@@ -1416,6 +1648,7 @@ function migrateLoadedState(state){
   if(state.pendingWonderDraw===undefined)state.pendingWonderDraw=null;
   if(state.pendingRefugeStage2Choice===undefined)state.pendingRefugeStage2Choice=null;
   if(state.pendingBezEffect===undefined)state.pendingBezEffect=null;
+  if(!Array.isArray(state.fragmentRewardQueue))state.fragmentRewardQueue=[];
 
   state.players.forEach((p,index)=>{
     if(p.index===undefined)p.index=index;
@@ -1434,6 +1667,10 @@ function migrateLoadedState(state){
       if(r.physical===undefined)r.physical=c?.physische_staerke ?? 0;
       if(r.astral===undefined)r.astral=c?.astrale_staerke ?? 0;
       if(r.wonderTurn===undefined)r.wonderTurn=null;
+      if(r.wonderCostCurrent===undefined)r.wonderCostCurrent=Number(c?.wunder?.kosten_ehre ?? 0);
+      if(r.berserkerMarks===undefined)r.berserkerMarks=0;
+      if(r.effectState===undefined||!r.effectState)r.effectState={};
+      if(r.effectRoundsRemaining===undefined)r.effectRoundsRemaining=(c?.effekt_dauer_kr ?? null);
       if(isRefuge){
         r.ready=true;
       }else if(!hasDeploymentDelay(c)){
@@ -1483,6 +1720,9 @@ window.G5Engine={
   bezEffectInfo,activateBezEffect,thalZirisTargets,resolveThalZiris,cancelPendingBezEffect,
   checkedEffectTargets,resolveCheckedEffectTarget,startTalisia1Wonder,jeanneForcedTarget,
   startZahiraWonder,startCassandraWonder,meniaDaggerTargets,resolveMeniaDagger,
+  startPsiloWonder,psiloTargets,resolvePsiloTarget,keylaSearchTargets,resolveKeylaSearch,
+  keyla2DestroyTargets,keyla2DiscardTargets,resolveKeyla2Choice,resolveKeyla2Destroy,resolveKeyla2Discard,
+  fragmentRewardTargets,resolveFragmentReward,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,currentShieldChoice,chooseShieldSource,returnToRush,cardData
 };
 })();

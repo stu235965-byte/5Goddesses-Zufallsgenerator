@@ -425,11 +425,13 @@
       "ehre": 0,
       "wunder": null,
       "effekte": [],
-      "tags": [],
+      "tags": [
+        "storytext"
+      ],
       "effekt_symbol": "none",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Storytext; kein Karteneffekt."
+      "effekt_text": ""
     },
     {
       "id": "1.04-04-32-922770d8",
@@ -456,20 +458,31 @@
       "ehre": 0,
       "wunder": {
         "kosten_ehre": 2,
-        "text": "Tausche 3 physische Schilde gegen 1 Herz und füge es dieser Bezwingerin hinzu. Für jeden durchgeführten Kampf mit dieser Bezwingerin erhält sie 1 ASTRAL-Schild am Ende der Kampfphase."
+        "text": "Tausche 3 Berserkermarken gegen 1 Herz und füge es Evelyn hinzu."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Tausche 3 physische Schilde gegen 1 Herz und füge es dieser Bezwingerin hinzu. Für jeden durchgeführten Kampf mit dieser Bezwingerin erhält sie 1 ASTRAL-Schild am Ende der Kampfphase.",
-          "engine_key": "evelyn"
+          "engine_key": "evelyn",
+          "berserker_marks_cost": 3,
+          "hearts_plus": 1
+        },
+        {
+          "trigger": "combat_end",
+          "engine_key": "evelyn_berserker",
+          "berserker_marks_plus": 1
         }
       ],
-      "tags": [],
+      "tags": [
+        "wunder",
+        "berserkermarke",
+        "kampfende",
+        "herz"
+      ],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Tausche 3 physische Schilde gegen 1 Herz und füge es dieser Bezwingerin hinzu. Für jeden durchgeführten Kampf mit dieser Bezwingerin erhält sie 1 ASTRAL-Schild am Ende der Kampfphase."
+      "effekt_text": "Tausche 3 Berserkermarken gegen 1 Herz und füge es Evelyn hinzu. Für jeden durchgeführten Kampf mit Evelyn erhält sie 1 Berserkermarke am Ende der Kampfphase."
     },
     {
       "id": "1.04-05-32-be771e84",
@@ -535,15 +548,25 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Suche aus dem Rüstkammer-Stapel eine Reliquie vom Typ ASTRALFRAGMENT und nimm sie auf die Hand.",
-          "engine_key": "keyla"
+          "engine_key": "keyla",
+          "optional": true,
+          "source": "own_ruestkammer_stack",
+          "kartentyp": "Reliquie",
+          "untertyp": "Astralfragment",
+          "destination": "hand",
+          "preserve_stack_order": true
         }
       ],
-      "tags": [],
+      "tags": [
+        "ausspieleffekt",
+        "ruestkammer_suche",
+        "reliquie",
+        "astralfragment"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Suche aus dem Rüstkammer-Stapel eine Reliquie vom Typ ASTRALFRAGMENT und nimm sie auf die Hand."
+      "effekt_text": "Du kannst dir aus dem Rüstkammer-Stapel eine RELIQUIE vom Typ ASTRALFRAGMENT suchen und diese auf deine Hand nehmen."
     },
     {
       "id": "1.04-20-32-0c8013b6",
@@ -607,20 +630,28 @@
       "ehre": 0,
       "wunder": {
         "kosten_ehre": 2,
-        "text": "Du kannst einer Kreatur für diese Kampfrunde 1 physische Stärke hinzufügen, jedoch nur für einen Kampf."
+        "text": "Du kannst einer KREATUR für diese Kampfrunde 1 physische Stärke hinzufügen, jedoch nur für einen Kampf."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Du kannst einer Kreatur für diese Kampfrunde 1 physische Stärke hinzufügen, jedoch nur für einen Kampf.",
-          "engine_key": "psilo"
+          "engine_key": "psilo",
+          "target": "any_open_creature",
+          "physical_bonus": 1,
+          "expires": "end_of_current_round",
+          "consume_on_combat": true
         }
       ],
-      "tags": [],
+      "tags": [
+        "wunder",
+        "kreatur",
+        "temporäre_physische_stärke",
+        "ein_kampf"
+      ],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Du kannst einer Kreatur für diese Kampfrunde 1 physische Stärke hinzufügen, jedoch nur für einen Kampf."
+      "effekt_text": "Du kannst einer KREATUR für diese Kampfrunde 1 physische Stärke hinzufügen, jedoch nur für einen Kampf."
     },
     {
       "id": "1.01-03-32-ff9fdb25",
@@ -3038,7 +3069,7 @@
       "kartentyp": "Reliquie",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Astralwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -3052,8 +3083,28 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "duration",
+          "engine_key": "astralfragment",
+          "duration_rounds": 2,
+          "destroy_on_expire": true,
+          "on_destroy_reward": {
+            "honor": 2
+          }
+        }
+      ],
+      "tags": [
+        "reliquie",
+        "astralfragment",
+        "kristall",
+        "kampfrundendauer",
+        "zerstörungseffekt"
+      ],
+      "fraktionslos": true,
+      "effekt_symbol": "duration",
+      "effekt_dauer_kr": 2,
+      "effekt_text": "Diese Karte bleibt 2 Kampfrunden offen auf dem Spielfeld. Nach Ablauf dieser Zeit wird sie zerstört. Wenn diese Karte zerstört wird, erhält eine eigene Bezwingerin 2 Ehre."
     },
     {
       "id": "1.04-28-32-59cf6134",
@@ -3065,7 +3116,7 @@
       "kartentyp": "Reliquie",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Astralwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -3079,8 +3130,29 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "duration",
+          "engine_key": "astralfragment",
+          "duration_rounds": 2,
+          "destroy_on_expire": true,
+          "on_destroy_reward": {
+            "hearts": 1,
+            "honor": 1
+          }
+        }
+      ],
+      "tags": [
+        "reliquie",
+        "astralfragment",
+        "kristall",
+        "kampfrundendauer",
+        "zerstörungseffekt"
+      ],
+      "fraktionslos": true,
+      "effekt_symbol": "duration",
+      "effekt_dauer_kr": 2,
+      "effekt_text": "Diese Karte bleibt 2 Kampfrunden offen auf dem Spielfeld. Nach Ablauf dieser Zeit wird sie zerstört. Wenn diese Karte zerstört wird, erhält eine eigene Bezwingerin 1 Herz und 1 Ehre."
     },
     {
       "id": "1.04-29-32-7d288892",
@@ -3092,7 +3164,7 @@
       "kartentyp": "Reliquie",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Astralwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -3106,8 +3178,29 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "duration",
+          "engine_key": "astralfragment",
+          "duration_rounds": 2,
+          "destroy_on_expire": true,
+          "on_destroy_reward": {
+            "physicalShield": 1,
+            "honor": 1
+          }
+        }
+      ],
+      "tags": [
+        "reliquie",
+        "astralfragment",
+        "kristall",
+        "kampfrundendauer",
+        "zerstörungseffekt"
+      ],
+      "fraktionslos": true,
+      "effekt_symbol": "duration",
+      "effekt_dauer_kr": 2,
+      "effekt_text": "Diese Karte bleibt 2 Kampfrunden offen auf dem Spielfeld. Nach Ablauf dieser Zeit wird sie zerstört. Wenn diese Karte zerstört wird, erhält eine eigene Bezwingerin 1 physischen Schild und 1 Ehre."
     },
     {
       "id": "1.04-30-32-f6e1d4a0",
@@ -3119,7 +3212,7 @@
       "kartentyp": "Reliquie",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Astralwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -3133,8 +3226,29 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "duration",
+          "engine_key": "astralfragment",
+          "duration_rounds": 2,
+          "destroy_on_expire": true,
+          "on_destroy_reward": {
+            "astralShield": 1,
+            "honor": 1
+          }
+        }
+      ],
+      "tags": [
+        "reliquie",
+        "astralfragment",
+        "kristall",
+        "kampfrundendauer",
+        "zerstörungseffekt"
+      ],
+      "fraktionslos": true,
+      "effekt_symbol": "duration",
+      "effekt_dauer_kr": 2,
+      "effekt_text": "Diese Karte bleibt 2 Kampfrunden offen auf dem Spielfeld. Nach Ablauf dieser Zeit wird sie zerstört. Wenn diese Karte zerstört wird, erhält eine eigene Bezwingerin 1 ASTRAL-Schild und 1 Ehre."
     },
     {
       "id": "1.04-31-32-5e304bb5",
@@ -4349,11 +4463,16 @@
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Erhöhe die aktuelle ASTRAL-Angriffsstärke dieser Bezwingerin um 1. Die aktuellen Wunder-Kosten steigen dadurch ebenfalls um 1 Ehre.",
-          "engine_key": "saphira2"
+          "engine_key": "saphira2",
+          "self_astral_plus": 1,
+          "increase_future_cost": 1
         }
       ],
-      "tags": [],
+      "tags": [
+        "wunder",
+        "astral_stärke",
+        "steigende_kosten"
+      ],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
@@ -4435,15 +4554,24 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Wähle: eine Reliquie zerstören; eine ASTRALFRAGMENT-Reliquie aus dem Rüstkammer-Stapel suchen und auf die Hand nehmen; oder eine ASTRALFRAGMENT-Reliquie aus dem Ablagestapel auf die Hand nehmen.",
-          "engine_key": "keyla2"
+          "engine_key": "keyla2",
+          "choices": [
+            "destroy_any_open_relic",
+            "search_own_astralfragment",
+            "recover_own_astralfragment_from_discard"
+          ]
         }
       ],
-      "tags": [],
+      "tags": [
+        "ausspieleffekt",
+        "wahl",
+        "reliquie",
+        "astralfragment"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Wähle: eine Reliquie zerstören; eine ASTRALFRAGMENT-Reliquie aus dem Rüstkammer-Stapel suchen und auf die Hand nehmen; oder eine ASTRALFRAGMENT-Reliquie aus dem Ablagestapel auf die Hand nehmen."
+      "effekt_text": "Wähle eine Aktion: eine offene RELIQUIE zerstören; den Rüstkammer-Stapel nach einer RELIQUIE vom Typ ASTRALFRAGMENT durchsuchen und sie auf die Hand nehmen; oder eine RELIQUIE vom Typ ASTRALFRAGMENT aus der eigenen Ablage auf die Hand nehmen."
     },
     {
       "id": "1.01-02-32-6bc100fd",
