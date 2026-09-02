@@ -157,7 +157,7 @@ function bezCore(r,i,isActive){
   // Gegnerische Bezwingerinnen dürfen nicht als HTML-"disabled" gerendert
   // werden: In der Ansturmphase müssen sie als Angriffsziel anklickbar sein.
   // Eigene Grundaktionen werden ohnehin nur über #playerBoard verdrahtet.
-  return `<button type="button" class="board-slot bez-slot${isActive?'':' opponent-slot'}" data-bez="${i}" aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN</span></button>`;
+  return `<button type="button" class="board-slot bez-slot${isActive?'':' opponent-slot'}" data-bez="${i}" aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN${bezEffectBadge(r)}</span></button>`;
 }
 function playerBoardHtml(p,isActive,isOpponent){
   const eq=p.equipment||[

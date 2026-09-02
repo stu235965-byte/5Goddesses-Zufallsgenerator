@@ -72,6 +72,11 @@ function makeRuntimeCard(bild,owner,enteredTurn=-1){
     attackedTurn:null,
     developedTurn:null,
     wonderTurn:null,
+    effectUsedTurn:null,
+    effectUsesRemaining:(c.effekt_zaehler_max ?? null),
+    effectRoundsRemaining:(c.effekt_dauer_kr ?? null),
+    effectDisabled:false,
+    effectState:{},
     faceDown:false,
     developmentStack:[c.bild]
   };
@@ -346,7 +351,7 @@ function grantHonor(state){
 }
 function readyEligibleBez(state,slot){
   const p=active(state),r=p.bezSlots[slot];
-  return !!r && !r.ready && p.turnCount>r.enteredTurn;
+  return !!r && !r.ready && p.turnCount>r.enteredTurn && !(r.effectState?.delayLockedUntilSupply);
 }
 function readyBez(state,slot){
   if(!readyEligibleBez(state,slot))return {ok:false,msg:'Diese Bezwingerin kann noch nicht einsatzbereit gemacht werden.'};
@@ -368,8 +373,65 @@ function recruit(state,handIndex,slot){
   p.bezSlots[slot]=r;
   p.recruitedThisTurn=true;
   log(state,`${p.name} rekrutiert ${c.name} in Bereich ${slot+1}.`);
+  resolveBezOnPlay(state,p,slot,r,c);
   return {ok:true};
 }
+
+function opposingBez(state,p,slot){return state.players[1-p.index]?.bezSlots?.[slot]||null}
+function countOwnAzrCards(p){return (p.azr||[]).filter(Boolean).length}
+function resolveBezOnPlay(state,p,slot,r,c){
+  const key=c?.effekte?.[0]?.engine_key;
+  const opp=opposingBez(state,p,slot);
+  if(key==='martha'){
+    if(!opp || (opp.hearts??0)<=(r.hearts??0)){r.honor=(r.honor||0)+1;log(state,`${c.name}: Ausspieleffekt → +1 Ehre.`)}
+  }else if(key==='effrayer'){
+    const hasVengeresse=p.bezSlots.some((x,i)=>i!==slot&&x&&String(cardData(x)?.untertyp||'').includes('Vengeresse'));
+    if(hasVengeresse){r.honor=(r.honor||0)+1;log(state,`${c.name}: Ausspieleffekt → +1 Ehre.`)}
+  }else if(key==='amelia' && opp){opp.astralShield=(opp.astralShield||0)-1;log(state,`${c.name}: Gegenüber verliert 1 ASTRAL-Schild.`)}
+  else if(key==='lilith' && opp){opp.honor=(opp.honor||0)-1;log(state,`${c.name}: Gegenüber verliert 1 Ehre.`)}
+  else if(key==='trix'){
+    const n=countOwnAzrCards(p); const add=n>=3?2:n>=2?1:0; r.honor=(r.honor||0)+add;if(add)log(state,`${c.name}: ${n} eigene AZR-Karten → +${add} Ehre.`)
+  }else if(key==='calypso'){r.ready=true;r.effectState.noRefugeAttackTurn=p.turnCount;log(state,`${c.name}: keine Einsatzverzögerung; Zuflucht ist in dieser KR kein Angriffsziel.`)}
+  else if(key==='talisia2'){
+    if((r.astralShield||0)>=1){r.astralShield-=1;r.hearts+=1;log(state,`${c.name}: 1 ASTRAL-Schild wurde in 1 Herz umgewandelt.`)}
+  }else if(key){log(state,`${c.name}: Ausspieleffekt „${c.effekt_text||key}“ ist erfasst; falls eine Ziel-/Suchauswahl nötig ist, wird er über die Effektsteuerung abgewickelt.`)}
+}
+function bezEffectInfo(state,slot){
+ const p=active(state),r=p.bezSlots[slot];if(!r)return null;const c=cardData(r);if(!c)return null;
+ return {symbol:c.effekt_symbol||'none',text:c.effekt_text||'',cost:Number(c.wunder?.kosten_ehre||0),usesRemaining:r.effectUsesRemaining,roundsRemaining:r.effectRoundsRemaining,disabled:!!r.effectDisabled,usedThisTurn:r.effectUsedTurn===p.turnCount,wonderUsed:r.wonderTurn===p.turnCount};
+}
+function activateBezEffect(state,slot,choice=null){
+ const p=active(state),r=p.bezSlots[slot];if(!r)return {ok:false,msg:'Keine Bezwingerin in diesem Bereich.'};const c=cardData(r),sym=c?.effekt_symbol||'none',key=c?.effekte?.[0]?.engine_key;
+ if(r.effectDisabled||sym==='none'||sym==='permanent'||sym==='duration'||sym==='on_play')return {ok:false,msg:'Dieser Effekt wird nicht manuell auf diese Weise aktiviert.'};
+ if(sym==='wonder'){
+   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+   const cost=Number(c.wunder?.kosten_ehre||0);if((r.honor||0)<cost)return {ok:false,msg:`Benötigt ${cost} Ehre.`};
+   r.honor-=cost;r.wonderTurn=p.turnCount;
+ }else if(sym==='charges'){
+   if(r.effectUsedTurn===p.turnCount)return {ok:false,msg:'Dieser Effekt wurde in dieser Kampfrunde bereits aktiviert.'};
+   if((r.effectUsesRemaining??0)<=0)return {ok:false,msg:'Keine Zählermarken mehr vorhanden.'};
+   r.effectUsesRemaining--;r.effectUsedTurn=p.turnCount;
+ }
+ // Effects that are unambiguous without selecting another card
+ if(key==='serinith'){
+   if(choice==='astral_to_physical' && r.astralShield>=1){r.astralShield--;r.physicalShield++;}
+   else if(choice==='physical_to_astral' && r.physicalShield>=1){r.physicalShield--;r.astralShield++;}
+   else return {ok:false,msg:'Wähle eine gültige Schild-Umwandlung.'};
+ }else if(key==='evelyn'){
+   if((r.physicalShield||0)<3)return {ok:false,msg:'Evelyn benötigt 3 physische Schilde.'};r.physicalShield-=3;r.hearts+=1;
+ }else if(key==='saphira2'){r.astral=(r.astral||0)+1;c.wunder.kosten_ehre=Number(c.wunder.kosten_ehre||4)+1;}
+ else if(key==='trix2'){
+   if(choice==='astral_to_physical' && r.astral>=1){r.astral--;r.physical++;}
+   else if(choice==='physical_to_astral' && r.physical>=1){r.physical--;r.astral++;}
+   else return {ok:false,msg:'Wähle eine gültige Stärke-Umwandlung.'};
+ }else {log(state,`${c.name}: Effekt aktiviert. Ziel-/Such-/Tokenauflösung muss entsprechend dem Kartentext ausgeführt werden.`);return {ok:true,manual:true,msg:`${c.name}: ${c.effekt_text}`};}
+ log(state,`${c.name}: Effekt aktiviert.`);return {ok:true,msg:`Effekt von ${c.name} ausgeführt.`};
+}
+function tickBezEffectDurations(state){
+ for(const p of state.players)for(const r of p.bezSlots){if(!r||r.effectDisabled||r.effectRoundsRemaining===null)continue;r.effectRoundsRemaining--;if(r.effectRoundsRemaining<=0){r.effectRoundsRemaining=0;r.effectDisabled=true;log(state,`${cardData(r)?.name||'Ein Effekt'} ist nach Ablauf der Kampfrunden deaktiviert.`)}}
+}
+
 function setFaceDown(state,handIndex,slot){
   const p=active(state);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Karten können hier nur in Versorgungs- oder Nachschubphase gesetzt werden.'};
@@ -1033,6 +1095,7 @@ function resolveCombat(state){
 function beginPhase(state){
   const p=active(state),phase=currentPhase(state);
   if(phase.id==='start'){
+    tickBezEffectDurations(state);
     p.recruitedThisTurn=false;
     p.drawDone=false;
     state.attack=null;

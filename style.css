@@ -1053,3 +1053,7 @@ h1{font-size:30px;margin:0 0 16px}
     top:auto !important;
   }
 }
+
+/* v1.28 Bezwingerinnen-Effekte */
+.effect-counter{display:inline-block;margin-left:.35rem;padding:.08rem .3rem;border:1px solid currentColor;border-radius:999px;font-size:.62rem;line-height:1.2;white-space:nowrap;background:#151515}
+.effect-wonder{color:#6ee88a}.effect-on_play{color:#ffe66d}.effect-permanent{color:#c7b8ff}.effect-charges{color:#9bdcff}.effect-duration{color:#ffb36b}
