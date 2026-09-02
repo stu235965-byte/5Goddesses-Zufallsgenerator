@@ -338,16 +338,19 @@ function grantHonor(state){
   if(p.honorGrantedTurn===p.turnCount)return 0;
 
   let n=0;
+  const changes=[];
   for(const r of honorCardsOfPlayer(state,p)){
     if(honorEligible(r,p)){
-      r.honor=(r.honor||0)+1;
+      const before=Number(r.honor ?? 0);
+      r.honor=before+1;
+      changes.push(`${cardData(r)?.name||'Karte'} ${before}→${r.honor}`);
       n++;
     }
   }
 
   p.honorGrantedTurn=p.turnCount;
   log(state,n
-    ?`${p.name}: ${n} Karte${n===1?'':'n'} mit Herzanzahl erhalten jeweils 1 Ehre.`
+    ?`${p.name}: Ehrungsphase +1 je Karte (${changes.join(', ')}). Ausgegebene Ehre wird nicht wiederhergestellt.`
     :`${p.name} hat derzeit keine Karte mit Herzanzahl, die Ehre erhält.`);
   return n;
 }
@@ -988,11 +991,16 @@ function resolveFragmentReward(state,id){
   state.pendingBezEffect=null;startNextFragmentReward(state);
   return {ok:true,msg:'ASTRALFRAGMENT-Zerstörungseffekt ausgeführt.'};
 }
+function runtimeControllerIndex(x){return Number(x?.r?.controllerIndex ?? x?.r?.owner ?? x?.playerIndex)}
 function tickFieldDurations(state){
-  const targets=allRuntimeCards(state).filter(x=>x.zone!=='bez' && x.r?.effectRoundsRemaining!==null && x.r?.effectRoundsRemaining!==undefined && !x.r.effectDisabled);
+  const targets=allRuntimeCards(state).filter(x=>
+    x.zone!=='bez' &&
+    x.r?.effectRoundsRemaining!==null &&
+    x.r?.effectRoundsRemaining!==undefined &&
+    !x.r.effectDisabled &&
+    runtimeControllerIndex(x)===state.activePlayer
+  );
   for(const x of targets){
-    const c=cardData(x.r);
-    if(c?.effekte?.some(e=>e.engine_key==='fluestern_brut') && (x.r.controllerIndex??x.playerIndex)!==state.activePlayer)continue;
     x.r.effectRoundsRemaining--;
     if(x.r.effectRoundsRemaining<=0){
       x.r.effectRoundsRemaining=0;
@@ -1076,7 +1084,9 @@ function checkedEffectTargets(state){
  if(pend.type==='talisia1_target')return p.bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);return [];
 }
 function resolveCheckedEffectTarget(state,id){
- const pend=state.pendingBezEffect;if(!pend)return {ok:false,msg:'Keine Effektauswahl aktiv.'};const p=state.players[pend.sourcePlayer],enemy=state.players[1-pend.sourcePlayer],src=p.bezSlots[pend.sourceSlot],c=cardData(src);
+ const pend=state.pendingBezEffect;if(!pend)return {ok:false,msg:'Keine Effektauswahl aktiv.'};
+ if(pend.type==='fragment_reward')return resolveFragmentReward(state,id);
+ const p=state.players[pend.sourcePlayer],enemy=state.players[1-pend.sourcePlayer],src=p.bezSlots[pend.sourceSlot],c=cardData(src);
  if(!src){state.pendingBezEffect=null;return {ok:false,msg:'Quellkarte ist nicht mehr auf dem Spielfeld.'};}
  if(pend.type==='skorpia_shield'){
    if(!['physical','astral'].includes(id))return {ok:false,msg:'Ungültige Schildwahl.'};
@@ -1089,7 +1099,6 @@ function resolveCheckedEffectTarget(state,id){
    log(state,`${c.name}: ${cardData(t)?.name} erhält 1 physischen Schild.`);return {ok:true,msg:'1 physischer Schild hinzugefügt.'};
  }
  if(pend.type==='psilo')return resolvePsiloTarget(state,id);
- if(pend.type==='fragment_reward')return resolveFragmentReward(state,id);
  if(pend.type==='zahira'){
    const t=p.bezSlots[Number(id)];if(!t||Number(id)===pend.sourceSlot)return {ok:false,msg:'Zahira muss eine andere eigene Bezwingerin wählen.'};
    if((src.honor||0)<1)return {ok:false,msg:'Zahira besitzt nicht mehr genügend Ehre.'};
@@ -1115,16 +1124,18 @@ function releaseMiraDelayLocks(state){const p=active(state);p.bezSlots.forEach(r
 function jeanneForcedTarget(state,attackerSource){const src=attackerKindAndSlot(attackerSource);if(src.kind!=='bez')return null;const p=active(state),opp=opponent(state),attacker=p.bezSlots[src.slot];if(!attacker)return null;const js=opp.bezSlots.map((r,i)=>r&&cardData(r)?.effekte?.[0]?.engine_key==='jeanne_taunt'?{r,slot:i}:null).filter(Boolean);for(const j of js){const n=Number(cardData(j.r)?.effekte?.[0]?.forced_attackers||0);if(n>=2)return {type:'bez',slot:j.slot,label:cardData(j.r)?.name};if(n===1&&p.bezSlots.filter(x=>x&&x.attackedTurn===p.turnCount).length===0)return {type:'bez',slot:j.slot,label:cardData(j.r)?.name};}return null;}
 
 function tickBezEffectDurations(state){
- for(const p of state.players)for(const r of p.bezSlots){
-   if(!r||r.effectDisabled||r.effectRoundsRemaining===null)continue;
+ const p=active(state);
+ for(const r of p.bezSlots||[]){
+   if(!r||r.effectDisabled||r.effectRoundsRemaining===null||r.effectRoundsRemaining===undefined)continue;
    r.effectRoundsRemaining--;
    if(r.effectRoundsRemaining<=0){
      const c=cardData(r);
      if(c?.effekte?.[0]?.engine_key==='martha2'){
        r.effectRoundsRemaining=null;r.effectState=r.effectState||{};r.effectState.physicalImmune=false;r.effectDisabled=false;
-       log(state,`${c.name}: Schutz vor physischem Schaden ist abgelaufen und kann in einer späteren Kampfrunde erneut gewirkt werden.`);
+       log(state,`${c.name}: Schutz vor physischem Schaden ist nach der eigenen Kampfrunde abgelaufen.`);
      }else{
-       r.effectRoundsRemaining=0;r.effectDisabled=true;log(state,`${c?.name||'Ein Effekt'} ist nach Ablauf der Kampfrunden deaktiviert.`);
+       r.effectRoundsRemaining=0;r.effectDisabled=true;
+       log(state,`${c?.name||'Ein Effekt'} ist nach Ablauf der eigenen Kampfrunden deaktiviert.`);
      }
    }
  }
@@ -1385,6 +1396,7 @@ function develop(state,kind,slot=null){
   const physSchildSchaden=Math.max(0,alterMaxPhysSchild-(r.physicalShield ?? 0));
   const astralSchildSchaden=Math.max(0,alterMaxAstralSchild-(r.astralShield ?? 0));
 
+  const deploymentReadyBeforeDevelopment=r.ready;
   r.honor-=kosten;
   p.development=p.development.filter(x=>x!==dev.bild);
   r.developmentStack.push(dev.bild);
@@ -1403,6 +1415,7 @@ function develop(state,kind,slot=null){
   // direkt auf die Werte der neuen Entwicklungsstufe gesetzt.
   r.physical=dev.physische_staerke ?? r.physical;
   r.astral=dev.astrale_staerke ?? r.astral;
+  r.ready=deploymentReadyBeforeDevelopment;
 
   r.developedTurn=p.turnCount;
   log(state,`${p.name} entwickelt ${dev.name} auf Stufe ${dev.stufe}. Bereits erlittener Herz- und Schildschaden bleibt erhalten.`);

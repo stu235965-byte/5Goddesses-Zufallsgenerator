@@ -122,19 +122,28 @@ function statLine(r){
     <span class="stat ashield">◆ ${r.astralShield}</span>
     <span class="stat honor">● ${r.honor}</span>`;
 }
+function runtimeCountersHtml(r){
+  if(!r || r.faceDown)return '';
+  const c=E().cardData(r),parts=[];
+  if(r.effectUsesRemaining!==null && r.effectUsesRemaining!==undefined)parts.push(`<span title="Verbleibende Ladungen">Ladungen ${Number(r.effectUsesRemaining)}</span>`);
+  if(r.effectRoundsRemaining!==null && r.effectRoundsRemaining!==undefined)parts.push(`<span title="Verbleibende eigene Kampfrunden">KR ${Number(r.effectRoundsRemaining)}</span>`);
+  if((r.berserkerMarks||0)>0 || c?.effekte?.some?.(e=>e.engine_key==='evelyn_berserker'))parts.push(`<span title="Berserkermarken">Berserk ${Number(r.berserkerMarks||0)}</span>`);
+  return parts.length?`<div class="runtime-counters">${parts.join('')}</div>`:'';
+}
+
 function runtimeCardHtml(r,{hidden=false,small=false}={}){
   if(!r)return '<div class="board-empty">Frei</div>';
   const c=E().cardData(r);
   if(hidden || r.faceDown){
     return `<div class="board-card back ${small?'small':''}"><img class="real-card-back" src="icons/kartenrueckseite.png" alt="Kartenrückseite"></div>`;
   }
-  const deploymentDelayApplies = cardHasDeploymentDelay(c);
-  const delayed = (r.ready===false && deploymentDelayApplies) ? ' delayed-card' : '';
-  const readiness = deploymentDelayApplies
-    ? (r.ready?'<em>EINSATZBEREIT</em>':'<em class="delay">Einsatzverzögerung</em>')
-    : '';
+  const isRefuge=c?.deck_bereich==='zuflucht'||String(c?.kartentyp||'').toLowerCase()==='zuflucht';
+  const deploymentDelayApplies=!isRefuge && c?.herzen!==null && c?.herzen!==undefined;
+  const delayed=(r.ready===false && deploymentDelayApplies)?' delayed-card':'';
+  const readiness=deploymentDelayApplies?(r.ready?'<em>EINSATZBEREIT</em>':'<em class="delay">Einsatzverzögerung</em>'):'';
   return `<div class="board-card ${small?'small':''}${delayed}">
     <img src="${esc(c?.bild||r.bild)}" alt="${esc(c?.name||'Karte')}">
+    ${runtimeCountersHtml(r)}
     <div class="board-card-meta"><strong>${esc(c?.name||'Karte')}</strong><div class="stat-row">${statLine(r)}</div>${readiness}</div>
   </div>`;
 }
@@ -171,16 +180,7 @@ function bezEffectBadge(r){
   const icon=labels[symbol]||'';
   if(!icon)return '';
 
-  let detail='';
-  if(symbol==='charges' && r.effectUsesRemaining!==null && r.effectUsesRemaining!==undefined){
-    detail=` ${r.effectUsesRemaining}`;
-  }else if(r.effectRoundsRemaining!==null && r.effectRoundsRemaining!==undefined){
-    detail+=` ⏱${r.effectRoundsRemaining}`;
-  }
-  if((r.berserkerMarks||0)>0 || c?.effekte?.some?.(e=>e.engine_key==='evelyn_berserker')){
-    detail+=` ◇${r.berserkerMarks||0}`;
-  }
-  return ` <span class="bez-effect-badge" title="${esc(c.effekt_text||'Karteneffekt')}">${icon}${detail}</span>`;
+  return ` <span class="bez-effect-badge" title="${esc(c.effekt_text||'Karteneffekt')}">${icon}</span>`;
 }
 
 function bezCore(r,i,isActive){
@@ -547,15 +547,13 @@ function renderActions(){
     root.appendChild(info);
   }
 
-  if(ph.id==='supply'){
-    const c=E().cardData(r);
-    if(c?.effekte?.[0]?.engine_key==='alice'&&(r.effectState?.counterDodgeUses||0)>0&&!r.effectState?.counterDodgeActive){
-      if(confirm('Alice Merveilleux: Einmaliges Ausweichen gegen einen Gegenangriff für diese Kampfrunde aktivieren?')){
-        const ar=E().activateAliceDodge(state,slot);if(!ar.ok)return message(ar.msg,'warn');saveRender(ar.msg);return;
-      }
-    }
-  }
   if(['supply','resupply'].includes(ph.id)){
+    if(!refugeActionSelected && !state.pendingFieldCard && !state.pendingEquipment && !state.pendingRefugeStage2Choice && !state.pendingWonderDraw){
+      const refugeBtn=document.createElement('button');
+      refugeBtn.type='button';refugeBtn.textContent='Zuflucht: Entwickeln / Wunder';
+      refugeBtn.addEventListener('click',()=>{selectedHandIndex=null;refugeActionSelected=true;renderActions();});
+      root.appendChild(refugeBtn);
+    }
     if(state.pendingFieldCard && state.pendingFieldCard.owner===state.activePlayer){
       const pending=state.pendingFieldCard;
       const r=p.azr[pending.azrSlot];
@@ -934,6 +932,17 @@ function handleOwnBez(slot){
   const p=E().active(state),r=p.bezSlots[slot],ph=phase();
   if(!r)return;
 
+  if(ph.id==='supply'){
+    const c=E().cardData(r);
+    if(c?.effekte?.[0]?.engine_key==='alice' && (r.effectState?.counterDodgeUses||0)>0 && !r.effectState?.counterDodgeActive){
+      if(confirm('Alice Merveilleux: Einmaliges Ausweichen gegen einen Gegenangriff für diese Kampfrunde aktivieren?')){
+        const ar=E().activateAliceDodge(state,slot);
+        if(!ar.ok)return message(ar.msg,'warn');
+        return saveRender(ar.msg);
+      }
+    }
+  }
+
   if(ph.id==='rush' && !state.attack){
     if(!E().canAttack(r,p)){
       return message('Diese Bezwingerin ist einsatzverzögert oder hat in dieser Kampfrunde bereits angegriffen.','warn');
@@ -959,10 +968,23 @@ function handleOwnBez(slot){
       return saveRender(rr.msg||'Einsatzbereit.');
     }
     const fx=E().bezEffectInfo?.(state,slot);
+    if(fx?.symbol==='charges' && (fx.usesRemaining??0)>0 && !fx.usedThisTurn){
+      const c=E().cardData(r);
+      if(c?.effekte?.[0]?.engine_key==='serinith'){
+        let choice=null;
+        if((r.astralShield||0)>0 && (r.physicalShield||0)>0){
+          choice=confirm('Serinith Solthar: Schild umwandeln?\n\nOK = 1 ASTRAL-Schild → 1 physischer Schild\nAbbrechen = 1 physischer Schild → 1 ASTRAL-Schild')?'astral_to_physical':'physical_to_astral';
+        }else if((r.astralShield||0)>0)choice='astral_to_physical';
+        else if((r.physicalShield||0)>0)choice='physical_to_astral';
+        if(!choice)return message('Serinith besitzt aktuell keinen Schildpunkt, den sie umwandeln kann.','warn');
+        const rr=E().activateBezEffect(state,slot,choice);
+        return saveRender(rr.msg||'Seriniths Ladung eingesetzt.');
+      }
+    }
     if(fx?.symbol==='wonder' && !fx.wonderUsed){
       const c=E().cardData(r);
-      const base=Number(c?.wunder?.kosten_ehre||0);
-      if(confirm(`${cardName(r)}: Wunder wirken? Grundkosten: ${base} Ehre.\n\n${fx.text}`)){
+      const base=Number((r.wonderCostCurrent ?? c?.wunder?.kosten_ehre) || 0);
+      if(confirm(`${cardName(r)}: Wunder wirken? Aktuelle Kosten: ${base} Ehre.\n\n${fx.text}`)){
         const rr=E().activateBezEffect(state,slot);
         return saveRender(rr.msg||'Wunder aktiviert.');
       }
