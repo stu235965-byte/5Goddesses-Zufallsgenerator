@@ -1422,15 +1422,22 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Abhängig von der Anzahl eigener ASTRAL-/Rüstkammer-Karten erhält diese Bezwingerin Ehre: 2 Karten = 1 Ehre; 3 Karten = 2 Ehre.",
-          "engine_key": "trix"
+          "engine_key": "trix",
+          "azr_count_rewards": {
+            "2": {
+              "honor": 1
+            },
+            "3": {
+              "honor": 2
+            }
+          }
         }
       ],
       "tags": [],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Abhängig von der Anzahl eigener ASTRAL-/Rüstkammer-Karten erhält diese Bezwingerin Ehre: 2 Karten = 1 Ehre; 3 Karten = 2 Ehre."
+      "effekt_text": "Entsprechend der Anzahl eigener Karten in deiner Astral-Rüstkammer-Zone erhält diese Bezwingerin: 2 Karten = 1 Ehre; 3 Karten = 2 Ehre."
     },
     {
       "id": "1.05-04-32-4607b556",
@@ -1459,15 +1466,15 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Abhängig von der Anzahl eigener ASTRAL-/Rüstkammer-Karten: 2 Karten = +1 physischer oder ASTRAL-Schild; 3 Karten = +1 Ehre und zusätzlich +1 physischer oder ASTRAL-Schild.",
-          "engine_key": "skorpia"
+          "engine_key": "skorpia",
+          "azr_count_choice": true
         }
       ],
       "tags": [],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Abhängig von der Anzahl eigener ASTRAL-/Rüstkammer-Karten: 2 Karten = +1 physischer oder ASTRAL-Schild; 3 Karten = +1 Ehre und zusätzlich +1 physischer oder ASTRAL-Schild."
+      "effekt_text": "Entsprechend der Anzahl eigener Karten in deiner Astral-Rüstkammer-Zone erhält diese Bezwingerin: 2 Karten = 1 physischer oder 1 ASTRAL-Schild; 3 Karten = 1 Ehre, zusätzlich 1 physischer oder 1 ASTRAL-Schild."
     },
     {
       "id": "1.05-06-32-7d205dbd",
@@ -1539,15 +1546,20 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Erhöhe oder verringere den Zeitzähler einer eigenen Karte um 1 (nicht bei eigenen Karten ohne Zeitzähler).",
-          "engine_key": "thal"
+          "engine_key": "thal",
+          "ziel_besitzer": "eigen",
+          "aenderung_kampfrundendauer": [
+            -1,
+            1
+          ],
+          "eigene_waffen_ausgeschlossen": true
         }
       ],
       "tags": [],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Erhöhe oder verringere den Zeitzähler einer eigenen Karte um 1 (nicht bei eigenen Karten ohne Zeitzähler)."
+      "effekt_text": "Erhöhe oder verringere die aktuelle Kampfrundendauer einer eigenen Karte um 1 (nicht bei eigenen Waffen)."
     },
     {
       "id": "1.05-20-32-52249a2e",
@@ -1573,21 +1585,23 @@
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": {
-        "kosten_ehre": 2,
-        "text": "Erzeuge einen Token als Kopie von Mornak – Brut und spiele ihn, wenn möglich, in Primär-, Sekundär- oder freien Bezwingerinnen-Bereich. Solange eine oder mehrere Mornak – Brut liegen, kostet das Wunder 1 Ehre weniger."
+        "kosten_ehre": 3,
+        "text": "Erzeuge einen Mornak-Brut-Token. Solange mindestens eine eigene Mornak-Brut auf dem Spielfeld liegt, kostet dieses Wunder 1 Ehre weniger."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Erzeuge einen Token als Kopie von Mornak – Brut und spiele ihn, wenn möglich, in Primär-, Sekundär- oder freien Bezwingerinnen-Bereich. Solange eine oder mehrere Mornak – Brut liegen, kostet das Wunder 1 Ehre weniger.",
-          "engine_key": "nemesis"
+          "engine_key": "nemesis",
+          "token": "Mornak - Brut",
+          "base_cost": 3,
+          "discount_if_own_mornak": 1
         }
       ],
       "tags": [],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Erzeuge einen Token als Kopie von Mornak – Brut und spiele ihn, wenn möglich, in Primär-, Sekundär- oder freien Bezwingerinnen-Bereich. Solange eine oder mehrere Mornak – Brut liegen, kostet das Wunder 1 Ehre weniger."
+      "effekt_text": "Erzeuge einen Token, der eine Kopie der Karte „Mornak - Brut“ ist. Spiele ihn, wenn möglich, in deinen PRIMÄR-, SEKUNDÄR- oder freien ASTRAL-Rüstkammer-Bereich. Solange eine oder mehrere deiner Karten oder Token mit dem Namen „Mornak - Brut“ auf dem Spielfeld liegen, kostet das Wunder 1 Ehre weniger."
     },
     {
       "id": "1.05-21-32-97e5c324",
@@ -1616,15 +1630,17 @@
       "effekte": [
         {
           "trigger": "charges",
-          "text": "Wandle bei dieser Bezwingerin 1 ASTRAL-Schild in 1 physischen Schild um oder umgekehrt.",
-          "engine_key": "serinith"
+          "engine_key": "serinith",
+          "max_uses": 2,
+          "once_per_round": true,
+          "conversion": "astral_physical_shield"
         }
       ],
       "tags": [],
       "effekt_symbol": "charges",
       "effekt_zaehler_max": 2,
       "effekt_dauer_kr": null,
-      "effekt_text": "Wandle bei dieser Bezwingerin 1 ASTRAL-Schild in 1 physischen Schild um oder umgekehrt."
+      "effekt_text": "Wandle von dieser Bezwingerin 1 ASTRAL-Schild in 1 physischen Schild um oder umgekehrt."
     },
     {
       "id": "1.04-07-32-a29c94aa",
@@ -2920,7 +2936,7 @@
       "stufe": 1,
       "klasse": null,
       "bereich": "Primär",
-      "untertyp": null,
+      "untertyp": "Brut",
       "material": null,
       "nebenattribute": [
         "Brut"
@@ -2932,8 +2948,20 @@
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "permanent",
+          "engine_key": "mornak_brut",
+          "redirect_nemesis_damage": true,
+          "alternate_areas": [
+            "secondary",
+            "azr"
+          ]
+        }
+      ],
+      "tags": [],
+      "effekt_symbol": "permanent",
+      "effekt_text": "Schaden, der „Geißel der Galaxie Nemesis“ zugefügt wird, kann auf diese Karte umgeleitet werden. Überschüssiger Schaden wird „Geißel der Galaxie Nemesis“ zugefügt. Du kannst diese Karte auch im SEKUNDÄR- oder in einem freien ASTRAL-Rüstkammer-Bereich spielen, falls möglich."
     },
     {
       "id": "1.05-26-32-b63b093a",
@@ -4355,7 +4383,7 @@
       "stufe": 1,
       "klasse": null,
       "bereich": null,
-      "untertyp": "Brut",
+      "untertyp": "Brut | Organisch",
       "material": "Organisch",
       "nebenattribute": [],
       "herzen": null,
@@ -4365,8 +4393,19 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "on_destroy",
+          "engine_key": "fluestern_brut",
+          "duration_own_rounds": 2,
+          "token": "Mornak - Brut",
+          "allow_enemy_azr_under_control": true
+        }
+      ],
+      "tags": [],
+      "effekt_symbol": "duration",
+      "effekt_dauer_kr": 2,
+      "effekt_text": "Nach 2 eigenen Kampfrunden wird diese Karte zerstört. Wenn diese Karte zerstört wird, erzeuge einen Token, der eine Kopie der Karte „Mornak - Brut“ ist. Platziere diesen Token – sofern möglich – in einem deiner Bereiche (PRIMÄR-, SEKUNDÄR- oder freier ASTRAL-Rüstkammer-Bereich) oder in der ASTRAL-/RÜSTKAMMER-Zone des Gegners (unter deiner Kontrolle; blockiert das Feld)."
     },
     {
       "id": "1.05-31-32-546db454",
@@ -5190,20 +5229,20 @@
       "ehre": 0,
       "wunder": {
         "kosten_ehre": 3,
-        "text": "Wandle bei dieser Bezwingerin 1 ASTRAL-Stärke in 1 physische Stärke um oder umgekehrt."
+        "text": "Wandle von dieser Bezwingerin 1 ASTRAL-Stärke in 1 physische Stärke um oder umgekehrt."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Wandle bei dieser Bezwingerin 1 ASTRAL-Stärke in 1 physische Stärke um oder umgekehrt.",
-          "engine_key": "trix2"
+          "engine_key": "trix2",
+          "conversion": "astral_physical_strength"
         }
       ],
       "tags": [],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Wandle bei dieser Bezwingerin 1 ASTRAL-Stärke in 1 physische Stärke um oder umgekehrt."
+      "effekt_text": "Wandle von dieser Bezwingerin 1 ASTRAL-Stärke in 1 physische Stärke um oder umgekehrt."
     },
     {
       "id": "1.05-18-32-7be7cb45",
@@ -5279,12 +5318,11 @@
       "ehre": 0,
       "wunder": {
         "kosten_ehre": 2,
-        "effekt_text": "Erhöhe oder verringere die aktuelle Kampfrundendauer einer eigenen oder gegnerischen Karte um 1. Eigene Waffen können nicht gewählt werden. Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich."
+        "text": "Erhöhe oder verringere die aktuelle Kampfrundendauer einer eigenen oder gegnerischen Karte um 1. Eigene Waffen können nicht gewählt werden. Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Erhöhe oder verringere die aktuelle Kampfrundendauer einer eigenen oder gegnerischen Karte um 1. Eigene Waffen können nicht gewählt werden. Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich.",
           "engine_key": "thal2",
           "ziel_besitzer": "eigen_oder_gegnerisch",
           "aenderung_kampfrundendauer": [
@@ -5303,7 +5341,7 @@
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Erhöhe oder verringere die aktuelle Kampfrundendauer einer eigenen oder gegnerischen Karte um 1. Eigene Waffen können nicht gewählt werden. Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich."
+      "effekt_text": "Erhöhe oder verringere die aktuelle Kampfrundendauer einer eigenen oder gegnerischen Karte um 1 (nicht bei eigenen Waffen). Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich."
     }
   ],
   "index": {

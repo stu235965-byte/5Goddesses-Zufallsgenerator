@@ -435,6 +435,16 @@ function resolveBezOnPlay(state,p,slot,r,c){
   else if(key==='lilith' && opp){opp.honor=(opp.honor||0)-1;log(state,`${c.name}: Gegenüber verliert 1 Ehre.`)}
   else if(key==='trix'){
     const n=countOwnAzrCards(p); const add=n>=3?2:n>=2?1:0; r.honor=(r.honor||0)+add;if(add)log(state,`${c.name}: ${n} eigene AZR-Karten → +${add} Ehre.`)
+  }else if(key==='skorpia'){
+    const n=countOwnAzrCards(p);
+    if(n>=2){
+      if(n>=3){r.honor=(r.honor||0)+1;log(state,`${c.name}: 3 eigene AZR-Karten → +1 Ehre.`);}
+      state.pendingBezEffect={type:'skorpia_shield',sourcePlayer:p.index,sourceSlot:slot};
+    }
+  }else if(key==='thal'){
+    const targets=thalZirisStage1Targets(state,p.index);
+    if(targets.length)state.pendingBezEffect={type:'thal1',sourcePlayer:p.index,sourceSlot:slot};
+    else log(state,`${c.name}: keine gültige eigene Karte mit aktiver Kampfrundendauer.`);
   }else if(key==='calypso'){r.ready=true;r.effectState.noRefugeAttackTurn=p.turnCount;log(state,`${c.name}: keine Einsatzverzögerung; Zuflucht ist in dieser KR kein Angriffsziel.`)}
   else if(key==='talisia2'){
     const targets=state.players[1-p.index].bezSlots.map((x,i)=>x&&((x.astralShield||0)>0)?i:null).filter(i=>i!==null);
@@ -469,12 +479,12 @@ function activateBezEffect(state,slot,choice=null){
  if(sym==='wonder' && key==='cassandra')return startCassandraWonder(state,slot);
  if(sym==='wonder' && key==='psilo')return startPsiloWonder(state,slot);
  if(sym==='wonder' && key==='queen2')return startQueen2Wonder(state,slot);
+ if(sym==='wonder' && key==='nemesis')return startNemesisWonder(state,slot);
 
  // Bei normalen Effekten erst Validität prüfen, dann Ressourcen verbrauchen.
  if(key==='serinith'){
-   if(choice==='astral_to_physical' && r.astralShield>=1){r.astralShield--;r.physicalShield++;}
-   else if(choice==='physical_to_astral' && r.physicalShield>=1){r.physicalShield--;r.astralShield++;}
-   else return {ok:false,msg:'Wähle eine gültige Schild-Umwandlung.'};
+   if(!((choice==='astral_to_physical' && r.astralShield>=1)||(choice==='physical_to_astral' && r.physicalShield>=1)))
+     return {ok:false,msg:'Wähle eine gültige Schild-Umwandlung.'};
  }else if(key==='evelyn'){
    if((r.berserkerMarks||0)<3)return {ok:false,msg:'Evelyn benötigt 3 Berserkermarken.'};
  }else if(key==='trix2'){
@@ -524,6 +534,89 @@ function allRuntimeCards(state){
  });
  if(state.sharedPrimary)out.push({playerIndex:state.sharedPrimary.owner,zone:'primary',slot:null,r:state.sharedPrimary});
  return out;
+}
+
+function thalZirisStage1Targets(state,playerIndex){
+ return allRuntimeCards(state).filter(x=>x.playerIndex===playerIndex && x.r?.effectRoundsRemaining!==null && x.r?.effectRoundsRemaining!==undefined && !x.r.effectDisabled)
+   .filter(x=>!(x.zone==='equipment' && x.kind==='weapon'))
+   .map(x=>({id:`${x.playerIndex}|${x.zone}|${x.slot??''}|${x.kind||''}`,name:cardData(x.r)?.name||'Karte',roundsRemaining:x.r.effectRoundsRemaining}));
+}
+function resolveThalZirisStage1(state,targetId,delta){
+ const pend=state.pendingBezEffect;if(!pend||pend.type!=='thal1')return {ok:false,msg:'Keine Thal-Ziris-Ausspieleffekt-Auswahl aktiv.'};
+ const t=allRuntimeCards(state).find(x=>`${x.playerIndex}|${x.zone}|${x.slot??''}|${x.kind||''}`===targetId);
+ if(!t||t.playerIndex!==pend.sourcePlayer||t.r.effectRoundsRemaining===null||t.r.effectRoundsRemaining===undefined)return {ok:false,msg:'Ungültiges eigenes Ziel.'};
+ if(t.zone==='equipment'&&t.kind==='weapon')return {ok:false,msg:'Eigene Waffen sind ausgeschlossen.'};
+ if(![-1,1].includes(Number(delta)))return {ok:false,msg:'Nur +1 oder −1 ist erlaubt.'};
+ t.r.effectRoundsRemaining=Math.max(0,Number(t.r.effectRoundsRemaining)+Number(delta));
+ state.pendingBezEffect=null;
+ log(state,`Thal Ziris: ${cardData(t.r)?.name} → Kampfrundendauer ${t.r.effectRoundsRemaining}.`);
+ if(t.r.effectRoundsRemaining===0)expireTimedFieldCardNow(state,t);
+ return {ok:true,msg:`Kampfrundendauer auf ${t.r.effectRoundsRemaining} geändert.`};
+}
+function isMornak(c){return c?.name==='Mornak - Brut'}
+function ownMornakLocations(state,playerIndex){
+ const p=state.players[playerIndex],out=[];
+ if(state.sharedPrimary && (state.sharedPrimary.controllerIndex??state.sharedPrimary.ownerIndex??state.sharedPrimary.owner)===playerIndex && isMornak(cardData(state.sharedPrimary)))out.push({zone:'primary',r:state.sharedPrimary});
+ if(p.secondary && isMornak(cardData(p.secondary)))out.push({zone:'secondary',r:p.secondary});
+ (p.azr||[]).forEach((r,i)=>{if(r&&isMornak(cardData(r))&&(r.controllerIndex??playerIndex)===playerIndex)out.push({zone:'azr',slot:i,r});});
+ for(const op of state.players)(op.azr||[]).forEach((r,i)=>{if(r&&isMornak(cardData(r))&&r.controllerIndex===playerIndex&&!out.some(x=>x.r===r))out.push({zone:'enemy_azr',hostPlayer:op.index,slot:i,r});});
+ return out;
+}
+function mornakTokenTargets(state,controllerIndex,allowEnemyAzr=false){
+ const p=state.players[controllerIndex],out=[];
+ if(!state.sharedPrimary)out.push({id:'primary',name:'Eigener PRIMÄR-Bereich'});
+ if(!p.secondary)out.push({id:'secondary',name:'Eigener SEKUNDÄR-Bereich'});
+ (p.azr||[]).forEach((r,i)=>{if(!r)out.push({id:`azr:${i}`,name:`Eigene ASTRAL-/Rüstkammer-Zone ${i+1}`})});
+ if(allowEnemyAzr){
+   const e=state.players[1-controllerIndex];
+   (e.azr||[]).forEach((r,i)=>{if(!r)out.push({id:`enemyazr:${i}`,name:`Gegnerische ASTRAL-/Rüstkammer-Zone ${i+1} (unter deiner Kontrolle)`})});
+ }
+ return out;
+}
+function createMornakTokenRuntime(state,controllerIndex){
+ const c=DB.find(x=>x.name==='Mornak - Brut');if(!c)return null;
+ const r=makeRuntimeCard(c.bild,controllerIndex,state.players[controllerIndex].turnCount);
+ r.faceDown=false;r.isToken=true;r.controllerIndex=controllerIndex;r.ownerIndex=controllerIndex;r.ready=true;
+ return r;
+}
+function resolveMornakTokenPlacement(state,id){
+ const pend=state.pendingBezEffect;if(!pend||pend.type!=='mornak_token_place')return {ok:false,msg:'Keine Mornak-Brut-Tokenplatzierung aktiv.'};
+ const ctrl=pend.sourcePlayer,p=state.players[ctrl],r=createMornakTokenRuntime(state,ctrl);if(!r)return {ok:false,msg:'Mornak-Brut konnte nicht gefunden werden.'};
+ const valid=mornakTokenTargets(state,ctrl,!!pend.allowEnemyAzr).some(t=>t.id===id);if(!valid)return {ok:false,msg:'Dieser Bereich ist nicht mehr frei.'};
+ if(id==='primary')state.sharedPrimary=r;
+ else if(id==='secondary')p.secondary=r;
+ else if(String(id).startsWith('azr:'))p.azr[Number(String(id).split(':')[1])]=r;
+ else if(String(id).startsWith('enemyazr:'))state.players[1-ctrl].azr[Number(String(id).split(':')[1])]=r;
+ else return {ok:false,msg:'Ungültiger Bereich.'};
+ state.pendingBezEffect=null;log(state,`Mornak-Brut TOKEN wurde in ${id} erzeugt.`);
+ return {ok:true,msg:'Mornak-Brut-Token erzeugt und platziert.'};
+}
+function startMornakTokenPlacement(state,controllerIndex,allowEnemyAzr=false,source=''){
+ const targets=mornakTokenTargets(state,controllerIndex,allowEnemyAzr);
+ if(!targets.length){log(state,`${source||'Token-Effekt'}: kein freier Bereich für Mornak-Brut.`);return false;}
+ state.pendingBezEffect={type:'mornak_token_place',sourcePlayer:controllerIndex,allowEnemyAzr:!!allowEnemyAzr,source};
+ return true;
+}
+function startNemesisWonder(state,slot){
+ const p=active(state),r=p.bezSlots[slot];
+ if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+ if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+ const cost=ownMornakLocations(state,p.index).length?2:3;
+ if((r.honor||0)<cost)return {ok:false,msg:`Nemesis benötigt ${cost} Ehre.`};
+ const targets=mornakTokenTargets(state,p.index,false);if(!targets.length)return {ok:false,msg:'Kein freier Bereich für einen Mornak-Brut-Token.'};
+ r.honor-=cost;r.wonderTurn=p.turnCount;
+ state.pendingBezEffect={type:'mornak_token_place',sourcePlayer:p.index,allowEnemyAzr:false,source:'Nemesis'};
+ log(state,`Nemesis wirkt ihr Wunder für ${cost} Ehre.`);
+ return {ok:true,pending:true,msg:'Wähle einen freien Bereich für den Mornak-Brut-Token.'};
+}
+function expireTimedFieldCardNow(state,x){
+ const c=cardData(x.r);
+ if(c?.effekte?.some(e=>e.engine_key==='fluestern_brut')){
+   destroyFieldRuntime(state,x,'nach Ablauf der eigenen Kampfrundendauer zerstört');
+   return;
+ }
+ if(isAstralFragment(c)){destroyFieldRuntime(state,x,'nach Ablauf der Kampfrundendauer zerstört');startNextFragmentReward(state);return;}
+ x.r.effectDisabled=true;
 }
 function thalZirisTargets(state){
  const source=state.pendingBezEffect?.sourcePlayer ?? state.activePlayer;
@@ -767,6 +860,9 @@ function destroyFieldRuntime(state,target,reason='zerstört'){
   p.discard.push(r);
   log(state,`${c?.name||'Karte'} wird ${reason} und auf die Ablage gelegt.`);
   if(isAstralFragment(c))queueFragmentReward(state,target.playerIndex,r);
+  if(c?.effekte?.some(e=>e.engine_key==='fluestern_brut')){
+    startMornakTokenPlacement(state,r.controllerIndex??target.playerIndex,true,'Flüstern der Brut');
+  }
   return {ok:true,msg:`${c?.name||'Reliquie'} wurde zerstört.`};
 }
 function resolveKeyla2Choice(state,choice){
@@ -824,15 +920,12 @@ function resolveFragmentReward(state,id){
 function tickFieldDurations(state){
   const targets=allRuntimeCards(state).filter(x=>x.zone!=='bez' && x.r?.effectRoundsRemaining!==null && x.r?.effectRoundsRemaining!==undefined && !x.r.effectDisabled);
   for(const x of targets){
+    const c=cardData(x.r);
+    if(c?.effekte?.some(e=>e.engine_key==='fluestern_brut') && (x.r.controllerIndex??x.playerIndex)!==state.activePlayer)continue;
     x.r.effectRoundsRemaining--;
     if(x.r.effectRoundsRemaining<=0){
-      const c=cardData(x.r);
-      if(isAstralFragment(c)){
-        x.r.effectRoundsRemaining=0;
-        destroyFieldRuntime(state,x,'nach Ablauf der Kampfrundendauer zerstört');
-      }else{
-        x.r.effectRoundsRemaining=0;x.r.effectDisabled=true;
-      }
+      x.r.effectRoundsRemaining=0;
+      expireTimedFieldCardNow(state,x);
     }
   }
   startNextFragmentReward(state);
@@ -900,6 +993,7 @@ function resolveMeniaDagger(state,index){
 }
 function checkedEffectTargets(state){
  const pend=state.pendingBezEffect;if(!pend)return [];const p=state.players[pend.sourcePlayer],enemy=state.players[1-pend.sourcePlayer];
+ if(pend.type==='skorpia_shield')return [{id:'physical',name:'+1 physischer Schild'},{id:'astral',name:'+1 ASTRAL-Schild'}];
  if(pend.type==='shield')return p.bezSlots.map((r,i)=>r&&i!==pend.sourceSlot?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
  if(pend.type==='psilo')return psiloTargets(state);
  if(pend.type==='fragment_reward')return fragmentRewardTargets(state);
@@ -913,6 +1007,11 @@ function checkedEffectTargets(state){
 function resolveCheckedEffectTarget(state,id){
  const pend=state.pendingBezEffect;if(!pend)return {ok:false,msg:'Keine Effektauswahl aktiv.'};const p=state.players[pend.sourcePlayer],enemy=state.players[1-pend.sourcePlayer],src=p.bezSlots[pend.sourceSlot],c=cardData(src);
  if(!src){state.pendingBezEffect=null;return {ok:false,msg:'Quellkarte ist nicht mehr auf dem Spielfeld.'};}
+ if(pend.type==='skorpia_shield'){
+   if(!['physical','astral'].includes(id))return {ok:false,msg:'Ungültige Schildwahl.'};
+   if(id==='physical')src.physicalShield=(src.physicalShield||0)+1;else src.astralShield=(src.astralShield||0)+1;
+   state.pendingBezEffect=null;log(state,`${c.name}: +1 ${id==='physical'?'physischer':'ASTRAL'} Schild.`);return {ok:true,msg:'Skorpias Schildbonus angewandt.'};
+ }
  if(pend.type==='shield'){
    const t=p.bezSlots[Number(id)];if(!t||Number(id)===pend.sourceSlot)return {ok:false,msg:'S.H.I.E.L.D. muss eine andere eigene Bezwingerin wählen.'};
    t.physicalShield=(t.physicalShield||0)+1;state.pendingBezEffect=null;
@@ -989,8 +1088,11 @@ function playOpenAzr(state,handIndex,slot){
   p.hand.splice(handIndex,1);
   const r=makeRuntimeCard(bild,p.index,p.turnCount);
   r.faceDown=false;
+  if(c?.effekte?.some(e=>e.engine_key==='fluestern_brut')){
+    r.effectRoundsRemaining=2;r.effectState=r.effectState||{};r.effectState.durationOwnRounds=true;
+  }
   p.azr[slot]=r;
-  log(state,`${p.name} spielt ${c.name} offen in die ASTRAL-/Rüstkammer-Zone. Der individuelle Karteneffekt ist noch nicht implementiert.`);
+  log(state,`${p.name} spielt ${c.name} offen in die ASTRAL-/Rüstkammer-Zone.${c?.effekte?.some(e=>e.engine_key==='fluestern_brut')?' Kampfrundendauer: 2 eigene KR.':''}`);
   return {ok:true};
 }
 function playFieldFromHand(state,handIndex,area){
@@ -1362,6 +1464,11 @@ function shieldSourcesForBez(state,playerIndex,bezSlot,type){
   ensureEquipmentState(p);
   const shieldKey=type==='physical'?'physicalShield':'astralShield';
   const sources=[];
+  if(cardData(r)?.name==='Geißel der Galaxie Nemesis'){
+    ownMornakLocations(state,playerIndex).forEach((m,i)=>{
+      if((m.r.hearts||0)>0)sources.push({source:'mornak',kind:String(i),label:`Schaden auf Mornak-Brut umleiten (${m.r.hearts} Herz)`,value:m.r.hearts,mornakIndex:i});
+    });
+  }
 
   for(const kind of ['shield','armor','helmet','weapon']){
     const eq=p.equipment[bezSlot]?.[kind];
@@ -1399,6 +1506,21 @@ function applyChosenShieldSource(state,packet,choice){
   if(choice.source==='base'){
     sourceRuntime=r;
     label=`Basisschild von ${cardData(r)?.name||'Bezwingerin'}`;
+  }else if(choice.source==='mornak'){
+    const loc=ownMornakLocations(state,packet.playerIndex)[Number(choice.mornakIndex??choice.kind)];
+    if(!loc?.r)return {ok:false,msg:'Diese Mornak-Brut ist nicht mehr vorhanden.'};
+    const loss=Math.min(loc.r.hearts||0,packet.remaining);
+    loc.r.hearts-=loss;packet.remaining-=loss;packet.heartLoss=(packet.heartLoss||0)+loss;
+    log(state,`Mornak-Brut übernimmt ${loss} Schaden für Nemesis.`);
+    if((loc.r.hearts||0)<=0){
+      let target=null;
+      if(loc.zone==='primary')target={playerIndex:packet.playerIndex,zone:'primary',r:loc.r};
+      else if(loc.zone==='secondary')target={playerIndex:packet.playerIndex,zone:'secondary',r:loc.r};
+      else if(loc.zone==='azr')target={playerIndex:packet.playerIndex,zone:'azr',slot:loc.slot,r:loc.r};
+      else if(loc.zone==='enemy_azr')target={playerIndex:loc.hostPlayer,zone:'azr',slot:loc.slot,r:loc.r};
+      if(target)destroyFieldRuntime(state,target,'durch umgeleiteten Schaden zerstört');
+    }
+    return {ok:true,loss};
   }else if(choice.source==='equipment'){
     ensureEquipmentState(p);
     sourceRuntime=p.equipment[packet.bezSlot]?.[choice.kind];
@@ -1836,7 +1958,8 @@ window.G5Engine={
   chooseEquipmentShieldBonus,equipmentCombatProfile,combatStrength,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,prepareAttack,
   refugeWonderAvailable,activateRefugeWonder,resolveWonderDraw,chooseRefugeStage2Bonus,
-  bezEffectInfo,activateBezEffect,thalZirisTargets,resolveThalZiris,cancelPendingBezEffect,
+  bezEffectInfo,activateBezEffect,thalZirisTargets,resolveThalZiris,thalZirisStage1Targets,resolveThalZirisStage1,
+  mornakTokenTargets,resolveMornakTokenPlacement,startNemesisWonder,cancelPendingBezEffect,
   checkedEffectTargets,resolveCheckedEffectTarget,startTalisia1Wonder,jeanneForcedTarget,
   startZahiraWonder,startCassandraWonder,meniaDaggerTargets,resolveMeniaDagger,
   startPsiloWonder,psiloTargets,resolvePsiloTarget,keylaSearchTargets,resolveKeylaSearch,

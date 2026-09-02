@@ -467,11 +467,28 @@ function renderActions(){
     E().meniaDaggerTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveMeniaDagger(state,t.id);saveRender(rr.msg);});root.appendChild(b);});
     const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Nicht nutzen';cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg||'Menias Suche wurde nicht genutzt.');});root.appendChild(cancel);return;
   }
-  if(state.pendingBezEffect && ['shield','psilo','fragment_reward','zahira','cassandra','mira','talisia2','talisia1_source','talisia1_target'].includes(state.pendingBezEffect.type)){
-    const labels={shield:'S.H.I.E.L.D. – andere eigene Bezwingerin wählen',psilo:'Psilo Cybe – KREATUR wählen',fragment_reward:`${state.pendingBezEffect.cardName||'ASTRALFRAGMENT'} – eigene Bezwingerin für Zerstörungseffekt wählen`,zahira:'Zahira – andere eigene Bezwingerin wählen',cassandra:'Cassandra – eigene Bezwingerin wählen',mira:'Mira Masako – gegnerische Bezwingerin wählen',talisia2:'Talisia II – gegnerische Bezwingerin wählen',talisia1_source:'Talisia – ASTRAL-Schild-Quelle wählen',talisia1_target:'Talisia – Empfängerin für 1 Herz wählen'};
+  if(state.pendingBezEffect && ['skorpia_shield','shield','psilo','fragment_reward','zahira','cassandra','mira','talisia2','talisia1_source','talisia1_target'].includes(state.pendingBezEffect.type)){
+    const labels={skorpia_shield:'Skorpia Masako – Schildbonus wählen',shield:'S.H.I.E.L.D. – andere eigene Bezwingerin wählen',psilo:'Psilo Cybe – KREATUR wählen',fragment_reward:`${state.pendingBezEffect.cardName||'ASTRALFRAGMENT'} – eigene Bezwingerin für Zerstörungseffekt wählen`,zahira:'Zahira – andere eigene Bezwingerin wählen',cassandra:'Cassandra – eigene Bezwingerin wählen',mira:'Mira Masako – gegnerische Bezwingerin wählen',talisia2:'Talisia II – gegnerische Bezwingerin wählen',talisia1_source:'Talisia – ASTRAL-Schild-Quelle wählen',talisia1_target:'Talisia – Empfängerin für 1 Herz wählen'};
     const title=document.createElement('strong');title.textContent=labels[state.pendingBezEffect.type];root.appendChild(title);
     E().checkedEffectTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveCheckedEffectTarget(state,t.id);saveRender(rr.msg);});root.appendChild(b);});
     const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Abbrechen';cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg);});root.appendChild(cancel);return;
+  }
+  if(state.pendingBezEffect?.type==='thal1'){
+    const title=document.createElement('strong');title.textContent='Thal Ziris Stufe 1 – eigene Kampfrundendauer verändern';root.appendChild(title);
+    E().thalZirisStage1Targets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{
+      const wrap=document.createElement('span');wrap.className='effect-target-choice';
+      const label=document.createElement('span');label.textContent=`${t.name} (${t.roundsRemaining} KR)`;wrap.appendChild(label);
+      [-1,1].forEach(delta=>{const b=document.createElement('button');b.type='button';b.textContent=delta<0?'−1 KR':'+1 KR';b.addEventListener('click',()=>{const rr=E().resolveThalZirisStage1(state,t.id,delta);saveRender(rr.msg);});wrap.appendChild(b);});
+      root.appendChild(wrap);
+    });
+    const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Nicht nutzen';cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg);});root.appendChild(cancel);return;
+  }
+  if(state.pendingBezEffect?.type==='mornak_token_place'){
+    const title=document.createElement('strong');title.textContent='Mornak-Brut TOKEN – Bereich wählen';root.appendChild(title);
+    E().mornakTokenTargets(state,state.pendingBezEffect.sourcePlayer,!!state.pendingBezEffect.allowEnemyAzr).forEach(t=>{
+      const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveMornakTokenPlacement(state,t.id);saveRender(rr.msg);});root.appendChild(b);
+    });
+    return;
   }
   if(state.pendingBezEffect?.type==='thal2'){
     const title=document.createElement('strong');
