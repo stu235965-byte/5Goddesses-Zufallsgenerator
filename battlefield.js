@@ -370,6 +370,39 @@ function handSelected(){
 function renderActions(){
   const root=document.getElementById('gameActions');
   root.innerHTML='';
+  if(state.pendingBezEffect?.type==='thal2'){
+    const title=document.createElement('strong');
+    title.textContent='Thal Ziris – Kampfrundendauer verändern';
+    root.appendChild(title);
+    const targets=E().thalZirisTargets(state);
+    targets.forEach(t=>{
+      const wrap=document.createElement('span');
+      wrap.className='effect-target-choice';
+      const label=document.createElement('span');
+      label.textContent=`${t.own?'Eigene':'Gegnerische'} Karte: ${t.name} (${t.roundsRemaining} KR)`;
+      wrap.appendChild(label);
+      [-1,1].forEach(delta=>{
+        const b=document.createElement('button');
+        b.type='button';
+        b.textContent=delta<0?'−1 KR':'+1 KR';
+        b.addEventListener('click',()=>{
+          const cost=t.own?3:2;
+          if(confirm(`${t.name}: Kampfrundendauer ${delta>0?'um 1 erhöhen':'um 1 verringern'}? Kosten: ${cost} Ehre.`)){
+            const rr=E().resolveThalZiris(state,t.id,delta);
+            saveRender(rr.msg);
+          }
+        });
+        wrap.appendChild(b);
+      });
+      root.appendChild(wrap);
+    });
+    const cancel=document.createElement('button');
+    cancel.type='button';cancel.textContent='Abbrechen';
+    cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg);});
+    root.appendChild(cancel);
+    return;
+  }
+
   const p=E().active(state),ph=phase();
 
   const title=document.createElement('div');
@@ -784,6 +817,15 @@ function handleOwnBez(slot){
     if(E().readyEligibleBez(state,slot)){
       const rr=E().readyBez(state,slot);
       return saveRender(rr.msg||'Einsatzbereit.');
+    }
+    const fx=E().bezEffectInfo?.(state,slot);
+    if(fx?.symbol==='wonder' && !fx.wonderUsed){
+      const c=E().cardData(r);
+      const base=Number(c?.wunder?.kosten_ehre||0);
+      if(confirm(`${cardName(r)}: Wunder wirken? Grundkosten: ${base} Ehre.\n\n${fx.text}`)){
+        const rr=E().activateBezEffect(state,slot);
+        return saveRender(rr.msg||'Wunder aktiviert.');
+      }
     }
     const dev=E().availableDevelopment(state,r);
     if(dev){

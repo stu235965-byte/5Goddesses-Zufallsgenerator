@@ -5030,21 +5030,32 @@
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": {
-        "kosten_ehre": 4,
-        "text": "Erhöhe oder verringere den Zeitzähler einer eigenen Karte um 1 (nicht bei eigenen Karten ohne Zeitzähler). Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich."
+        "kosten_ehre": 2,
+        "effekt_text": "Erhöhe oder verringere die aktuelle Kampfrundendauer einer eigenen oder gegnerischen Karte um 1. Eigene Waffen können nicht gewählt werden. Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Erhöhe oder verringere den Zeitzähler einer eigenen Karte um 1 (nicht bei eigenen Karten ohne Zeitzähler). Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich.",
-          "engine_key": "thal2"
+          "text": "Erhöhe oder verringere die aktuelle Kampfrundendauer einer eigenen oder gegnerischen Karte um 1. Eigene Waffen können nicht gewählt werden. Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich.",
+          "engine_key": "thal2",
+          "ziel_besitzer": "eigen_oder_gegnerisch",
+          "aenderung_kampfrundendauer": [
+            -1,
+            1
+          ],
+          "eigene_waffen_ausgeschlossen": true,
+          "zusatzkosten_eigene_karte": 1
         }
       ],
-      "tags": [],
+      "tags": [
+        "kampfrundendauer",
+        "zeitzähler",
+        "ziel_eigen_oder_gegnerisch"
+      ],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Erhöhe oder verringere den Zeitzähler einer eigenen Karte um 1 (nicht bei eigenen Karten ohne Zeitzähler). Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich."
+      "effekt_text": "Erhöhe oder verringere die aktuelle Kampfrundendauer einer eigenen oder gegnerischen Karte um 1. Eigene Waffen können nicht gewählt werden. Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich."
     }
   ],
   "index": {

@@ -1057,3 +1057,16 @@ h1{font-size:30px;margin:0 0 16px}
 /* v1.28 Bezwingerinnen-Effekte */
 .effect-counter{display:inline-block;margin-left:.35rem;padding:.08rem .3rem;border:1px solid currentColor;border-radius:999px;font-size:.62rem;line-height:1.2;white-space:nowrap;background:#151515}
 .effect-wonder{color:#6ee88a}.effect-on_play{color:#ffe66d}.effect-permanent{color:#c7b8ff}.effect-charges{color:#9bdcff}.effect-duration{color:#ffb36b}
+
+/* v1.29 – Auswahl für zeitabhängige Bezwingerinnen-Effekte */
+.effect-target-choice{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:6px 8px;
+  border:1px solid rgba(212,175,55,.42);
+  border-radius:8px;
+  background:rgba(0,0,0,.18);
+}
+.effect-target-choice > span{font-size:.86rem}
+.effect-target-choice button{min-width:58px}

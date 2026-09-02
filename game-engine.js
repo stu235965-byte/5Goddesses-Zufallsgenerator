@@ -401,8 +401,34 @@ function bezEffectInfo(state,slot){
  return {symbol:c.effekt_symbol||'none',text:c.effekt_text||'',cost:Number(c.wunder?.kosten_ehre||0),usesRemaining:r.effectUsesRemaining,roundsRemaining:r.effectRoundsRemaining,disabled:!!r.effectDisabled,usedThisTurn:r.effectUsedTurn===p.turnCount,wonderUsed:r.wonderTurn===p.turnCount};
 }
 function activateBezEffect(state,slot,choice=null){
- const p=active(state),r=p.bezSlots[slot];if(!r)return {ok:false,msg:'Keine Bezwingerin in diesem Bereich.'};const c=cardData(r),sym=c?.effekt_symbol||'none',key=c?.effekte?.[0]?.engine_key;
+ const p=active(state),r=p.bezSlots[slot];if(!r)return {ok:false,msg:'Keine Bezwingerin in diesem Bereich.'};
+ const c=cardData(r),sym=c?.effekt_symbol||'none',key=c?.effekte?.[0]?.engine_key;
  if(r.effectDisabled||sym==='none'||sym==='permanent'||sym==='duration'||sym==='on_play')return {ok:false,msg:'Dieser Effekt wird nicht manuell auf diese Weise aktiviert.'};
+
+ // Thal Ziris Stufe 2: Kosten werden erst nach Zielwahl berechnet,
+ // weil eine eigene Zielkarte 1 zusätzliche Ehre kostet.
+ if(sym==='wonder' && key==='thal2'){
+   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+   if((r.honor||0)<2)return {ok:false,msg:'Benötigt mindestens 2 Ehre.'};
+   const targets=thalZirisTargets(state);
+   if(!targets.length)return {ok:false,msg:'Es gibt keine gültige Karte mit aktiver Kampfrundendauer.'};
+   state.pendingBezEffect={type:'thal2',sourcePlayer:p.index,sourceSlot:slot};
+   return {ok:true,pending:true,msg:'Thal Ziris: Wähle eine eigene oder gegnerische Karte mit Kampfrundendauer.'};
+ }
+
+ // Bei normalen Effekten erst Validität prüfen, dann Ressourcen verbrauchen.
+ if(key==='serinith'){
+   if(choice==='astral_to_physical' && r.astralShield>=1){r.astralShield--;r.physicalShield++;}
+   else if(choice==='physical_to_astral' && r.physicalShield>=1){r.physicalShield--;r.astralShield++;}
+   else return {ok:false,msg:'Wähle eine gültige Schild-Umwandlung.'};
+ }else if(key==='evelyn'){
+   if((r.physicalShield||0)<3)return {ok:false,msg:'Evelyn benötigt 3 physische Schilde.'};
+ }else if(key==='trix2'){
+   if(!((choice==='astral_to_physical' && r.astral>=1)||(choice==='physical_to_astral' && r.physical>=1)))
+     return {ok:false,msg:'Wähle eine gültige Stärke-Umwandlung.'};
+ }
+
  if(sym==='wonder'){
    if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
    if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
@@ -413,21 +439,68 @@ function activateBezEffect(state,slot,choice=null){
    if((r.effectUsesRemaining??0)<=0)return {ok:false,msg:'Keine Zählermarken mehr vorhanden.'};
    r.effectUsesRemaining--;r.effectUsedTurn=p.turnCount;
  }
- // Effects that are unambiguous without selecting another card
+
  if(key==='serinith'){
-   if(choice==='astral_to_physical' && r.astralShield>=1){r.astralShield--;r.physicalShield++;}
-   else if(choice==='physical_to_astral' && r.physicalShield>=1){r.physicalShield--;r.astralShield++;}
-   else return {ok:false,msg:'Wähle eine gültige Schild-Umwandlung.'};
- }else if(key==='evelyn'){
-   if((r.physicalShield||0)<3)return {ok:false,msg:'Evelyn benötigt 3 physische Schilde.'};r.physicalShield-=3;r.hearts+=1;
- }else if(key==='saphira2'){r.astral=(r.astral||0)+1;c.wunder.kosten_ehre=Number(c.wunder.kosten_ehre||4)+1;}
+   if(choice==='astral_to_physical'){r.astralShield--;r.physicalShield++;}
+   else {r.physicalShield--;r.astralShield++;}
+ }else if(key==='evelyn'){r.physicalShield-=3;r.hearts+=1;}
+ else if(key==='saphira2'){r.astral=(r.astral||0)+1;c.wunder.kosten_ehre=Number(c.wunder.kosten_ehre||4)+1;}
  else if(key==='trix2'){
-   if(choice==='astral_to_physical' && r.astral>=1){r.astral--;r.physical++;}
-   else if(choice==='physical_to_astral' && r.physical>=1){r.physical--;r.astral++;}
-   else return {ok:false,msg:'Wähle eine gültige Stärke-Umwandlung.'};
+   if(choice==='astral_to_physical'){r.astral--;r.physical++;}
+   else {r.physical--;r.astral++;}
  }else {log(state,`${c.name}: Effekt aktiviert. Ziel-/Such-/Tokenauflösung muss entsprechend dem Kartentext ausgeführt werden.`);return {ok:true,manual:true,msg:`${c.name}: ${c.effekt_text}`};}
  log(state,`${c.name}: Effekt aktiviert.`);return {ok:true,msg:`Effekt von ${c.name} ausgeführt.`};
 }
+
+function allRuntimeCards(state){
+ const out=[];
+ state.players.forEach((p,pi)=>{
+   if(p.refuge)out.push({playerIndex:pi,zone:'refuge',slot:null,r:p.refuge});
+   p.bezSlots.forEach((r,i)=>{if(r)out.push({playerIndex:pi,zone:'bez',slot:i,r})});
+   p.azr.forEach((r,i)=>{if(r&&!r.faceDown)out.push({playerIndex:pi,zone:'azr',slot:i,r})});
+   if(p.secondary)out.push({playerIndex:pi,zone:'secondary',slot:null,r:p.secondary});
+   (p.equipment||[]).forEach((eq,bi)=>['weapon','shield','armor','helmet'].forEach(kind=>{
+     if(eq?.[kind])out.push({playerIndex:pi,zone:'equipment',slot:bi,kind,r:eq[kind]});
+   }));
+ });
+ if(state.sharedPrimary)out.push({playerIndex:state.sharedPrimary.owner,zone:'primary',slot:null,r:state.sharedPrimary});
+ return out;
+}
+function thalZirisTargets(state){
+ const source=state.pendingBezEffect?.sourcePlayer ?? state.activePlayer;
+ return allRuntimeCards(state).filter(x=>{
+   if(x.r.effectRoundsRemaining===null||x.r.effectRoundsRemaining===undefined||x.r.effectDisabled)return false;
+   // Stufe-2-Text: nur EIGENE Waffen sind ausgeschlossen.
+   if(x.playerIndex===source && x.zone==='equipment' && x.kind==='weapon')return false;
+   return true;
+ }).map((x,i)=>({id:`${x.playerIndex}|${x.zone}|${x.slot??''}|${x.kind||''}`,playerIndex:x.playerIndex,zone:x.zone,slot:x.slot,kind:x.kind||null,name:cardData(x.r)?.name||'Karte',roundsRemaining:x.r.effectRoundsRemaining,own:x.playerIndex===source}));
+}
+function findThalTarget(state,id){
+ return allRuntimeCards(state).find(x=>`${x.playerIndex}|${x.zone}|${x.slot??''}|${x.kind||''}`===id)||null;
+}
+function resolveThalZiris(state,targetId,delta){
+ const pend=state.pendingBezEffect;if(!pend||pend.type!=='thal2')return {ok:false,msg:'Keine Thal-Ziris-Auswahl aktiv.'};
+ if(delta!==1&&delta!==-1)return {ok:false,msg:'Ungültige Änderung der Kampfrundendauer.'};
+ const p=state.players[pend.sourcePlayer],src=p?.bezSlots?.[pend.sourceSlot],c=cardData(src);
+ if(!src||c?.effekte?.[0]?.engine_key!=='thal2'){state.pendingBezEffect=null;return {ok:false,msg:'Thal Ziris ist nicht mehr auf dem Spielfeld.'};}
+ const target=findThalTarget(state,targetId);
+ if(!target||target.r.effectRoundsRemaining===null||target.r.effectRoundsRemaining===undefined||target.r.effectDisabled)
+   return {ok:false,msg:'Dieses Ziel besitzt keine aktive Kampfrundendauer.'};
+ if(target.playerIndex===pend.sourcePlayer && target.zone==='equipment' && target.kind==='weapon')
+   return {ok:false,msg:'Eigene Waffen können von diesem Wunder nicht gewählt werden.'};
+ const own=target.playerIndex===pend.sourcePlayer;
+ const cost=2+(own?1:0);
+ if((src.honor||0)<cost)return {ok:false,msg:`Für dieses Ziel werden ${cost} Ehre benötigt.`};
+ src.honor-=cost;src.wonderTurn=p.turnCount;
+ target.r.effectRoundsRemaining=Math.max(0,(target.r.effectRoundsRemaining||0)+delta);
+ if(target.r.effectRoundsRemaining<=0){target.r.effectRoundsRemaining=0;target.r.effectDisabled=true;}
+ state.pendingBezEffect=null;
+ const direction=delta>0?'erhöht':'verringert';
+ log(state,`${c.name}: Kampfrundendauer von ${cardData(target.r)?.name||'Karte'} um 1 ${direction} (${target.r.effectRoundsRemaining} verbleibend). Kosten: ${cost} Ehre.`);
+ return {ok:true,msg:`Kampfrundendauer um 1 ${direction}. Noch ${target.r.effectRoundsRemaining} Kampfrunde(n).`};
+}
+function cancelPendingBezEffect(state){state.pendingBezEffect=null;return {ok:true,msg:'Effektauswahl abgebrochen.'};}
+
 function tickBezEffectDurations(state){
  for(const p of state.players)for(const r of p.bezSlots){if(!r||r.effectDisabled||r.effectRoundsRemaining===null)continue;r.effectRoundsRemaining--;if(r.effectRoundsRemaining<=0){r.effectRoundsRemaining=0;r.effectDisabled=true;log(state,`${cardData(r)?.name||'Ein Effekt'} ist nach Ablauf der Kampfrunden deaktiviert.`)}}
 }
@@ -1137,6 +1210,9 @@ function advancePhase(state){
   if(state.pendingRefugeStage2Choice){
     return {ok:false,msg:'Die Auswahl für den Stufe-2-Zuflucht-Effekt muss zuerst abgeschlossen werden.'};
   }
+  if(state.pendingBezEffect){
+    return {ok:false,msg:'Die aktuelle Bezwingerinnen-Effektauswahl muss zuerst abgeschlossen werden.'};
+  }
 
   if(phase.id==='draw'){
     const nonempty=Object.values(p.stacks).some(a=>a.length);
@@ -1199,6 +1275,7 @@ function migrateLoadedState(state){
   if(state.pendingDamage===undefined)state.pendingDamage=null;
   if(state.pendingWonderDraw===undefined)state.pendingWonderDraw=null;
   if(state.pendingRefugeStage2Choice===undefined)state.pendingRefugeStage2Choice=null;
+  if(state.pendingBezEffect===undefined)state.pendingBezEffect=null;
 
   state.players.forEach((p,index)=>{
     if(p.index===undefined)p.index=index;
@@ -1263,6 +1340,7 @@ window.G5Engine={
   chooseEquipmentShieldBonus,equipmentCombatProfile,combatStrength,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,prepareAttack,
   refugeWonderAvailable,activateRefugeWonder,resolveWonderDraw,chooseRefugeStage2Bonus,
+  bezEffectInfo,activateBezEffect,thalZirisTargets,resolveThalZiris,cancelPendingBezEffect,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,currentShieldChoice,chooseShieldSource,returnToRush,cardData
 };
 })();
