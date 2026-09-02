@@ -855,7 +855,15 @@ function attackTargets(state,attackerSource){
 
   const noBez=opp.bezSlots.every(x=>!x);
   if(src.kind==='bez'){
-    const ar=attackerRuntime(state,attackerSource),ac=cardData(ar);const calypsoBlocked=ac?.effekte?.[0]?.engine_key==='calypso'&&ar?.enteredTurn===active(state).turnCount;if(!calypsoBlocked&&(noBez || !opp.bezSlots[src.slot])&&hasHeartAttribute(opp.refuge))targets.push({type:'refuge',label:`Zuflucht von ${opp.name}`});
+    const ar=attackerRuntime(state,attackerSource),ac=cardData(ar);
+    const calypsoBlocked=ac?.effekte?.[0]?.engine_key==='calypso' && ar?.enteredTurn===active(state).turnCount;
+    // Eine Bezwingerin darf die gegnerische Zuflucht nur angreifen,
+    // wenn beim Gegner überhaupt keine Bezwingerin mehr auf dem Feld liegt.
+    // Dadurch gilt die Zielregel bereits in der allerersten nutzbaren Ansturmphase
+    // genauso wie in allen späteren Kampfrunden.
+    if(!calypsoBlocked && noBez && hasHeartAttribute(opp.refuge)){
+      targets.push({type:'refuge',label:`Zuflucht von ${opp.name}`});
+    }
   }else{
     // Eine Zuflucht besitzt keinen gegenüberliegenden Bezwingerinnen-Slot.
     // Daher ist der direkte Angriff auf die gegnerische Zuflucht erst möglich,
