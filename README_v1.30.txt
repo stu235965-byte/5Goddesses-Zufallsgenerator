@@ -1,0 +1,1 @@
+5Goddesses PWA v1.30 – geprüfte Mittelwelt-Bezwingerinnen und Z.E.R.O. ATK. Jeanne 1/2, Talisia 1/2, Calypso, Mira Masako, Z.E.R.O. ATK und Amelia wurden anhand der gemeinsam geprüften Karten korrigiert. Sichtbare Version v1.30; Cache v38.

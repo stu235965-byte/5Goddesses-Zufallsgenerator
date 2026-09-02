@@ -370,6 +370,12 @@ function handSelected(){
 function renderActions(){
   const root=document.getElementById('gameActions');
   root.innerHTML='';
+  if(state.pendingBezEffect && ['mira','talisia2','talisia1_source','talisia1_target'].includes(state.pendingBezEffect.type)){
+    const labels={mira:'Mira Masako – gegnerische Bezwingerin wählen',talisia2:'Talisia II – gegnerische Bezwingerin wählen',talisia1_source:'Talisia – ASTRAL-Schild-Quelle wählen',talisia1_target:'Talisia – Empfängerin für 1 Herz wählen'};
+    const title=document.createElement('strong');title.textContent=labels[state.pendingBezEffect.type];root.appendChild(title);
+    E().checkedEffectTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveCheckedEffectTarget(state,t.id);saveRender(rr.msg);});root.appendChild(b);});
+    const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Abbrechen';cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender(rr.msg);});root.appendChild(cancel);return;
+  }
   if(state.pendingBezEffect?.type==='thal2'){
     const title=document.createElement('strong');
     title.textContent='Thal Ziris – Kampfrundendauer verändern';

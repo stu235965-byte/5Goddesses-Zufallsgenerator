@@ -649,15 +649,18 @@
       "effekte": [
         {
           "trigger": "permanent",
-          "text": "Die erste gegnerische Bezwingerin, die kämpft, muss diese Bezwingerin angreifen, falls möglich.",
-          "engine_key": "jeanne"
+          "engine_key": "jeanne_taunt",
+          "forced_attackers": 1
         }
       ],
-      "tags": [],
+      "tags": [
+        "permanent",
+        "zielzwang"
+      ],
       "effekt_symbol": "permanent",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Die erste gegnerische Bezwingerin, die kämpft, muss diese Bezwingerin angreifen, falls möglich."
+      "effekt_text": "Die erste gegnerische Bezwingerin, die kämpft, muss Jeanne d'Arque angreifen, falls möglich."
     },
     {
       "id": "1.01-04-32-6c8c7d2d",
@@ -686,15 +689,19 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Keine Einsatzverzögerung. In dieser Kampfrunde darf diese Bezwingerin die gegnerische Zuflucht nicht als Angriffsziel wählen.",
-          "engine_key": "calypso"
+          "engine_key": "calypso",
+          "no_deployment_delay": true,
+          "no_enemy_refuge_current_round": true
         }
       ],
-      "tags": [],
+      "tags": [
+        "ausspieleffekt",
+        "keine_einsatzverzögerung"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Keine Einsatzverzögerung. In dieser Kampfrunde darf diese Bezwingerin die gegnerische Zuflucht nicht als Angriffsziel wählen."
+      "effekt_text": "Calypso hat keine Einsatzverzögerung. In dieser Kampfrunde darf sie die gegnerische Zuflucht nicht als Angriffsziel wählen."
     },
     {
       "id": "1.01-05-32-07ee4a59",
@@ -706,7 +713,7 @@
       "kartentyp": "Bezwingerin",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Mittelwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": "Unterstützerin",
       "bereich": null,
@@ -721,11 +728,15 @@
       "ehre": 0,
       "wunder": null,
       "effekte": [],
-      "tags": [],
+      "tags": [
+        "fraktionslos",
+        "storytext"
+      ],
       "effekt_symbol": "none",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Storytext; kein Karteneffekt."
+      "effekt_text": "",
+      "fraktionslos": true
     },
     {
       "id": "1.01-19-32-f22d48d8",
@@ -754,15 +765,20 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Die gegenüberliegende Bezwingerin verliert 1 ASTRAL-Schild.",
-          "engine_key": "amelia"
+          "engine_key": "amelia",
+          "resource": "astralShield",
+          "amount": -1
         }
       ],
-      "tags": [],
+      "tags": [
+        "ausspieleffekt",
+        "astralschild",
+        "gegenüber"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Die gegenüberliegende Bezwingerin verliert 1 ASTRAL-Schild."
+      "effekt_text": "Die gegnerische Bezwingerin direkt gegenüber Amelia verliert 1 ASTRAL-Schild."
     },
     {
       "id": "1.01-20-32-62cd298b",
@@ -789,20 +805,24 @@
       "ehre": 0,
       "wunder": {
         "kosten_ehre": 2,
-        "text": "Ziehe von einer Bezwingerin oder Zuflucht 1 ASTRAL-Schild ab, wandle ihn in 1 Herz um und füge ihn einer beliebigen Bezwingerin hinzu."
+        "effekt_text": "Ziehe von einer eigenen Bezwingerin oder der eigenen Zuflucht 1 ASTRAL-Schild ab, wandle ihn in 1 Herz um und füge dieses einer beliebigen eigenen Bezwingerin hinzu."
       },
       "effekte": [
         {
           "trigger": "wonder",
-          "text": "Ziehe von einer Bezwingerin oder Zuflucht 1 ASTRAL-Schild ab, wandle ihn in 1 Herz um und füge ihn einer beliebigen Bezwingerin hinzu.",
-          "engine_key": "talisia"
+          "engine_key": "talisia1",
+          "cost_honor": 2
         }
       ],
-      "tags": [],
+      "tags": [
+        "wunder",
+        "heilung",
+        "astralschild"
+      ],
       "effekt_symbol": "wonder",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Ziehe von einer Bezwingerin oder Zuflucht 1 ASTRAL-Schild ab, wandle ihn in 1 Herz um und füge ihn einer beliebigen Bezwingerin hinzu."
+      "effekt_text": "Ziehe von einer eigenen Bezwingerin oder der eigenen Zuflucht 1 ASTRAL-Schild ab, wandle ihn in 1 Herz um und füge dieses einer beliebigen eigenen Bezwingerin hinzu."
     },
     {
       "id": "1.01-21-32-9c26c16c",
@@ -831,15 +851,18 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Wähle eine Bezwingerin: Sie kommt in Einsatzverzögerung und muss bis zum Beginn deiner nächsten Versorgungsphase darin bleiben.",
-          "engine_key": "mira"
+          "engine_key": "mira",
+          "expires": "source_next_supply_start"
         }
       ],
-      "tags": [],
+      "tags": [
+        "ausspieleffekt",
+        "einsatzverzögerung"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Wähle eine Bezwingerin: Sie kommt in Einsatzverzögerung und muss bis zum Beginn deiner nächsten Versorgungsphase darin bleiben."
+      "effekt_text": "Wähle eine gegnerische Bezwingerin. Bringe sie in die Einsatzverzögerung. Sie muss bis zum Beginn deiner nächsten Versorgungsphase in der Einsatzverzögerung bleiben."
     },
     {
       "id": "1.03-13-32-c61a0eda",
@@ -4468,15 +4491,18 @@
       "effekte": [
         {
           "trigger": "permanent",
-          "text": "Gegnerische Bezwingerinnen müssen, falls möglich, diese Bezwingerin angreifen, wenn sie kämpfen.",
-          "engine_key": "jeanne2"
+          "engine_key": "jeanne_taunt",
+          "forced_attackers": 2
         }
       ],
-      "tags": [],
+      "tags": [
+        "permanent",
+        "zielzwang"
+      ],
       "effekt_symbol": "permanent",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Gegnerische Bezwingerinnen müssen, falls möglich, diese Bezwingerin angreifen, wenn sie kämpfen."
+      "effekt_text": "Beide gegnerischen Bezwingerinnen müssen Jeanne d'Arque angreifen, wenn sie kämpfen, falls möglich."
     },
     {
       "id": "1.01-18-32-4f928d2c",
@@ -4554,15 +4580,18 @@
       "effekte": [
         {
           "trigger": "on_play",
-          "text": "Du kannst 1 ASTRAL-Schild abziehen und dieser Bezwingerin 1 Herz hinzufügen.",
-          "engine_key": "talisia2"
+          "engine_key": "talisia2",
+          "optional": true
         }
       ],
-      "tags": [],
+      "tags": [
+        "ausspieleffekt",
+        "astralschild"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Du kannst 1 ASTRAL-Schild abziehen und dieser Bezwingerin 1 Herz hinzufügen."
+      "effekt_text": "Du kannst einer gegnerischen Bezwingerin 1 ASTRAL-Schild abziehen und Talisia hinzufügen."
     },
     {
       "id": "1.03-12-32-4bd94de1",
