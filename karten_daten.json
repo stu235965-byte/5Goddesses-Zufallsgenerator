@@ -24,10 +24,19 @@
     "ehre": 0,
     "wunder": {
       "kosten_ehre": 2,
-      "effekt_text": "Ziehe eine Karte."
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
     },
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.04-17-32-a4e9b502",
@@ -54,10 +63,19 @@
     "ehre": 0,
     "wunder": {
       "kosten_ehre": 2,
-      "effekt_text": "Ziehe eine Karte."
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
     },
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.01-01-32-09907f26",
@@ -84,10 +102,19 @@
     "ehre": 0,
     "wunder": {
       "kosten_ehre": 2,
-      "effekt_text": "Ziehe eine Karte."
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
     },
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.01-17-32-aab9521d",
@@ -114,10 +141,19 @@
     "ehre": 0,
     "wunder": {
       "kosten_ehre": 2,
-      "effekt_text": "Ziehe eine Karte."
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
     },
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.03-11-32-69f1d5d9",
@@ -144,10 +180,19 @@
     "ehre": 0,
     "wunder": {
       "kosten_ehre": 2,
-      "effekt_text": "Ziehe eine Karte."
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
     },
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.03-22-32-0d7d0d97",
@@ -174,10 +219,19 @@
     "ehre": 0,
     "wunder": {
       "kosten_ehre": 2,
-      "effekt_text": "Ziehe eine Karte."
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
     },
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.02-11-32-fb6715c3",
@@ -204,10 +258,19 @@
     "ehre": 0,
     "wunder": {
       "kosten_ehre": 2,
-      "effekt_text": "Ziehe eine Karte."
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
     },
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.02-22-32-e327b014",
@@ -234,10 +297,19 @@
     "ehre": 0,
     "wunder": {
       "kosten_ehre": 2,
-      "effekt_text": "Ziehe eine Karte."
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
     },
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.05-01-32-0cb157b6",
@@ -264,10 +336,19 @@
     "ehre": 0,
     "wunder": {
       "kosten_ehre": 2,
-      "effekt_text": "Ziehe eine Karte."
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
     },
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.05-17-32-4bfcb0ce",
@@ -294,10 +375,19 @@
     "ehre": 0,
     "wunder": {
       "kosten_ehre": 2,
-      "effekt_text": "Ziehe eine Karte."
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
     },
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.04-03-32-aa7ee080",
@@ -3845,9 +3935,31 @@
     "physischer_schild": 0,
     "astraler_schild": 0,
     "ehre": 0,
-    "wunder": null,
-    "effekte": [],
-    "tags": []
+    "wunder": {
+      "kosten_ehre": 2,
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
+    },
+    "effekte": [
+      {
+        "typ": "beim_ausspielen",
+        "einmalig": true,
+        "auswahl": [
+          "+1 Physische Stärke",
+          "+1 ASTRAL-Stärke"
+        ],
+        "effekt_text": "Beim Ausspielen wähle: Füge dieser Zuflucht 1 Physische Stärke oder 1 ASTRAL-Stärke hinzu."
+      },
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "beim_ausspielen_staerke_wahl",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.04-06-32-85364c9d",
@@ -3899,9 +4011,31 @@
     "physischer_schild": 0,
     "astraler_schild": 0,
     "ehre": 0,
-    "wunder": null,
-    "effekte": [],
-    "tags": []
+    "wunder": {
+      "kosten_ehre": 2,
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
+    },
+    "effekte": [
+      {
+        "typ": "beim_ausspielen",
+        "einmalig": true,
+        "auswahl": [
+          "+1 Physische Stärke",
+          "+1 ASTRAL-Stärke"
+        ],
+        "effekt_text": "Beim Ausspielen wähle: Füge dieser Zuflucht 1 Physische Stärke oder 1 ASTRAL-Stärke hinzu."
+      },
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "beim_ausspielen_staerke_wahl",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.04-22-32-a9fd56f0",
@@ -3953,9 +4087,31 @@
     "physischer_schild": 0,
     "astraler_schild": 0,
     "ehre": 0,
-    "wunder": null,
-    "effekte": [],
-    "tags": []
+    "wunder": {
+      "kosten_ehre": 2,
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
+    },
+    "effekte": [
+      {
+        "typ": "beim_ausspielen",
+        "einmalig": true,
+        "auswahl": [
+          "+1 Physische Stärke",
+          "+1 ASTRAL-Stärke"
+        ],
+        "effekt_text": "Beim Ausspielen wähle: Füge dieser Zuflucht 1 Physische Stärke oder 1 ASTRAL-Stärke hinzu."
+      },
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "beim_ausspielen_staerke_wahl",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.01-06-32-58d07b2b",
@@ -4007,9 +4163,31 @@
     "physischer_schild": 0,
     "astraler_schild": 0,
     "ehre": 0,
-    "wunder": null,
-    "effekte": [],
-    "tags": []
+    "wunder": {
+      "kosten_ehre": 2,
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
+    },
+    "effekte": [
+      {
+        "typ": "beim_ausspielen",
+        "einmalig": true,
+        "auswahl": [
+          "+1 Physische Stärke",
+          "+1 ASTRAL-Stärke"
+        ],
+        "effekt_text": "Beim Ausspielen wähle: Füge dieser Zuflucht 1 Physische Stärke oder 1 ASTRAL-Stärke hinzu."
+      },
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "beim_ausspielen_staerke_wahl",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.01-22-32-e01025a4",
@@ -4061,9 +4239,31 @@
     "physischer_schild": 0,
     "astraler_schild": 0,
     "ehre": 0,
-    "wunder": null,
-    "effekte": [],
-    "tags": []
+    "wunder": {
+      "kosten_ehre": 2,
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
+    },
+    "effekte": [
+      {
+        "typ": "beim_ausspielen",
+        "einmalig": true,
+        "auswahl": [
+          "+1 Physische Stärke",
+          "+1 ASTRAL-Stärke"
+        ],
+        "effekt_text": "Beim Ausspielen wähle: Füge dieser Zuflucht 1 Physische Stärke oder 1 ASTRAL-Stärke hinzu."
+      },
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "beim_ausspielen_staerke_wahl",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.03-16-32-02bf8e96",
@@ -4115,9 +4315,31 @@
     "physischer_schild": 0,
     "astraler_schild": 0,
     "ehre": 0,
-    "wunder": null,
-    "effekte": [],
-    "tags": []
+    "wunder": {
+      "kosten_ehre": 2,
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
+    },
+    "effekte": [
+      {
+        "typ": "beim_ausspielen",
+        "einmalig": true,
+        "auswahl": [
+          "+1 Physische Stärke",
+          "+1 ASTRAL-Stärke"
+        ],
+        "effekt_text": "Beim Ausspielen wähle: Füge dieser Zuflucht 1 Physische Stärke oder 1 ASTRAL-Stärke hinzu."
+      },
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "beim_ausspielen_staerke_wahl",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.03-27-32-d286351b",
@@ -4169,9 +4391,31 @@
     "physischer_schild": 0,
     "astraler_schild": 0,
     "ehre": 0,
-    "wunder": null,
-    "effekte": [],
-    "tags": []
+    "wunder": {
+      "kosten_ehre": 2,
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
+    },
+    "effekte": [
+      {
+        "typ": "beim_ausspielen",
+        "einmalig": true,
+        "auswahl": [
+          "+1 Physische Stärke",
+          "+1 ASTRAL-Stärke"
+        ],
+        "effekt_text": "Beim Ausspielen wähle: Füge dieser Zuflucht 1 Physische Stärke oder 1 ASTRAL-Stärke hinzu."
+      },
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "beim_ausspielen_staerke_wahl",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.02-16-32-e8a93145",
@@ -4182,7 +4426,7 @@
     "hauptattribut": "BEZWINGERIN",
     "kartentyp": "Bezwingerin",
     "entwicklungskarte": true,
-    "grundkarte_bild": null,
+    "grundkarte_bild": "Bezwingerin/1.02-13-32-a55290d6.webp",
     "fraktion": "Unterwelt",
     "stufe": 2,
     "klasse": "Kriegerin",
@@ -4223,9 +4467,31 @@
     "physischer_schild": 0,
     "astraler_schild": 0,
     "ehre": 0,
-    "wunder": null,
-    "effekte": [],
-    "tags": []
+    "wunder": {
+      "kosten_ehre": 2,
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
+    },
+    "effekte": [
+      {
+        "typ": "beim_ausspielen",
+        "einmalig": true,
+        "auswahl": [
+          "+1 Physische Stärke",
+          "+1 ASTRAL-Stärke"
+        ],
+        "effekt_text": "Beim Ausspielen wähle: Füge dieser Zuflucht 1 Physische Stärke oder 1 ASTRAL-Stärke hinzu."
+      },
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "beim_ausspielen_staerke_wahl",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.02-27-32-2ee29192",
@@ -4304,9 +4570,31 @@
     "physischer_schild": 0,
     "astraler_schild": 0,
     "ehre": 0,
-    "wunder": null,
-    "effekte": [],
-    "tags": []
+    "wunder": {
+      "kosten_ehre": 2,
+      "effekt_text": "Ziehe eine Karte von einem der Hauptstapel."
+    },
+    "effekte": [
+      {
+        "typ": "beim_ausspielen",
+        "einmalig": true,
+        "auswahl": [
+          "+1 Physische Stärke",
+          "+1 ASTRAL-Stärke"
+        ],
+        "effekt_text": "Beim Ausspielen wähle: Füge dieser Zuflucht 1 Physische Stärke oder 1 ASTRAL-Stärke hinzu."
+      },
+      {
+        "typ": "angriffsregel",
+        "trigger": "Ansturmphase",
+        "effekt_text": "Diese Zuflucht kann nur angreifen, wenn auf der eigenen Spielfeldseite keine Bezwingerin vorhanden ist."
+      }
+    ],
+    "tags": [
+      "angriff_nur_ohne_eigene_bezwingerin",
+      "beim_ausspielen_staerke_wahl",
+      "zuflucht"
+    ]
   },
   {
     "id": "1.05-22-32-86b7a35a",

@@ -7,6 +7,7 @@ let selectedHandIndex=null;
 let selectedAttacker=null;
 let selectedTarget=null;
 let selectedAttackType=null;
+let refugeActionSelected=false;
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function cardName(r){return r?E().cardData(r)?.name||'Karte':''}
@@ -19,6 +20,11 @@ function finishEquipmentChoice(result,bezSlot,kind){
 }
 function cardImg(r){return r?E().cardData(r)?.bild||r.bild:''}
 function phase(){return state?E().currentPhase(state):null}
+function selectedAttackerRuntime(){
+  if(selectedAttacker===null || !state)return null;
+  const p=E().active(state);
+  return selectedAttacker==='refuge' ? p.refuge : p.bezSlots[selectedAttacker];
+}
 function saveRender(msg=''){
   if(state)E().save(state);
   render(msg);
@@ -64,7 +70,7 @@ function startGame(){
   E().save(state);
   document.getElementById('gameSetup').hidden=true;
   document.getElementById('gameShell').hidden=false;
-  selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;
+  selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;refugeActionSelected=false;
   render('Gefecht gestartet. Beide Spieler haben 3 Karten auf der Starthand.');
 }
 function resumeGame(){
@@ -284,6 +290,11 @@ function renderBoards(){
         if(selectedAttacker===slot)btn.classList.add('attack-source-selected');
       }
     });
+    const refugeBtn=document.querySelector('#playerBoard [data-refuge]');
+    if(refugeBtn && E().canRefugeAttack(state)){
+      refugeBtn.classList.add('attack-source-valid');
+      if(selectedAttacker==='refuge')refugeBtn.classList.add('attack-source-selected');
+    }
 
     // Nach Wahl eines Angreifers nur legale gegnerische Karten mit Herzen hervorheben.
     if(selectedAttacker!==null){
@@ -418,6 +429,78 @@ function renderActions(){
       return;
     }
 
+    if(state.pendingRefugeStage2Choice && state.pendingRefugeStage2Choice.playerIndex===state.activePlayer){
+      const info=document.createElement('span');
+      info.innerHTML='<strong>Stufe-2-Zuflucht:</strong> Wähle den einmaligen Bonus beim Ausspielen.';
+      root.appendChild(info);
+      const phys=document.createElement('button');
+      phys.className='primary';
+      phys.textContent='+1 Physische Stärke';
+      phys.addEventListener('click',()=>saveRender(E().chooseRefugeStage2Bonus(state,'physical').msg));
+      const astral=document.createElement('button');
+      astral.className='primary';
+      astral.textContent='+1 ASTRAL-Stärke';
+      astral.addEventListener('click',()=>saveRender(E().chooseRefugeStage2Bonus(state,'astral').msg));
+      root.append(phys,astral);
+      return;
+    }
+
+    if(state.pendingWonderDraw && state.pendingWonderDraw.playerIndex===state.activePlayer){
+      const info=document.createElement('span');
+      info.innerHTML='<strong>Zuflucht-Wunder:</strong> Wähle einen Hauptstapel und ziehe eine Karte.';
+      root.appendChild(info);
+      for(const [key,label] of [['bezwingerinnen','Bezwingerinnen'],['astral','ASTRAL'],['ruestkammer','Rüstkammer']]){
+        const b=document.createElement('button');
+        b.className='primary';
+        b.textContent=`${label}-Stapel`;
+        b.disabled=!p.stacks[key]?.length;
+        b.addEventListener('click',()=>saveRender(E().resolveWonderDraw(state,key).msg));
+        root.appendChild(b);
+      }
+      return;
+    }
+
+    if(refugeActionSelected){
+      const r=p.refuge,c=E().cardData(r),dev=E().availableDevelopment(state,r);
+      const info=document.createElement('span');
+      info.innerHTML=`Ausgewählt: <strong>${esc(cardName(r))}</strong> – Ehre: <strong>${r.honor||0}</strong>`;
+      root.appendChild(info);
+
+      if(dev){
+        const b=document.createElement('button');
+        b.className='primary';
+        b.textContent=`Auf Stufe ${dev.stufe} entwickeln (${dev.stufe} Ehre)`;
+        b.disabled=(r.honor||0)<dev.stufe || r.developedTurn===p.turnCount;
+        b.addEventListener('click',()=>{
+          const rr=E().develop(state,'refuge');
+          refugeActionSelected=false;
+          saveRender(rr.msg||'Zuflucht entwickelt.');
+        });
+        root.appendChild(b);
+      }
+
+      if(c?.wunder){
+        const chk=E().refugeWonderAvailable(state);
+        const b=document.createElement('button');
+        b.className='primary';
+        b.textContent=`Wunder wirken (${c.wunder.kosten_ehre} Ehre) – Karte ziehen`;
+        b.disabled=!chk.ok;
+        b.title=chk.ok?'':chk.msg;
+        b.addEventListener('click',()=>{
+          const rr=E().activateRefugeWonder(state);
+          refugeActionSelected=false;
+          saveRender(rr.msg||'Wunder aktiviert.');
+        });
+        root.appendChild(b);
+      }
+
+      const cancel=document.createElement('button');
+      cancel.textContent='Auswahl schließen';
+      cancel.addEventListener('click',()=>{refugeActionSelected=false;renderActions();});
+      root.appendChild(cancel);
+      return;
+    }
+
     const c=handSelected();
     if(c){
       const info=document.createElement('span');
@@ -515,7 +598,7 @@ function renderActions(){
     const opp=E().opponent(state);
 
     if(state.attack){
-      const atk=p.bezSlots[state.attack.attackerSlot];
+      const atk=(state.attack.attackerKind==='refuge'?p.refuge:p.bezSlots[state.attack.attackerSlot]);
       const targetLabel=(()=>{
         const t=state.attack.target;
         if(t.type==='bez')return cardName(opp.bezSlots[t.slot]);
@@ -576,22 +659,27 @@ function renderActions(){
       root.appendChild(warn);
     }else{
       const attackers=p.bezSlots.map((r,i)=>E().canAttack(r,p)?i:null).filter(i=>i!==null);
+      if(E().canRefugeAttack(state))attackers.push('refuge');
 
       if(!attackers.length){
         const info=document.createElement('span');
-        info.textContent='Keine einsatzbereite Bezwingerin kann angreifen. Einsatzverzögerte Karten dürfen weiterhin angegriffen werden.';
+        info.textContent=p.bezSlots.some(Boolean)
+          ?'Keine einsatzbereite Bezwingerin kann angreifen. Die Zuflucht darf nur angreifen, wenn keine eigene Bezwingerin mehr auf dem Feld liegt.'
+          :'Derzeit kann keine eigene Karte angreifen.';
         root.appendChild(info);
       }else if(selectedAttacker===null){
         const info=document.createElement('span');
-        info.textContent='Klicke auf eine eigene einsatzbereite Bezwingerin. Sie wird als Angreiferin ausgewählt.';
+        info.textContent=E().canRefugeAttack(state)
+          ?'Klicke auf deine Zuflucht, um sie als Angreifer zu wählen.'
+          :'Klicke auf eine eigene einsatzbereite Bezwingerin. Sie wird als Angreiferin ausgewählt.';
         root.appendChild(info);
       }else if(selectedTarget===null){
         const info=document.createElement('span');
-        info.innerHTML=`Angreiferin: <strong>${esc(cardName(p.bezSlots[selectedAttacker]))}</strong>. Klicke jetzt auf eines der gold aufleuchtenden gegnerischen Ziele mit Herzpunkten.`;
+        info.innerHTML=`Angreifer: <strong>${esc(cardName(selectedAttackerRuntime()))}</strong>. Klicke jetzt auf eines der gold aufleuchtenden gegnerischen Ziele mit Herzpunkten.`;
         root.appendChild(info);
       }else{
         const info=document.createElement('span');
-        info.innerHTML=`Ziel gewählt. Wähle jetzt die Angriffsart für <strong>${esc(cardName(p.bezSlots[selectedAttacker]))}</strong>.`;
+        info.innerHTML=`Ziel gewählt. Wähle jetzt die Angriffsart für <strong>${esc(cardName(selectedAttackerRuntime()))}</strong>.`;
         root.appendChild(info);
 
         const physical=document.createElement('button');
@@ -642,7 +730,7 @@ function renderActions(){
     }
 
     if(state.attack){
-      const a=p.bezSlots[state.attack.attackerSlot];
+      const a=(state.attack.attackerKind==='refuge'?p.refuge:p.bezSlots[state.attack.attackerSlot]);
       const b=document.createElement('button');
       b.className='primary';
       b.textContent=`Kampf ausführen: ${cardName(a)}`;
@@ -652,7 +740,7 @@ function renderActions(){
       });
       root.appendChild(b);
     }else{
-      const more=p.bezSlots.some(r=>E().canAttack(r,p));
+      const more=p.bezSlots.some(r=>E().canAttack(r,p)) || E().canRefugeAttack(state);
       if(more){
         const b=document.createElement('button');
         b.textContent='Mit weiterer Karte angreifen';
@@ -708,13 +796,27 @@ function handleOwnBez(slot){
   }
 }
 function handleRefuge(){
-  if(!['supply','resupply'].includes(phase().id))return;
-  const p=E().active(state);
-  const dev=E().availableDevelopment(state,p.refuge);
-  if(dev && confirm(`Zuflucht auf Stufe ${dev.stufe} entwickeln? Kosten: ${dev.stufe} Ehre auf der Zuflucht.`)){
-    const r=E().develop(state,'refuge');
-    saveRender(r.msg||'Zuflucht entwickelt.');
-  }else if(!dev) message('Keine passende nächste Entwicklungsstufe im Entwicklungsdeck.','warn');
+  const ph=phase(),p=E().active(state);
+
+  if(ph.id==='rush' && !state.attack){
+    if(!E().canRefugeAttack(state)){
+      if(p.bezSlots.some(Boolean))return message('Die Zuflucht darf nur angreifen, wenn auf deiner Spielfeldseite keine Bezwingerin mehr vorhanden ist.','warn');
+      return message('Die Zuflucht kann in dieser Kampfrunde nicht angreifen.','warn');
+    }
+    selectedAttacker='refuge';
+    selectedTarget=null;
+    selectedAttackType=null;
+    refugeActionSelected=false;
+    renderBoards();
+    renderActions();
+    return message(`${cardName(p.refuge)} als Angreifer gewählt. Wähle jetzt ein leuchtendes gegnerisches Ziel.`);
+  }
+
+  if(!['supply','resupply'].includes(ph.id))return;
+  selectedHandIndex=null;
+  refugeActionSelected=true;
+  renderActions();
+  message('Zuflucht ausgewählt. Wähle Entwickeln oder Wunder wirken.');
 }
 function handleAzr(slot){
   const r=E().active(state).azr[slot];
@@ -785,7 +887,7 @@ function handleBattlefieldTargetClick(ev){
 function chooseTarget(target){
   if(phase()?.id!=='rush'||selectedAttacker===null)return;
   const legal=E().attackTargets(state,selectedAttacker).some(t=>t.type===target.type&&t.slot===target.slot);
-  if(!legal)return message('Dieses Ziel darf mit dieser Bezwingerin derzeit nicht angegriffen werden.','warn');
+  if(!legal)return message('Dieses Ziel darf mit der ausgewählten Karte derzeit nicht angegriffen werden.','warn');
   selectedTarget={type:target.type,slot:target.slot};
   selectedAttackType=null;
   renderBoards();
@@ -936,7 +1038,7 @@ document.getElementById('gameNew')?.addEventListener('click',newGame);
 document.getElementById('gameNextPhase')?.addEventListener('click',()=>{
   if(!state)return;
   const r=E().advancePhase(state);
-  selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;
+  selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;refugeActionSelected=false;
   saveRender(r.msg||'');
 });
 

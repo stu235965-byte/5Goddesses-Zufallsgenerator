@@ -60,6 +60,8 @@ function makeRuntimeCard(bild,owner,enteredTurn=-1){
     hearts:c.herzen ?? 0,
     physicalShield:c.physischer_schild ?? 0,
     astralShield:c.astraler_schild ?? 0,
+    physical:c.physische_staerke ?? 0,
+    astral:c.astrale_staerke ?? 0,
     // Gedruckte Ehre ist die Startehre der Karte.
     // Sie ist bereits beim Ausspielen vorhanden – auch wenn die Karte
     // zunächst verdeckt gesetzt wird. Verdeckte Karten erhalten lediglich
@@ -288,6 +290,8 @@ function startGame(deck1,deck2,startPlayer){
     pendingEquipment:null,
     pendingFieldCard:null,
     pendingDamage:null,
+    pendingWonderDraw:null,
+    pendingRefugeStage2Choice:null,
     sharedPrimary:null,
     players:[playerFromDeck(deck1,0),playerFromDeck(deck2,1)],
     log:[]
@@ -529,6 +533,62 @@ function reveal(state,slot){
   log(state,`${p.name} deckt ${c?.name||'eine gesetzte Karte'} auf. Der individuelle Karteneffekt ist noch nicht implementiert.`);
   return {ok:true};
 }
+
+function isRefugeRuntime(runtime){
+  const c=cardData(runtime);
+  return !!c && String(c.kartentyp||'').toLowerCase()==='zuflucht';
+}
+function canRefugeAttack(state,playerIndex=state.activePlayer){
+  const p=state.players[playerIndex];
+  if(!p?.refuge)return false;
+  // Vom Nutzer bestätigte Zuflucht-Regel: Sie darf nur angreifen, wenn auf
+  // der eigenen Spielfeldseite keine Bezwingerin vorhanden ist.
+  if(p.bezSlots.some(Boolean))return false;
+  return canAttack(p.refuge,p);
+}
+function refugeWonderAvailable(state){
+  const p=active(state),r=p.refuge,c=cardData(r);
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in Versorgungs- oder Nachschubphase gewirkt werden.'};
+  if(!c?.wunder)return {ok:false,msg:'Diese Zuflucht besitzt kein Wunder.'};
+  if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Diese Zuflucht hat in dieser Kampfrunde bereits ein Wunder gewirkt.'};
+  const cost=Number(c.wunder.kosten_ehre||0);
+  if((r.honor||0)<cost)return {ok:false,msg:`Für dieses Wunder werden ${cost} Ehre auf der Zuflucht benötigt.`};
+  const nonempty=['bezwingerinnen','astral','ruestkammer'].some(k=>p.stacks[k]?.length);
+  if(!nonempty)return {ok:false,msg:'Alle drei Hauptstapel sind leer.'};
+  return {ok:true,cost};
+}
+function activateRefugeWonder(state){
+  if(state.pendingWonderDraw)return {ok:false,msg:'Es wartet bereits eine Kartenziehung aus einem Wunder.'};
+  const chk=refugeWonderAvailable(state);
+  if(!chk.ok)return chk;
+  const p=active(state),r=p.refuge;
+  r.honor-=chk.cost;
+  r.wonderTurn=p.turnCount;
+  state.pendingWonderDraw={playerIndex:p.index,source:'refuge'};
+  log(state,`${p.name} wirkt das Wunder der Zuflucht für ${chk.cost} Ehre und darf eine Karte von einem Hauptstapel ziehen.`);
+  return {ok:true,needsStackChoice:true,msg:'Wunder aktiviert. Wähle einen der drei Hauptstapel.'};
+}
+function resolveWonderDraw(state,stack){
+  const pending=state.pendingWonderDraw;
+  if(!pending)return {ok:false,msg:'Es wartet keine Kartenziehung aus einem Wunder.'};
+  if(pending.playerIndex!==state.activePlayer)return {ok:false,msg:'Die offene Wunder-Kartenziehung gehört nicht dem aktiven Spieler.'};
+  const r=drawFrom(state,pending.playerIndex,stack);
+  if(!r.ok)return r;
+  state.pendingWonderDraw=null;
+  return {ok:true,bild:r.bild,msg:'Wunder abgewickelt: Eine Karte wurde gezogen.'};
+}
+function chooseRefugeStage2Bonus(state,type){
+  const pending=state.pendingRefugeStage2Choice;
+  if(!pending)return {ok:false,msg:'Es wartet keine Auswahl für eine Stufe-2-Zuflucht.'};
+  if(pending.playerIndex!==state.activePlayer)return {ok:false,msg:'Diese Auswahl gehört nicht dem aktiven Spieler.'};
+  if(!['physical','astral'].includes(type))return {ok:false,msg:'Ungültige Auswahl.'};
+  const p=active(state),r=p.refuge;
+  if(type==='physical')r.physical=(r.physical||0)+1;
+  else r.astral=(r.astral||0)+1;
+  state.pendingRefugeStage2Choice=null;
+  log(state,`${p.name} gibt der Stufe-2-Zuflucht dauerhaft +1 ${type==='physical'?'Physische':'ASTRAL'} Stärke.`);
+  return {ok:true,msg:`Stufe-2-Effekt: +1 ${type==='physical'?'Physische':'ASTRAL'} Stärke gewählt.`};
+}
 function availableDevelopment(state,runtime){
   if(!runtime)return null;
   const p=active(state);
@@ -581,6 +641,13 @@ function develop(state,kind,slot=null){
 
   r.developedTurn=p.turnCount;
   log(state,`${p.name} entwickelt ${dev.name} auf Stufe ${dev.stufe}. Bereits erlittener Herz- und Schildschaden bleibt erhalten.`);
+
+  // Alle aktuell vorhandenen Stufe-2-Zufluchten besitzen beim Ausspielen
+  // die einmalige Wahl: +1 Physische ODER +1 ASTRAL-Stärke.
+  if(kind==='refuge' && dev.stufe===2){
+    state.pendingRefugeStage2Choice={playerIndex:p.index};
+    return {ok:true,needsRefugeStage2Choice:true,msg:'Zuflucht auf Stufe 2 entwickelt. Wähle jetzt +1 Physische oder +1 ASTRAL-Stärke.'};
+  }
   return {ok:true};
 }
 function canAttack(runtime,p){
@@ -595,54 +662,62 @@ function hasHeartAttribute(runtime){
 function targetKey(t){
   return `${t.type}:${t.slot??''}`;
 }
-function attackTargets(state,attackerSlot){
+function attackerRuntime(state,attackerSource){
+  const p=active(state);
+  if(attackerSource==='refuge' || attackerSource?.type==='refuge')return p.refuge;
+  const slot=typeof attackerSource==='number' ? attackerSource : attackerSource?.slot;
+  return p.bezSlots[slot];
+}
+function attackerKindAndSlot(attackerSource){
+  if(attackerSource==='refuge' || attackerSource?.type==='refuge')return {kind:'refuge',slot:null};
+  const slot=typeof attackerSource==='number' ? attackerSource : attackerSource?.slot;
+  return {kind:'bez',slot};
+}
+function attackTargets(state,attackerSource){
   const opp=opponent(state);
   const targets=[];
+  const src=attackerKindAndSlot(attackerSource);
 
-  // Jede gegnerische Bezwingerin mit Herz-Attribut ist grundsätzlich anwählbar.
   opp.bezSlots.forEach((r,i)=>{
-    if(r && hasHeartAttribute(r)){
-      targets.push({type:'bez',slot:i,label:cardData(r)?.name||`Bezwingerin ${i+1}`});
-    }
+    if(r && hasHeartAttribute(r))targets.push({type:'bez',slot:i,label:cardData(r)?.name||`Bezwingerin ${i+1}`});
   });
-
-  // Sekundärbereich des Gegners, sofern dort eine Karte mit Herzen liegt.
-  if(opp.secondary && hasHeartAttribute(opp.secondary)){
-    targets.push({type:'secondary',label:cardData(opp.secondary)?.name||'Sekundärbereich'});
-  }
-
-  // Die gemeinsame Primärzone kann nur angegriffen werden, wenn dort eine
-  // gegnerische Karte mit Herz-Attribut liegt.
-  if(state.sharedPrimary &&
-     state.sharedPrimary.owner===opp.index &&
-     hasHeartAttribute(state.sharedPrimary)){
+  if(opp.secondary && hasHeartAttribute(opp.secondary))targets.push({type:'secondary',label:cardData(opp.secondary)?.name||'Sekundärbereich'});
+  if(state.sharedPrimary && state.sharedPrimary.owner===opp.index && hasHeartAttribute(state.sharedPrimary)){
     targets.push({type:'primary',label:cardData(state.sharedPrimary)?.name||'Primärbereich'});
   }
 
-  // Zuflucht nur wenn keine gegnerische Bezwingerin auf dem Feld ODER der
-  // direkt gegenüberliegende Bezwingerinnenbereich frei ist.
   const noBez=opp.bezSlots.every(x=>!x);
-  if((noBez || !opp.bezSlots[attackerSlot]) && hasHeartAttribute(opp.refuge)){
-    targets.push({type:'refuge',label:`Zuflucht von ${opp.name}`});
+  if(src.kind==='bez'){
+    if((noBez || !opp.bezSlots[src.slot]) && hasHeartAttribute(opp.refuge))targets.push({type:'refuge',label:`Zuflucht von ${opp.name}`});
+  }else{
+    // Eine Zuflucht besitzt keinen gegenüberliegenden Bezwingerinnen-Slot.
+    // Daher ist der direkte Angriff auf die gegnerische Zuflucht erst möglich,
+    // wenn dort keine Bezwingerin mehr vorhanden ist.
+    if(noBez && hasHeartAttribute(opp.refuge))targets.push({type:'refuge',label:`Zuflucht von ${opp.name}`});
   }
   return targets;
 }
-function prepareAttack(state,attackerSlot,target,attackType){
+function prepareAttack(state,attackerSource,target,attackType){
   if(currentPhase(state).id!=='rush')return {ok:false,msg:'Angriffe werden in der Ansturmphase festgelegt.'};
-  const p=active(state),r=p.bezSlots[attackerSlot];
-  if(!canAttack(r,p))return {ok:false,msg:'Diese Bezwingerin ist einsatzverzögert oder hat bereits angegriffen.'};
+  const p=active(state),src=attackerKindAndSlot(attackerSource),r=attackerRuntime(state,attackerSource);
+  if(src.kind==='refuge'){
+    if(!canRefugeAttack(state,p.index))return {ok:false,msg:'Die Zuflucht kann nur angreifen, wenn auf deiner Spielfeldseite keine Bezwingerin vorhanden ist.'};
+  }else if(!canAttack(r,p)){
+    return {ok:false,msg:'Diese Bezwingerin ist einsatzverzögert oder hat bereits angegriffen.'};
+  }
   if(!['physical','astral'].includes(attackType))return {ok:false,msg:'Ungültige Angriffsart.'};
-  const legal=attackTargets(state,attackerSlot).some(t=>targetKey(t)===targetKey(target));
+  const legal=attackTargets(state,attackerSource).some(t=>targetKey(t)===targetKey(target));
   if(!legal)return {ok:false,msg:'Dieses Angriffsziel ist nach der Grundregel nicht zulässig.'};
 
   state.attack={
-    attackerSlot,
+    attackerKind:src.kind,
+    attackerSlot:src.slot,
     target,
     attackType,
     defenderConfirmed:false,
     revealedDuringDefense:false
   };
-  log(state,`${p.name} kündigt mit ${cardData(r)?.name||'einer Bezwingerin'} einen ${attackType==='physical'?'physischen':'ASTRAL'} Angriff an.`);
+  log(state,`${p.name} kündigt mit ${cardData(r)?.name||'einer Karte'} einen ${attackType==='physical'?'physischen':'ASTRAL'} Angriff an.`);
   return {ok:true};
 }
 function defenderFaceDownSlots(state){
@@ -785,7 +860,7 @@ function finalizePendingCombat(state){
   const attack=state.attack;
   if(attack){
     killIfNeeded(state,pd.defenderIndex,pd.defKind,pd.defSlot);
-    killIfNeeded(state,pd.attackerIndex,'bez',pd.attackerSlot);
+    killIfNeeded(state,pd.attackerIndex,pd.attackerKind||'bez',pd.attackerSlot);
   }
   state.pendingDamage=null;
   state.attack=null;
@@ -856,7 +931,8 @@ function resolveCombat(state){
   }
 
   const p=active(state),opp=opponent(state);
-  const a=p.bezSlots[state.attack.attackerSlot];
+  const attackerKind=state.attack.attackerKind||'bez';
+  const a=attackerKind==='refuge' ? p.refuge : p.bezSlots[state.attack.attackerSlot];
   if(!a)return {ok:false,msg:'Der Angreifer ist nicht mehr auf dem Feld.'};
   if(!state.attack.defenderConfirmed)return {ok:false,msg:'Der verteidigende Spieler muss den Angriff zuerst zulassen.'};
 
@@ -871,7 +947,9 @@ function resolveCombat(state){
   const ac=cardData(a),dc=cardData(d);
   const type=state.attack.attackType;
 
-  const atk=combatStrength(state,p.index,state.attack.attackerSlot,type,true);
+  const atk=attackerKind==='refuge'
+    ? {base:type==='physical'?(a.physical ?? ac?.physische_staerke ?? 0):(a.astral ?? ac?.astrale_staerke ?? 0),equipment:0,total:type==='physical'?(a.physical ?? ac?.physische_staerke ?? 0):(a.astral ?? ac?.astrale_staerke ?? 0)}
+    : combatStrength(state,p.index,state.attack.attackerSlot,type,true);
   const attackValue=atk.total;
 
   let counterValue=0,counter={base:0,equipment:0,total:0};
@@ -913,19 +991,25 @@ function resolveCombat(state){
     });
   }
   if(counterValue>0){
-    packets.push({
-      role:'attacker',
-      playerIndex:p.index,
-      bezSlot:state.attack.attackerSlot,
-      type,
-      remaining:counterValue,
-      shieldLoss:0,
-      heartLoss:0
-    });
+    if(attackerKind==='refuge'){
+      const dmg=applyDamage(a,counterValue,type);
+      if(dmg.shield||dmg.hearts)log(state,`Angreifende Zuflucht: −${dmg.shield} Basisschild/−${dmg.hearts} Herzen durch Gegenangriff.`);
+    }else{
+      packets.push({
+        role:'attacker',
+        playerIndex:p.index,
+        bezSlot:state.attack.attackerSlot,
+        type,
+        remaining:counterValue,
+        shieldLoss:0,
+        heartLoss:0
+      });
+    }
   }
 
   state.pendingDamage={
     attackerIndex:p.index,
+    attackerKind,
     attackerSlot:state.attack.attackerSlot,
     defenderIndex:opp.index,
     defKind,
@@ -984,6 +1068,12 @@ function advancePhase(state){
   if(state.pendingDamage){
     return {ok:false,msg:'Die Schild-/Schadensverteilung des aktuellen Kampfes muss zuerst abgeschlossen werden.'};
   }
+  if(state.pendingWonderDraw){
+    return {ok:false,msg:'Die Kartenziehung aus dem Wunder muss zuerst abgeschlossen werden.'};
+  }
+  if(state.pendingRefugeStage2Choice){
+    return {ok:false,msg:'Die Auswahl für den Stufe-2-Zuflucht-Effekt muss zuerst abgeschlossen werden.'};
+  }
 
   if(phase.id==='draw'){
     const nonempty=Object.values(p.stacks).some(a=>a.length);
@@ -1030,7 +1120,7 @@ function drawPhaseCard(state,stack){
 function returnToRush(state){
   if(currentPhase(state).id!=='combat' || state.attack)return {ok:false,msg:'Noch nicht möglich.'};
   const p=active(state);
-  if(!p.bezSlots.some(r=>canAttack(r,p)))return {ok:false,msg:'Keine weitere einsatzbereite Bezwingerin kann angreifen.'};
+  if(!p.bezSlots.some(r=>canAttack(r,p)) && !canRefugeAttack(state))return {ok:false,msg:'Keine weitere eigene Karte kann angreifen.'};
   state.phaseIndex=5;
   beginPhase(state);
   return {ok:true};
@@ -1044,6 +1134,8 @@ function migrateLoadedState(state){
   if(state.pendingEquipment===undefined)state.pendingEquipment=null;
   if(state.pendingFieldCard===undefined)state.pendingFieldCard=null;
   if(state.pendingDamage===undefined)state.pendingDamage=null;
+  if(state.pendingWonderDraw===undefined)state.pendingWonderDraw=null;
+  if(state.pendingRefugeStage2Choice===undefined)state.pendingRefugeStage2Choice=null;
 
   state.players.forEach((p,index)=>{
     if(p.index===undefined)p.index=index;
@@ -1059,6 +1151,9 @@ function migrateLoadedState(state){
     const normalizeRuntime=(r,isRefuge=false)=>{
       if(!r)return;
       const c=cardData(r);
+      if(r.physical===undefined)r.physical=c?.physische_staerke ?? 0;
+      if(r.astral===undefined)r.astral=c?.astrale_staerke ?? 0;
+      if(r.wonderTurn===undefined)r.wonderTurn=null;
       if(isRefuge){
         r.ready=true;
       }else if(!hasDeploymentDelay(c)){
@@ -1103,7 +1198,8 @@ window.G5Engine={
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,playOpenAzr,reveal,
   equipmentKind,isEquipmentCard,fieldArea,playFieldFromHand,moveRevealedFieldCard,equipFromHand,equipFromAzr,discardEquipment,
   chooseEquipmentShieldBonus,equipmentCombatProfile,combatStrength,
-  availableDevelopment,develop,hasDeploymentDelay,canAttack,hasHeartAttribute,attackTargets,prepareAttack,
+  availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,prepareAttack,
+  refugeWonderAvailable,activateRefugeWonder,resolveWonderDraw,chooseRefugeStage2Bonus,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,currentShieldChoice,chooseShieldSource,returnToRush,cardData
 };
 })();

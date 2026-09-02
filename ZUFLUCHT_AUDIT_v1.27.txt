@@ -1,0 +1,26 @@
+5Goddesses – Zuflucht-Audit v1.27
+
+Gefundene Zufluchtkarten: 19
+- Stufe 1 im Zufluchtordner: 10
+- Stufe 2 im Entwicklungsordner: 9
+
+Geprüfte Pflichtdaten:
+- Hauptattribut: ZUFLUCHT
+- Nebenattribut / zweites Symbol: leer (nebenattribute = [], untertyp = null)
+- Fraktion: Astralwelt / Mittelwelt / Oberwelt / Unterwelt / Zwischenwelt
+- Stufe: 1 bzw. 2
+- Herz-/Stärke-/Schild-/Ehre-Grundwerte
+- Wunder: 2 Ehre -> eine Karte von einem Hauptstapel ziehen
+- Zuflucht-Angriffsregel: Angriff nur ohne eigene Bezwingerin auf dem Feld
+- Stufe 2: einmalige Wahl beim Ausspielen +1 Physische oder +1 ASTRAL-Stärke
+
+Ergebnis:
+- Alle 10 vorhandenen Stufe-1-Zufluchten sind vollständig zugeordnet.
+- Alle 9 vorhandenen Stufe-2-Zufluchten sind vollständig zugeordnet.
+- Bei den Stufe-2-Zufluchten fehlten im Datenmodell Wunder + Ausspieleffekt; ergänzt.
+- Die Angriffsregel war nicht als Effekt hinterlegt; ergänzt und im Gefecht umgesetzt.
+- Das Zuflucht-Wunder ist jetzt im Gefecht auswählbar; der Hauptstapel wird anschließend gewählt.
+- Beim Entwickeln auf Stufe 2 wird die Stärke-Wahl unmittelbar abgefragt.
+
+Fehlende passende Stufe-2-Karte im vorhandenen Entwicklungsordner:
+- Genova Toshi
