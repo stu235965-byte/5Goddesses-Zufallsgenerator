@@ -139,13 +139,15 @@ function runtimeCardHtml(r,{hidden=false,small=false}={}){
   </div>`;
 }
 function stackHtml(p,key,label){
-  const n=p.stacks[key].length;
+  const pile=Array.isArray(p?.stacks?.[key])?p.stacks[key]:[];
+  const n=pile.length;
   return `<button class="stack-pile" data-stack="${key}" ${n?'':'disabled'}>
     <span class="stack-back">${esc(label)}</span><b>${n}</b>
   </button>`;
 }
 function developmentHtml(p){
-  return `<div class="dev-pile"><span>ENTWICKLUNG</span><b>${p.development.length}</b></div>`;
+  const n=Array.isArray(p?.development)?p.development.length:0;
+  return `<div class="dev-pile"><span>ENTWICKLUNG</span><b>${n}</b></div>`;
 }
 function equipmentSlot(label,kind,bezIndex,r,isActive){
   return `<button class="equip-slot ${kind}" data-equip="${kind}" data-equip-bez="${bezIndex}" ${isActive?'':'disabled'}>
@@ -185,27 +187,39 @@ function bezCore(r,i,isActive){
   return `<button type="button" class="board-slot bez-slot${isActive?'':' opponent-slot'}" data-bez="${i}" aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN${bezEffectBadge(r)}</span></button>`;
 }
 function playerBoardHtml(p,isActive,isOpponent){
-  const eq=p.equipment||[
+  // Defensive migration/rendering: older gespeicherte Gefechte können einzelne
+  // Felder noch nicht besitzen. Das Spielfeld darf deshalb nicht komplett
+  // abstürzen, nur weil z.B. azr/equipment/development fehlt.
+  p=p||{};
+  const eq=Array.isArray(p.equipment) ? p.equipment : [
     {weapon:null,shield:null,armor:null,helmet:null},
     {weapon:null,shield:null,armor:null,helmet:null}
   ];
-  const azr=p.azr.map((r,i)=>`<button class="board-slot azr-slot" data-azr="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r,{hidden:isOpponent&&r?.faceDown})}<span class="slot-label">AZR ${i+1}</span></button>`).join('');
+  const azrList=Array.isArray(p.azr) ? p.azr : [null,null,null];
+  const bezSlots=Array.isArray(p.bezSlots) ? p.bezSlots : [null,null];
+  const hand=Array.isArray(p.hand) ? p.hand : [];
+  const discard=Array.isArray(p.discard) ? p.discard : [];
+  const development=Array.isArray(p.development) ? p.development : [];
+  const stacks=p.stacks||{bezwingerinnen:[],astral:[],ruestkammer:[]};
+  const safePlayer={...p,azr:azrList,bezSlots,hand,discard,development,stacks,equipment:eq};
+
+  const azr=azrList.map((r,i)=>`<button class="board-slot azr-slot" data-azr="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r,{hidden:isOpponent&&r?.faceDown})}<span class="slot-label">AZR ${i+1}</span></button>`).join('');
   const oppClass=isOpponent?' mirrored':'';
 
   return `<div class="board-inner${oppClass}">
     <div class="board-player-title">
-      <strong>${esc(p.name)}${isActive?' · AM ZUG':''}</strong>
-      <span>${esc(p.deckName)} · Hand ${p.hand.length} · Ablage ${p.discard.length}</span>
+      <strong>${esc(safePlayer.name||'Spieler')}${isActive?' · AM ZUG':''}</strong>
+      <span>${esc(safePlayer.deckName||'Deck')} · Hand ${hand.length} · Ablage ${discard.length}</span>
     </div>
 
     <div class="rule-board">
-      <div class="development-column">${developmentHtml(p)}</div>
+      <div class="development-column">${developmentHtml(safePlayer)}</div>
 
       <div class="playmat-center">
         <div class="secondary-row">
           <div class="secondary-zone" data-secondary-target role="button" tabindex="0">
             <span class="area-title">SEKUNDÄRZONE</span>
-            ${runtimeCardHtml(p.secondary||null,{small:true})}
+            ${runtimeCardHtml(safePlayer.secondary||null,{small:true})}
           </div>
         </div>
 
@@ -214,15 +228,15 @@ function playerBoardHtml(p,isActive,isOpponent){
           <div class="cg r-helmet">${equipmentSlot('HELM','helmet',1,eq[1]?.helmet,isActive)}</div>
 
           <div class="cg l-weapon">${equipmentSlot('WAFFE','weapon',0,eq[0]?.weapon,isActive)}</div>
-          <div class="cg l-bez">${bezCore(p.bezSlots[0],0,isActive)}</div>
+          <div class="cg l-bez">${bezCore(bezSlots[0],0,isActive)}</div>
           <div class="cg l-shield">${equipmentSlot('SCHILD','shield',0,eq[0]?.shield,isActive)}</div>
 
           <div class="cg refuge">
-            <button type="button" class="refuge-card${isActive?'':' opponent-slot'}" data-refuge aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(p.refuge)}<span class="slot-label">ZUFLUCHT</span></button>
+            <button type="button" class="refuge-card${isActive?'':' opponent-slot'}" data-refuge aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(safePlayer.refuge)}<span class="slot-label">ZUFLUCHT</span></button>
           </div>
 
           <div class="cg r-weapon">${equipmentSlot('WAFFE','weapon',1,eq[1]?.weapon,isActive)}</div>
-          <div class="cg r-bez">${bezCore(p.bezSlots[1],1,isActive)}</div>
+          <div class="cg r-bez">${bezCore(bezSlots[1],1,isActive)}</div>
           <div class="cg r-shield">${equipmentSlot('SCHILD','shield',1,eq[1]?.shield,isActive)}</div>
 
           <div class="cg l-armor">${equipmentSlot('RÜSTUNG','armor',0,eq[0]?.armor,isActive)}</div>
@@ -233,10 +247,10 @@ function playerBoardHtml(p,isActive,isOpponent){
       </div>
 
       <div class="stacks-column">
-        ${stackHtml(p,'bezwingerinnen','BEZWINGERINNEN')}
-        ${stackHtml(p,'astral','ASTRAL')}
-        ${stackHtml(p,'ruestkammer','RÜSTKAMMER')}
-        <div class="discard-pile"><span>ABLAGE</span><b>${p.discard.length}</b></div>
+        ${stackHtml(safePlayer,'bezwingerinnen','BEZWINGERINNEN')}
+        ${stackHtml(safePlayer,'astral','ASTRAL')}
+        ${stackHtml(safePlayer,'ruestkammer','RÜSTKAMMER')}
+        <div class="discard-pile"><span>ABLAGE</span><b>${discard.length}</b></div>
       </div>
     </div>
   </div>`;
@@ -259,14 +273,14 @@ function renderBoards(){
     opponentRoot.innerHTML=playerBoardHtml(state.players[opp],false,true);
   }catch(err){
     console.error('Gegnerfeld konnte nicht gerendert werden:',err);
-    opponentRoot.innerHTML='<div class="board-render-error">Gegnerfeld konnte nicht dargestellt werden. Bitte Gefecht neu laden.</div>';
+    opponentRoot.innerHTML=`<div class="board-render-error">Gegnerfeld konnte nicht dargestellt werden.<br><small>${esc(err?.message||err)}</small></div>`;
   }
 
   try{
     playerRoot.innerHTML=playerBoardHtml(state.players[a],true,false);
   }catch(err){
     console.error('Eigenes Spielfeld konnte nicht gerendert werden:',err);
-    playerRoot.innerHTML='<div class="board-render-error">Eigenes Spielfeld konnte nicht dargestellt werden. Bitte Gefecht neu laden.</div>';
+    playerRoot.innerHTML=`<div class="board-render-error">Eigenes Spielfeld konnte nicht dargestellt werden.<br><small>${esc(err?.message||err)}</small></div>`;
   }
 
   try{
