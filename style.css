@@ -1070,3 +1070,5 @@ h1{font-size:30px;margin:0 0 16px}
 }
 .effect-target-choice > span{font-size:.86rem}
 .effect-target-choice button{min-width:58px}
+
+.bez-effect-badge{display:inline-block;margin-left:.3em;font-weight:800;white-space:nowrap;}

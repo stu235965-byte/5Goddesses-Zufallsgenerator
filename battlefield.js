@@ -153,6 +153,31 @@ function equipmentSlot(label,kind,bezIndex,r,isActive){
     <span class="slot-label">${label}</span>
   </button>`;
 }
+
+function bezEffectBadge(r){
+  if(!r)return '';
+  const c=E().cardData(r);
+  if(!c)return '';
+  const symbol=String(c.effekt_symbol||'none');
+  const labels={
+    on_play:'⚡',
+    wonder:'✦',
+    permanent:'∞',
+    charges:'●',
+    duration:'⏱'
+  };
+  const icon=labels[symbol]||'';
+  if(!icon)return '';
+
+  let detail='';
+  if(symbol==='charges' && r.effectUsesRemaining!==null && r.effectUsesRemaining!==undefined){
+    detail=` ${r.effectUsesRemaining}`;
+  }else if(symbol==='duration' && r.effectRoundsRemaining!==null && r.effectRoundsRemaining!==undefined){
+    detail=` ${r.effectRoundsRemaining}`;
+  }
+  return ` <span class="bez-effect-badge" title="${esc(c.effekt_text||'Karteneffekt')}">${icon}${detail}</span>`;
+}
+
 function bezCore(r,i,isActive){
   // Gegnerische Bezwingerinnen dürfen nicht als HTML-"disabled" gerendert
   // werden: In der Ansturmphase müssen sie als Angriffsziel anklickbar sein.
