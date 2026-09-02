@@ -548,15 +548,21 @@ function renderActions(){
   }
 
   if(['supply','resupply'].includes(ph.id)){
-    if(!refugeActionSelected && !state.pendingFieldCard && !state.pendingEquipment && !state.pendingRefugeStage2Choice && !state.pendingWonderDraw){
-      const refugeBtn=document.createElement('button');
-      refugeBtn.type='button';refugeBtn.textContent='Zuflucht: Entwickeln / Wunder';
-      refugeBtn.addEventListener('click',()=>{selectedHandIndex=null;refugeActionSelected=true;renderActions();});
-      root.appendChild(refugeBtn);
-    }
     if(state.pendingFieldCard && state.pendingFieldCard.owner===state.activePlayer){
       const pending=state.pendingFieldCard;
       const r=p.azr[pending.azrSlot];
+      if(pending.area==='mornak_choice'){
+        const info=document.createElement('span');
+        info.textContent='Mornak-Brut ist aufgedeckt. Wähle PRIMÄR, SEKUNDÄR oder lasse sie offen in dieser AZR.';
+        root.appendChild(info);
+        [['primary','PRIMÄR'],['secondary','SEKUNDÄR'],['azr','In AZR lassen']].forEach(([area,label])=>{
+          const b=document.createElement('button');b.className='primary';b.textContent=label;
+          b.disabled=area==='primary'?!!state.sharedPrimary:area==='secondary'?!!p.secondary:false;
+          b.addEventListener('click',()=>saveRender(E().moveMornakFromAzr(state,pending.azrSlot,area).msg));
+          root.appendChild(b);
+        });
+        return;
+      }
       const b=document.createElement('button');
       b.className='primary';
       b.textContent=`${pending.area==='primary'?'Primär':'Sekundär'}bereich erneut prüfen`;
@@ -705,18 +711,20 @@ function renderActions(){
         }
 
         const field=E().fieldArea(c);
-        if(field){
+        const mornakAreas=E().mornakAllowedAreas?.(c)||[];
+        const fieldAreas=mornakAreas.includes('secondary')?['primary','secondary']:(field?[field]:[]);
+        fieldAreas.forEach(area=>{
           const fieldBtn=document.createElement('button');
           fieldBtn.className='primary';
-          fieldBtn.textContent=`Offen in ${field==='primary'?'Primär':'Sekundär'}bereich spielen`;
-          fieldBtn.disabled=field==='primary' ? !!state.sharedPrimary : !!p.secondary;
+          fieldBtn.textContent=`Offen in ${area==='primary'?'Primär':'Sekundär'}bereich spielen`;
+          fieldBtn.disabled=area==='primary' ? !!state.sharedPrimary : !!p.secondary;
           fieldBtn.addEventListener('click',()=>{
-            const r=E().playFieldFromHand(state,selectedHandIndex,field);
+            const r=E().playFieldFromHand(state,selectedHandIndex,area);
             if(r.ok)selectedHandIndex=null;
             saveRender(r.msg||'Karte ausgespielt.');
           });
           root.appendChild(fieldBtn);
-        }
+        });
 
         [0,1,2].forEach(slot=>{
           const hiddenBtn=document.createElement('button');
@@ -729,7 +737,7 @@ function renderActions(){
           });
           root.appendChild(hiddenBtn);
 
-          if(!eqKind && !field){
+          if(!eqKind && (!field || mornakAreas.includes('azr'))){
             const openBtn=document.createElement('button');
             openBtn.textContent=`Offen in AZR ${slot+1}`;
             openBtn.disabled=!!p.azr[slot];
@@ -746,6 +754,8 @@ function renderActions(){
         note.className='action-note';
         note.textContent=eqKind
           ?'Ausrüstungen werden offen direkt an eine Bezwingerin angelegt. In der AZR dürfen sie nur verdeckt gesetzt werden.'
+          :mornakAreas.includes('secondary')
+            ?'Mornak-Brut darf offen in PRIMÄR, SEKUNDÄR oder eine freie eigene ASTRAL-/Rüstkammer-Zone gespielt werden.'
           :field
             ?`Diese Karte gehört offen in den ${field==='primary'?'Primär':'Sekundär'}bereich. Alternativ darf sie verdeckt in die AZR gesetzt werden.`
             :'Diese Karte kann offen oder verdeckt in die AZR gespielt werden. Individuelle Karteneffekte folgen später.';

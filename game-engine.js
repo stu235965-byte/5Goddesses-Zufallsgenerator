@@ -428,8 +428,8 @@ function resolveBezOnPlay(state,p,slot,r,c){
       log(state,`${c.name}: Kein Dolch im Rüstkammer-Stapel gefunden.`);
     }
   }else if(key==='effrayer'){
-    const hasVengeresse=p.bezSlots.some((x,i)=>i!==slot&&x&&String(cardData(x)?.untertyp||'').includes('Vengeresse'));
-    if(hasVengeresse){r.honor=(r.honor||0)+1;log(state,`${c.name}: Ausspieleffekt → +1 Ehre.`)}
+    const other=p.bezSlots.find((x,i)=>i!==slot&&x&&isVengeresseCard(cardData(x)));
+    if(other){other.honor=Number(other.honor||0)+1;log(state,`${c.name}: ${cardData(other)?.name||'andere Vengeresse'} erhält +1 Ehre.`)}
   }else if(key==='amelia' && opp){opp.astralShield=Math.max(0,(opp.astralShield||0)-1);log(state,`${c.name}: Gegenüber verliert bis zu 1 ASTRAL-Schild.`)}
   else if(key==='mira'){
     const targets=state.players[1-p.index].bezSlots.map((x,i)=>x?i:null).filter(i=>i!==null);
@@ -445,7 +445,8 @@ function resolveBezOnPlay(state,p,slot,r,c){
     const oi=oppositeBezSlot(slot),t=state.players[1-p.index].bezSlots?.[oi];
     if(t){t.honor=Number(t.honor||0)-1;log(state,`${c.name}: ${cardData(t)?.name||'gegnerische Bezwingerin'} verliert 1 Ehre (${t.honor}).`);}else log(state,`${c.name}: keine gegnerische Bezwingerin direkt gegenüber.`);
   }else if(key==='baronesse'){
-    if(ownSubtypeCount(p,'Vengeresse',slot)>0){r.honor=Number(r.honor||0)+1;log(state,`${c.name}: andere eigene Vengeresse vorhanden → +1 Ehre.`);}
+    const other=p.bezSlots.find((x,i)=>i!==slot&&x&&isVengeresseCard(cardData(x)));
+    if(other){other.honor=Number(other.honor||0)+1;log(state,`${c.name}: ${cardData(other)?.name||'andere Vengeresse'} erhält +1 Ehre.`);}
   }else if(key==='skorpia'){
     const n=countOwnAzrCards(p);
     if(n>=2){
@@ -552,7 +553,8 @@ function allRuntimeCards(state){
 
 function oppositeBezSlot(slot){return Number(slot)===0?1:0}
 function currentBaseHearts(runtime){const c=cardData(runtime);return Number(runtime?.effectState?.baseHeartsOverride ?? c?.herzen ?? runtime?.hearts ?? 0)}
-function ownSubtypeCount(p,subtype,excludeSlot=null){return (p.bezSlots||[]).filter((r,i)=>r&&i!==excludeSlot&&String(cardData(r)?.untertyp||'').toLowerCase()===String(subtype).toLowerCase()).length}
+function isVengeresseCard(c){return String(c?.untertyp||'').toLowerCase()==='vengeresse'||(c?.tags||[]).some(t=>String(t).toLowerCase()==='vengeresse')||(c?.nebenattribute||[]).some(t=>String(t).toLowerCase()==='vengeresse')}
+function ownSubtypeCount(p,subtype,excludeSlot=null){return (p.bezSlots||[]).filter((r,i)=>r&&i!==excludeSlot&&(String(subtype).toLowerCase()==='vengeresse'?isVengeresseCard(cardData(r)):String(cardData(r)?.untertyp||'').toLowerCase()===String(subtype).toLowerCase())).length}
 function firstEnemyBezFightUsed(state,playerIndex){const p=state.players[playerIndex];return (p.bezSlots||[]).some(r=>r&&r.attackedTurn===p.turnCount)}
 function activeArcadiaConstraint(state,attackerPlayerIndex){
   const opp=state.players[1-attackerPlayerIndex];
@@ -628,6 +630,8 @@ function resolveThalZirisStage1(state,targetId,delta){
  return {ok:true,msg:`Kampfrundendauer auf ${t.r.effectRoundsRemaining} geändert.`};
 }
 function isMornak(c){return c?.name==='Mornak - Brut'}
+function isMornakCard(c){return isMornak(c)||c?.effekte?.some?.(e=>e.engine_key==='mornak_brut')}
+function mornakAllowedAreas(c){return isMornakCard(c)?['primary','secondary','azr']:(fieldArea(c)?[fieldArea(c)]:['azr'])}
 function ownMornakLocations(state,playerIndex){
  const p=state.players[playerIndex],out=[];
  if(state.sharedPrimary && (state.sharedPrimary.controllerIndex??state.sharedPrimary.ownerIndex??state.sharedPrimary.owner)===playerIndex && isMornak(cardData(state.sharedPrimary)))out.push({zone:'primary',r:state.sharedPrimary});
@@ -648,7 +652,7 @@ function mornakTokenTargets(state,controllerIndex,allowEnemyAzr=false){
  return out;
 }
 function createMornakTokenRuntime(state,controllerIndex){
- const c=DB.find(x=>x.name==='Mornak - Brut');if(!c)return null;
+ const c=window.GODDESSES_DB?.karten?.find(x=>x.name==='Mornak - Brut');if(!c)return null;
  const r=makeRuntimeCard(c.bild,controllerIndex,state.players[controllerIndex].turnCount);
  r.faceDown=false;r.isToken=true;r.controllerIndex=controllerIndex;r.ownerIndex=controllerIndex;r.ready=true;
  return r;
@@ -1164,7 +1168,7 @@ function playOpenAzr(state,handIndex,slot){
     return {ok:false,msg:`${c.kartentyp} darf offen nicht in der AZR liegen. Spiele die Karte direkt an eine Bezwingerin oder setze sie verdeckt.`};
   }
   const area=fieldArea(c);
-  if(area){
+  if(area && !isMornakCard(c)){
     return {ok:false,msg:`Diese Karte gehört offen in den ${area==='primary'?'Primär':'Sekundär'}bereich. Alternativ kannst du sie verdeckt in die AZR setzen.`};
   }
   p.hand.splice(handIndex,1);
@@ -1181,7 +1185,8 @@ function playFieldFromHand(state,handIndex,area){
   const p=active(state);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Primär- und Sekundärkarten können nur in Versorgungs- oder Nachschubphase ausgespielt werden.'};
   const bild=p.hand[handIndex],c=dbCard(bild);
-  if(!c || fieldArea(c)!==area)return {ok:false,msg:'Diese Karte gehört nicht in diesen Bereich.'};
+  const allowed=mornakAllowedAreas(c);
+  if(!c || !allowed.includes(area) || !['primary','secondary'].includes(area))return {ok:false,msg:'Diese Karte gehört nicht in diesen Bereich.'};
 
   if(area==='primary'){
     if(state.sharedPrimary)return {ok:false,msg:'Der gemeinsame Primärbereich ist bereits belegt.'};
@@ -1198,6 +1203,26 @@ function playFieldFromHand(state,handIndex,area){
 
   log(state,`${p.name} spielt ${c.name} offen in den ${area==='primary'?'Primär':'Sekundär'}bereich.`);
   return {ok:true};
+}
+function moveMornakFromAzr(state,azrSlot,area){
+  const p=active(state),r=p.azr[azrSlot],c=cardData(r);
+  if(!r || r.faceDown || !isMornakCard(c))return {ok:false,msg:'Hier liegt keine aufgedeckte Mornak-Brut.'};
+  if(!['primary','secondary','azr'].includes(area))return {ok:false,msg:'Ungültiger Bereich für Mornak-Brut.'};
+  if(area==='azr'){
+    state.pendingFieldCard=null;
+    log(state,`${p.name} lässt ${c.name} offen in der ASTRAL-/Rüstkammer-Zone.`);
+    return {ok:true,msg:'Mornak-Brut bleibt offen in der ASTRAL-/Rüstkammer-Zone.'};
+  }
+  if(area==='primary'){
+    if(state.sharedPrimary)return {ok:false,msg:'Der gemeinsame Primärbereich ist bereits belegt.'};
+    state.sharedPrimary=r;
+  }else{
+    if(p.secondary)return {ok:false,msg:'Dein Sekundärbereich ist bereits belegt.'};
+    p.secondary=r;
+  }
+  p.azr[azrSlot]=null;state.pendingFieldCard=null;
+  log(state,`${p.name} verschiebt ${c.name} in den ${area==='primary'?'Primär':'Sekundär'}bereich.`);
+  return {ok:true,msg:`Mornak-Brut in den ${area==='primary'?'Primär':'Sekundär'}bereich verschoben.`};
 }
 function moveRevealedFieldCard(state,azrSlot){
   const p=active(state),r=p.azr[azrSlot];
@@ -1297,6 +1322,11 @@ function reveal(state,slot){
       return {ok:false,msg:'Diese Primär-/Sekundärkarte kann in der aktuellen Grundversion nur in Versorgungs- oder Nachschubphase aktiviert werden.'};
     }
     r.faceDown=false;
+    if(isMornakCard(c)){
+      state.pendingFieldCard={owner:p.index,azrSlot:slot,area:'mornak_choice'};
+      log(state,`${p.name} deckt ${c.name} auf. Wähle PRIMÄR, SEKUNDÄR oder lasse sie offen in der AZR.`);
+      return {ok:true,needsFieldPlacement:true,area:'mornak_choice',msg:'Mornak-Brut: Zielbereich wählen.'};
+    }
     state.pendingFieldCard={owner:p.index,azrSlot:slot,area};
     const moved=moveRevealedFieldCard(state,slot);
     if(moved.ok)return moved;
@@ -2046,7 +2076,7 @@ function clear(){localStorage.removeItem('5goddesses_active_game_v1')}
 window.G5Engine={
   PHASES,decks,validDeck,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,playOpenAzr,reveal,
-  equipmentKind,isEquipmentCard,fieldArea,playFieldFromHand,moveRevealedFieldCard,equipFromHand,equipFromAzr,discardEquipment,
+  equipmentKind,isEquipmentCard,fieldArea,mornakAllowedAreas,playFieldFromHand,moveRevealedFieldCard,moveMornakFromAzr,equipFromHand,equipFromAzr,discardEquipment,
   chooseEquipmentShieldBonus,equipmentCombatProfile,combatStrength,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,prepareAttack,
   refugeWonderAvailable,activateRefugeWonder,resolveWonderDraw,chooseRefugeStage2Bonus,

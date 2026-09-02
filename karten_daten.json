@@ -1199,14 +1199,17 @@
         "trigger": "on_play",
         "engine_key": "baronesse",
         "requires_other_own_subtype": "Vengeresse",
+        "target": "other_own_vengeresse",
         "honor_gain": 1
       }
     ],
-    "tags": [],
+    "tags": [
+      "vengeresse"
+    ],
     "effekt_symbol": "on_play",
     "effekt_zaehler_max": null,
     "effekt_dauer_kr": null,
-    "effekt_text": "Wenn du diese Bezwingerin rekrutierst und sich bereits eine andere Vengeresse-Bezwingerin auf deiner Spielfeldseite befindet, erhält diese Bezwingerin 1 Ehre."
+    "effekt_text": "Wenn du diese Bezwingerin rekrutierst und sich bereits eine andere Vengeresse-Bezwingerin auf deiner Spielfeldseite befindet, erhält die andere Vengeresse-Bezwingerin 1 Ehre."
   },
   {
     "id": "1.02-14-32-08775875",
@@ -1240,7 +1243,9 @@
         "activation_phase": "supply"
       }
     ],
-    "tags": [],
+    "tags": [
+      "vengeresse"
+    ],
     "effekt_symbol": "on_play",
     "effekt_zaehler_max": null,
     "effekt_dauer_kr": null,
@@ -1306,7 +1311,9 @@
     "ehre": 0,
     "wunder": null,
     "effekte": [],
-    "tags": [],
+    "tags": [
+      "vengeresse"
+    ],
     "effekt_symbol": "none",
     "effekt_zaehler_max": null,
     "effekt_dauer_kr": null,
@@ -5109,7 +5116,9 @@
         "duration": "one_combat"
       }
     ],
-    "tags": [],
+    "tags": [
+      "vengeresse"
+    ],
     "effekt_symbol": "wonder",
     "effekt_zaehler_max": null,
     "effekt_dauer_kr": null,
@@ -5207,7 +5216,9 @@
         "increase_future_cost": 1
       }
     ],
-    "tags": [],
+    "tags": [
+      "vengeresse"
+    ],
     "effekt_symbol": "wonder",
     "effekt_zaehler_max": null,
     "effekt_dauer_kr": null,
