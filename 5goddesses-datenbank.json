@@ -3784,7 +3784,7 @@
       "kartentyp": "Kopfschutz",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Mittelwelt",
+      "fraktion": "Oberwelt",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -3798,8 +3798,19 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "continuous",
+          "engine_key": "gloria_shields",
+          "physicalShield": 1,
+          "astralShield": 1
+        }
+      ],
+      "tags": [
+        "schild"
+      ],
+      "effekt_symbol": "permanent",
+      "effekt_text": "Die ausgerüstete Bezwingerin erhält +1 physischen und +1 ASTRAL-Schild."
     },
     {
       "id": "1.01-31-32-9e8ce748",
@@ -3852,8 +3863,32 @@
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "activated",
+          "engine_key": "ruth_kaufladen",
+          "target": "own_bez",
+          "cost_honor_on_target": 1,
+          "charges": 3,
+          "once_per_round": true,
+          "phases": [
+            "supply",
+            "resupply"
+          ],
+          "choice": [
+            "physicalShield",
+            "astralShield"
+          ],
+          "cannot_attack_this_round": true
+        }
+      ],
+      "tags": [
+        "ladungen",
+        "kaufladen"
+      ],
+      "effekt_symbol": "charges",
+      "effekt_text": "Einmal pro Kampfrunde kann eine eigene Bezwingerin, die in dieser KR noch nicht gekämpft hat, 1 Ehre bezahlen und +1 physischen oder +1 ASTRAL-Schild erhalten. Danach kann sie in dieser KR nicht angreifen.",
+      "effekt_zaehler_max": 3
     },
     {
       "id": "1.03-01-32-92d5784a",
@@ -3879,8 +3914,24 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "continuous",
+          "engine_key": "victores_shield",
+          "physicalShield": 1
+        },
+        {
+          "trigger": "on_equip",
+          "engine_key": "victores_honor",
+          "honor_delta": 1
+        }
+      ],
+      "tags": [
+        "schild",
+        "ehre"
+      ],
+      "effekt_symbol": "permanent+on_play",
+      "effekt_text": "Die ausgerüstete Bezwingerin erhält dauerhaft durch die Ausrüstung +1 physischen Schild. Beim Anlegen erhält sie einmalig +1 Ehre."
     },
     {
       "id": "1.03-02-32-38e3f5fb",
@@ -3933,8 +3984,20 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "after_own_combat",
+          "engine_key": "invictus_victores_honor",
+          "requires_equipment": "Glorreicher Helm Victores",
+          "honor_delta": 1
+        }
+      ],
+      "tags": [
+        "ehre",
+        "kombination"
+      ],
+      "effekt_symbol": "permanent",
+      "effekt_text": "Ist die ausgerüstete Bezwingerin zusätzlich mit Glorreicher Helm Victores ausgerüstet, erhält sie in der eigenen Kampfrunde nach jeder ihrer abgeschlossenen Kampfphasen +1 Ehre."
     },
     {
       "id": "1.03-04-32-1a4b4379",
@@ -3960,8 +4023,21 @@
       "astraler_schild": 1,
       "ehre": 0,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "damage_redirect",
+          "engine_key": "titan_refuge_redirect",
+          "target": "own_refuge",
+          "optional": true,
+          "overflow_to_original_target": true
+        }
+      ],
+      "tags": [
+        "schadensumleitung",
+        "zuflucht"
+      ],
+      "effekt_symbol": "permanent",
+      "effekt_text": "Schaden an der eigenen Zuflucht kann auf T.I.T.A.N. umgeleitet werden. Überschüssiger Schaden wird der Zuflucht zugefügt."
     },
     {
       "id": "1.03-05-32-958b7be8",
@@ -3987,13 +4063,31 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "continuous",
+          "engine_key": "ehris_ohrringe",
+          "requires_own_faction_bez": {
+            "fraktion": "Oberwelt",
+            "min": 2
+          },
+          "choose_one": true,
+          "wonder_cost_delta": -1
+        }
+      ],
+      "tags": [
+        "reliquie",
+        "oberwelt",
+        "wunderkosten"
+      ],
+      "effekt_symbol": "duration",
+      "effekt_text": "Wenn mindestens zwei eigene Oberwelt-Bezwingerinnen auf dem Feld liegen, wähle eine davon. Ihre Wunderkosten sind um 1 Ehre reduziert, solange die Bedingung erfüllt und die Reliquie offen liegt.",
+      "effekt_dauer_kr": 3
     },
     {
       "id": "1.03-06-32-60257f9d",
       "bild": "Rüstkammer/1.03-06-32-60257f9d.webp",
-      "name": "Die Abenddämmerung Hyde",
+      "name": "Die Abenddämmerung Hyhde",
       "kartengruppe": "Rüstkammer",
       "deck_bereich": "ruestkammer",
       "hauptattribut": "RÜSTKAMMER",
@@ -4014,8 +4108,26 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "on_equip",
+          "engine_key": "hyhde_temp_astral",
+          "astral_delta": 1,
+          "until_next_supply": true
+        },
+        {
+          "trigger": "continuous",
+          "engine_key": "hyhde_allows_jakyl_shield",
+          "allows_card": "Die Morgenröte Jakyl",
+          "slot": "shield"
+        }
+      ],
+      "tags": [
+        "zeit",
+        "sonderausrüstung"
+      ],
+      "effekt_symbol": "duration+permanent",
+      "effekt_text": "Die ausgerüstete Bezwingerin erhält bis zum Anfang der nächsten eigenen Versorgungsphase +1 ASTRAL-Stärke. Solange Hyhde ausgerüstet ist, darf Die Morgenröte Jakyl als Schild ausgerüstet werden."
     },
     {
       "id": "1.03-07-32-da49cc07",
@@ -4041,8 +4153,26 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "on_equip",
+          "engine_key": "jakyl_temp_physical",
+          "physical_delta": 1,
+          "until_next_supply": true
+        },
+        {
+          "trigger": "continuous",
+          "engine_key": "jakyl_allows_hyhde_shield",
+          "allows_card": "Die Abenddämmerung Hyhde",
+          "slot": "shield"
+        }
+      ],
+      "tags": [
+        "zeit",
+        "sonderausrüstung"
+      ],
+      "effekt_symbol": "duration+permanent",
+      "effekt_text": "Die ausgerüstete Bezwingerin erhält bis zum Anfang der nächsten eigenen Versorgungsphase +1 physische Stärke. Solange Jakyl ausgerüstet ist, darf Die Abenddämmerung Hyhde als Schild ausgerüstet werden."
     },
     {
       "id": "1.03-08-32-7dedc4d6",

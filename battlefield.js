@@ -311,6 +311,7 @@ function renderBoards(){
     btn.addEventListener('click',()=>handleEquipmentSlot(btn.dataset.equip,Number(btn.dataset.equipBez)));
   });
   document.querySelector('#playerBoard [data-refuge]')?.addEventListener('click',()=>handleRefuge());
+  document.querySelector('#sharedPrimaryZone [data-primary-target]')?.addEventListener('click',handleOwnPrimary);
 
   if(state.pendingEquipment && state.pendingEquipment.owner===state.activePlayer){
     const pending=state.pendingEquipment;
@@ -940,6 +941,10 @@ function renderActions(){
       b.className='primary';
       b.textContent=`Kampf ausführen: ${cardName(a)}`;
       b.addEventListener('click',()=>{
+        if(E().titanCanRedirectRefuge?.(state) && state.attack.titanRedirect===undefined){
+          const use=confirm('Der Torwächter T.I.T.A.N.: Schaden der Zuflucht auf T.I.T.A.N. umleiten?');
+          E().setTitanRedirectChoice(state,use);
+        }
         const r=E().resolveCombat(state);
         saveRender(r.msg||'Kampf abgewickelt.');
       });
@@ -1088,11 +1093,16 @@ function handleRefuge(){
   message('Zuflucht ausgewählt. Wähle Entwickeln oder Wunder wirken.');
 }
 function handleAzr(slot){
-  const r=E().active(state).azr[slot];
+  const p=E().active(state),r=p.azr[slot];
   if(!r)return;
-  if(r.faceDown){
-    const rr=E().reveal(state,slot);
-    saveRender(rr.msg||'Karte aufgedeckt.');
+  if(r.faceDown){const rr=E().reveal(state,slot);return saveRender(rr.msg||'Karte aufgedeckt.');}
+  const c=E().cardData(r);
+  if(c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe') && ['supply','resupply'].includes(phase()?.id||'')){
+    const eligible=p.bezSlots.map((b,i)=>b&&E().cardData(b)?.fraktion==='Oberwelt'?{slot:i,name:cardName(b)}:null).filter(Boolean);
+    if(eligible.length<2)return message('Ehris Ohrringe benötigen mindestens zwei eigene Oberwelt-Bezwingerinnen.','warn');
+    const raw=prompt('Ehris Ohrringe – welche Oberwelt-Bezwingerin erhält −1 Wunderkosten?\n'+eligible.map((x,i)=>`${i+1}: ${x.name}`).join('\n'));
+    if(raw===null)return;const t=eligible[Number(raw)-1];if(!t)return message('Ungültige Auswahl.','warn');
+    const rr=E().selectEhrisTarget(state,t.slot);return saveRender(rr.msg);
   }
 }
 function handleEquipmentSlot(kind,bezSlot){
@@ -1138,6 +1148,22 @@ function handleEquipmentSlot(kind,bezSlot){
     }
   }
 }
+function handleOwnPrimary(){
+  const r=state.sharedPrimary,p=E().active(state),c=E().cardData(r);
+  if(!r || r.owner!==p.index)return;
+  if(c?.effekte?.some(e=>e.engine_key==='ruth_kaufladen')){
+    if(!['supply','resupply'].includes(phase()?.id||''))return message('Ruths Kaufladen kann nur in VP oder NP benutzt werden.','warn');
+    const targets=E().ruthTargets(state);
+    if(!targets.length)return message('Keine eigene Bezwingerin kann Ruth derzeit benutzen.','warn');
+    const lines=targets.map((t,i)=>`${i+1}: ${t.name} (${t.honor} Ehre)`).join('\n');
+    const raw=prompt(`Dorfschmiedin Ruth die Eiserne – Ladungen ${r.effectUsesRemaining}\n\nWelche Bezwingerin kauft?\n${lines}`);
+    if(raw===null)return;
+    const t=targets[Number(raw)-1];if(!t)return message('Ungültige Auswahl.','warn');
+    const kind=confirm('OK = +1 physischer Schild\nAbbrechen = +1 ASTRAL-Schild')?'physical':'astral';
+    const rr=E().activateRuth(state,t.slot,kind);return saveRender(rr.msg);
+  }
+}
+
 function handleBattlefieldTargetClick(ev){
   if(phase()?.id!=='rush' || selectedAttacker===null || state.attack)return;
 
