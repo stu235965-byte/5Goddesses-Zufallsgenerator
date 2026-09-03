@@ -121,25 +121,51 @@ function gamePageOpened(){
 window.gamePageOpened=gamePageOpened;
 
 function fillDeckSelectors(){
-  const ds=E().decks().filter(E().validDeck);
+  const all=E().decks();
+  const normalized=all.map(d=>E().normalizeDeckForBattle?.(d)||d);
+  const ds=normalized.filter(E().validDeck);
+
   for(const id of ['gameDeckP1','gameDeckP2']){
     const sel=document.getElementById(id);
     if(!sel)return;
     const old=sel.value;
-    sel.innerHTML='';
+    const oldIndex=sel.selectedIndex;
+    sel.replaceChildren();
+
     for(const d of ds){
       const o=document.createElement('option');
-      o.value=d.id;o.textContent=d.name;sel.appendChild(o);
+      o.value=String(d.id||'');
+      o.textContent=d.name||'Unbenanntes Deck';
+      sel.appendChild(o);
     }
-    if(old && ds.some(d=>d.id===old))sel.value=old;
+
+    if(old && ds.some(d=>String(d.id||'')===old)){
+      sel.value=old;
+    }else if(oldIndex>=0 && sel.options.length){
+      sel.selectedIndex=Math.min(oldIndex,sel.options.length-1);
+    }
   }
-  if(ds.length>1)document.getElementById('gameDeckP2').selectedIndex=1;
+
+  if(ds.length>1){
+    const p1=document.getElementById('gameDeckP1');
+    const p2=document.getElementById('gameDeckP2');
+    if(p2 && (!p2.value || p2.value===p1?.value))p2.selectedIndex=1;
+  }
+
   const info=document.getElementById('gameSetupInfo');
-  if(!ds.length){
+  if(!info)return;
+  if(!all.length){
     info.hidden=false;
     info.textContent='Du brauchst zuerst mindestens ein vollständiges Deck unter „Meine Decks“.';
-  }else info.hidden=true;
+  }else if(!ds.length){
+    info.hidden=false;
+    info.textContent=`${all.length} gespeicherte${all.length===1?'s Deck':' Decks'} gefunden, aber keines erfüllt aktuell alle Gefechtsregeln. Öffne das Deck einmal unter „Meine Decks“ und speichere es erneut.`;
+  }else{
+    info.hidden=true;
+    info.textContent='';
+  }
 }
+
 function startGame(){
   const ds=E().decks().filter(E().validDeck);
   const d1=ds.find(d=>d.id===document.getElementById('gameDeckP1').value);
@@ -1439,6 +1465,13 @@ document.getElementById('gameNextPhase')?.addEventListener('click',async()=>{
 });
 
 window.addEventListener('resize',updateStickyGameOffsets);
+window.addEventListener('focus',()=>{
+  if(document.getElementById('gameSetup') && !document.getElementById('gameSetup').hidden)fillDeckSelectors();
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && document.getElementById('gameSetup') && !document.getElementById('gameSetup').hidden)fillDeckSelectors();
+});
+
 
   fillDeckSelectors();
 const saved=E().load();

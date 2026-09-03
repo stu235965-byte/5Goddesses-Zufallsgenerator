@@ -31,7 +31,16 @@ function ladeDecks(){
     return Array.isArray(a)?a:[];
   }catch(e){return []}
 }
-function speichereDecks(decks){localStorage.setItem(DECKS_KEY,JSON.stringify(decks))}
+function speichereDecks(decks){
+  const sauber=(Array.isArray(decks)?decks:[]).map(d=>({
+    ...d,
+    id:String(d?.id||neueId()),
+    name:String(d?.name||'Deck'),
+    quelle:d?.quelle==='zufall'?'zufall':'eigen',
+    karten:kopiereKartenstruktur(d?.karten||{})
+  }));
+  localStorage.setItem(DECKS_KEY,JSON.stringify(sauber));
+}
 function neueId(){return 'deck-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)}
 function leeresDeck(){
   return {zuflucht:[],bezwingerinnen:[],astral:[],ruestkammer:[],entwicklung:[]};

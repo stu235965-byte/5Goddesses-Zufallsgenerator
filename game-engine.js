@@ -31,13 +31,57 @@ function decks(){
     return Array.isArray(a)?a:[];
   }catch(e){return []}
 }
+function normalizeDeckCardList(v){
+  if(Array.isArray(v))return v.filter(x=>typeof x==='string' && x.length>0);
+  // Ältere/iOS-gespeicherte Strukturen defensiv normalisieren.
+  if(v && typeof v==='object')return Object.keys(v)
+    .sort((a,b)=>Number(a)-Number(b))
+    .map(k=>v[k])
+    .filter(x=>typeof x==='string' && x.length>0);
+  return [];
+}
+function normalizeDeckForBattle(d){
+  if(!d || typeof d!=='object')return null;
+  const source=d.karten && typeof d.karten==='object' ? d.karten : d;
+  return {
+    ...d,
+    karten:{
+      zuflucht:normalizeDeckCardList(source.zuflucht),
+      bezwingerinnen:normalizeDeckCardList(source.bezwingerinnen),
+      astral:normalizeDeckCardList(source.astral),
+      ruestkammer:normalizeDeckCardList(source.ruestkammer),
+      entwicklung:normalizeDeckCardList(source.entwicklung)
+    }
+  };
+}
 function validDeck(d){
-  if(!d?.karten)return false;
-  return d.karten.zuflucht?.length===1 &&
-    d.karten.bezwingerinnen?.length===3 &&
-    d.karten.astral?.length===5 &&
-    d.karten.ruestkammer?.length===5 &&
-    d.karten.entwicklung?.length===5;
+  const n=normalizeDeckForBattle(d);
+  if(!n)return false;
+  const k=n.karten;
+  if(!(k.zuflucht.length===1 &&
+       k.bezwingerinnen.length===3 &&
+       k.astral.length===5 &&
+       k.ruestkammer.length===5 &&
+       k.entwicklung.length===5))return false;
+
+  // Jede gespeicherte Bildreferenz muss in der aktuellen Kartendatenbank existieren.
+  const all=[...k.zuflucht,...k.bezwingerinnen,...k.astral,...k.ruestkammer,...k.entwicklung];
+  if(all.some(bild=>!dbCard(bild)))return false;
+
+  // Dieselben Regeln wie im Deckbuilder: 3 verschiedene Klassen.
+  const classes=k.bezwingerinnen.map(dbCard).map(c=>c?.klasse).filter(Boolean);
+  if(classes.length!==3 || new Set(classes).size!==3)return false;
+
+  // Die zur Zuflucht gehörende Stufe-2-Entwicklung muss enthalten sein.
+  const refuge=k.zuflucht[0];
+  const required=window.GODDESSES_DB?.karten?.find(c=>
+    c.deck_bereich==='entwicklung' &&
+    Number(c.stufe)===2 &&
+    c.kartentyp==='Zuflucht' &&
+    c.grundkarte_bild===refuge
+  );
+  if(!required || !k.entwicklung.includes(required.bild))return false;
+  return true;
 }
 function hasDeploymentDelay(c){
   if(!c)return false;
@@ -84,6 +128,8 @@ function makeRuntimeCard(bild,owner,enteredTurn=-1){
   };
 }
 function playerFromDeck(deck,index){
+  deck=normalizeDeckForBattle(deck);
+  if(!deck || !validDeck(deck))throw new Error('Das gewählte Deck ist unvollständig oder enthält ungültige Kartendaten.');
   const k=deck.karten;
   return {
     index,
@@ -2784,7 +2830,7 @@ function load(){
 function clear(){localStorage.removeItem('5goddesses_active_game_v1')}
 
 window.G5Engine={
-  PHASES,decks,validDeck,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
+  PHASES,decks,validDeck,normalizeDeckForBattle,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,playOpenAzr,reveal,
   equipmentKind,isEquipmentCard,fieldArea,mornakAllowedAreas,playFieldFromHand,moveRevealedFieldCard,moveMornakFromAzr,equipFromHand,equipFromAzr,discardEquipment,
   chooseEquipmentShieldBonus,equipmentCombatProfile,combatStrength,effectiveWonderCost,ruthTargets,activateRuth,selectEhrisTarget,
