@@ -458,6 +458,19 @@ function renderActions(){
     });
     return;
   }
+  if(state.pendingBezEffect && ['laehmendes_nervengift','trank_der_staerke'].includes(state.pendingBezEffect.type)){
+    const title=document.createElement('strong');
+    title.textContent=state.pendingBezEffect.type==='laehmendes_nervengift'
+      ? 'Lähmendes Nervengift – gegnerische Bezwingerin wählen'
+      : 'Trank der Stärke – eigene Bezwingerin wählen';
+    root.appendChild(title);
+    E().instantRuestkammerTargets(state).forEach(t=>{
+      const b=document.createElement('button');b.type='button';b.textContent=t.name;
+      b.addEventListener('click',()=>{const rr=E().resolveInstantRuestkammerTarget(state,t.id);saveRender(rr.msg);});
+      root.appendChild(b);
+    });
+    return;
+  }
   if(state.pendingBezEffect?.type==='kristallharnisch_choice'){
     const title=document.createElement('strong');title.textContent='Kristallharnisch – Blitz-Effekt';root.appendChild(title);
     const yes=document.createElement('button');yes.type='button';yes.textContent='1 ASTRAL-Stärke → +2 ASTRAL-Schilde';
@@ -1106,6 +1119,18 @@ function handleEquipmentSlot(kind,bezSlot){
   }
 
   const r=p.equipment?.[bezSlot]?.[kind];
+
+  if(r && kind==='weapon' && phase().id==='supply'){
+    const c=E().cardData(r);
+    if(c?.effekte?.some(e=>e.engine_key==='parierdolch_dodge') &&
+       (r.effectState?.counterDodgeUses||0)>0 && !r.effectState?.counterDodgeActive){
+      if(confirm('Parierdolch: Einmaliges Ausweichen gegen einen Gegenangriff für diese Kampfrunde aktivieren?')){
+        const rr=E().activateParierdolchDodge(state,bezSlot);
+        return saveRender(rr.msg);
+      }
+    }
+  }
+
   if(r && ['supply','resupply'].includes(phase().id)){
     if(confirm(`${cardName(r)} auf den Ablagestapel legen?`)){
       const rr=E().discardEquipment(state,bezSlot,kind);

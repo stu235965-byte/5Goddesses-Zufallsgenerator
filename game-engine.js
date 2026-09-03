@@ -238,7 +238,7 @@ function combatStrength(state,playerIndex,bezSlot,type,isAttacking=false){
   if(!r)return {base:0,equipment:0,total:0};
   const c=cardData(r);
   const base=type==='physical'
-    ? ((r.physical ?? c?.physische_staerke ?? 0) + Number(r.effectState?.psiloPhysicalBonus||0))
+    ? ((r.physical ?? c?.physische_staerke ?? 0) + Number(r.effectState?.psiloPhysicalBonus||0) + Number(r.effectState?.trankStaerkePhysicalBonus||0))
     : (r.astral ?? c?.astrale_staerke ?? 0);
   const equipment=equipmentStrengthBonus(state,playerIndex,bezSlot,type,isAttacking);
   return {base,equipment,total:Math.max(0,base+equipment)};
@@ -578,11 +578,63 @@ function activateAliceDodge(state,slot){
   if(c?.effekte?.[0]?.engine_key!=='alice')return {ok:false,msg:'Diese Bezwingerin besitzt Alices Effekt nicht.'};
   r.effectState=r.effectState||{};
   if((r.effectState.counterDodgeUses||0)<=0)return {ok:false,msg:'Alices einmaliges Ausweichen wurde bereits verbraucht.'};
-  r.effectState.counterDodgeUses--;r.effectState.counterDodgeActive=true;r.effectState.counterDodgeActivatedTurn=p.turnCount;
-  log(state,`${c.name}: Ausweichen gegen den nächsten Gegenangriff dieser Kampfrunde aktiviert.`);
+  r.effectState.counterDodgeActive=true;r.effectState.counterDodgeActivatedTurn=p.turnCount;
+  log(state,`${c.name}: Ausweichen gegen den nächsten Gegenangriff dieser Kampfrunde aktiviert. Die einmalige Nutzung wird erst beim tatsächlichen Ausweichen verbraucht.`);
   return {ok:true,msg:'Alices Ausweichen aktiviert.'};
 }
-function expireAliceDodge(state){for(const p of state.players)for(const r of p.bezSlots||[])if(r?.effectState?.counterDodgeActive){r.effectState.counterDodgeActive=false;log(state,`${cardData(r)?.name||'Alice'}: aktiviertes Ausweichen verfällt am Ende der Kampfrunde.`);}}
+function activateParierdolchDodge(state,bezSlot){
+  const p=active(state);
+  if(currentPhase(state).id!=='supply')return {ok:false,msg:'Der Parierdolch kann nur in deiner Versorgungsphase aktiviert werden.'};
+  ensureEquipmentState(p);
+  const weapon=p.equipment?.[bezSlot]?.weapon,c=cardData(weapon);
+  if(!weapon||!c?.effekte?.some(e=>e.engine_key==='parierdolch_dodge'))
+    return {ok:false,msg:'An dieser Bezwingerin ist kein Parierdolch ausgerüstet.'};
+  weapon.effectState=weapon.effectState||{};
+  if((weapon.effectState.counterDodgeUses||0)<=0)return {ok:false,msg:'Das einmalige Ausweichen des Parierdolchs wurde bereits verbraucht.'};
+  if(weapon.effectState.counterDodgeActive)return {ok:false,msg:'Der Parierdolch ist für diese Kampfrunde bereits aktiviert.'};
+  weapon.effectState.counterDodgeActive=true;
+  weapon.effectState.counterDodgeActivatedTurn=p.turnCount;
+  log(state,`${c.name}: Ausweichen gegen den nächsten Gegenangriff dieser Kampfrunde aktiviert.`);
+  return {ok:true,msg:'Parierdolch-Ausweichen aktiviert.'};
+}
+function consumeCounterDodgeIfActive(state,p,bezSlot,bez){
+  if(!bez)return null;
+  bez.effectState=bez.effectState||{};
+  if(bez.effectState.counterDodgeActive && (bez.effectState.counterDodgeUses||0)>0){
+    bez.effectState.counterDodgeActive=false;
+    bez.effectState.counterDodgeUses=Math.max(0,Number(bez.effectState.counterDodgeUses||0)-1);
+    return cardData(bez)?.name||'Bezwingerin';
+  }
+  ensureEquipmentState(p);
+  const weapon=p.equipment?.[bezSlot]?.weapon;
+  if(weapon?.effectState?.counterDodgeActive && (weapon.effectState.counterDodgeUses||0)>0){
+    weapon.effectState.counterDodgeActive=false;
+    weapon.effectState.counterDodgeUses=Math.max(0,Number(weapon.effectState.counterDodgeUses||0)-1);
+    return cardData(weapon)?.name||'Parierdolch';
+  }
+  return null;
+}
+function expireCounterDodgeActivations(state){
+  for(const p of state.players){
+    for(const r of p.bezSlots||[]){
+      if(r?.effectState?.counterDodgeActive){
+        r.effectState.counterDodgeActive=false;
+        log(state,`${cardData(r)?.name||'Bezwingerin'}: nicht genutztes Ausweichen ist für diese Kampfrunde nicht mehr aktiv; die gespeicherte Nutzung bleibt erhalten.`);
+      }
+    }
+    ensureEquipmentState(p);
+    for(const eq of p.equipment||[]){
+      for(const kind of ['weapon','shield','armor','helmet']){
+        const r=eq?.[kind];
+        if(r?.effectState?.counterDodgeActive){
+          r.effectState.counterDodgeActive=false;
+          log(state,`${cardData(r)?.name||'Ausrüstung'}: nicht genutztes Ausweichen ist für diese Kampfrunde nicht mehr aktiv; die gespeicherte Nutzung bleibt erhalten.`);
+        }
+      }
+    }
+  }
+}
+function expireAliceDodge(state){expireCounterDodgeActivations(state)}
 function expireBaronesse2Arm(state){
   const p=active(state);
   for(const r of p.bezSlots||[]){
@@ -1418,6 +1470,113 @@ function tickBezEffectDurations(state){
  }
 }
 
+function isInstantRuestkammerItem(c){
+  return c?.deck_bereich==='ruestkammer' && c?.kartentyp==='Gegenstand' &&
+    c?.effekte?.some(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke'].includes(e.engine_key));
+}
+function discardAzrInstantItem(state,playerIndex,azrSlot){
+  const p=state.players[playerIndex],r=p?.azr?.[azrSlot];
+  if(!r)return;
+  p.azr[azrSlot]=null;
+  discardRuntime(p,r);
+}
+function startInstantRuestkammerItem(state,playerIndex,azrSlot){
+  const p=state.players[playerIndex],r=p?.azr?.[azrSlot],c=cardData(r);
+  if(!r||!isInstantRuestkammerItem(c))return {ok:false,msg:'Kein unterstützter Rüstkammer-Gegenstand.'};
+  const key=c.effekte.find(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke'].includes(e.engine_key))?.engine_key;
+
+  if(key==='bastion_erleuchtung'){
+    p.refuge.honor=Number(p.refuge.honor||0)+1;
+    discardAzrInstantItem(state,playerIndex,azrSlot);
+    log(state,`${c.name}: eigene Zuflucht erhält +1 Ehre; Gegenstand wird nach Auflösung abgelegt.`);
+    return {ok:true,msg:'Eigene Zuflucht erhält +1 Ehre.'};
+  }
+
+  if(key==='laehmendes_nervengift'){
+    const enemy=state.players[1-playerIndex];
+    const targets=(enemy.bezSlots||[]).map((x,i)=>x?i:null).filter(i=>i!==null);
+    if(!targets.length){
+      discardAzrInstantItem(state,playerIndex,azrSlot);
+      log(state,`${c.name}: keine gegnerische Bezwingerin als Ziel; Gegenstand wird abgelegt.`);
+      return {ok:true,msg:'Keine gegnerische Bezwingerin als Ziel vorhanden.'};
+    }
+    state.pendingBezEffect={type:'laehmendes_nervengift',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
+    return {ok:true,pending:true,msg:'Wähle eine gegnerische Bezwingerin für Sekundärangriff in dieser Kampfrunde.'};
+  }
+
+  if(key==='trank_der_staerke'){
+    const targets=(p.bezSlots||[]).map((x,i)=>x?i:null).filter(i=>i!==null);
+    if(!targets.length){
+      discardAzrInstantItem(state,playerIndex,azrSlot);
+      log(state,`${c.name}: keine eigene Bezwingerin als Ziel; Gegenstand wird abgelegt.`);
+      return {ok:true,msg:'Keine eigene Bezwingerin als Ziel vorhanden.'};
+    }
+    state.pendingBezEffect={type:'trank_der_staerke',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
+    return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin für +1 physische Stärke für einen Kampf in dieser KR.'};
+  }
+  return {ok:false,msg:'Unbekannter Gegenstandseffekt.'};
+}
+function instantRuestkammerTargets(state){
+  const pend=state.pendingBezEffect;if(!pend)return [];
+  if(pend.type==='laehmendes_nervengift'){
+    return state.players[1-pend.sourcePlayer].bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
+  }
+  if(pend.type==='trank_der_staerke'){
+    return state.players[pend.sourcePlayer].bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
+  }
+  return [];
+}
+function resolveInstantRuestkammerTarget(state,id){
+  const pend=state.pendingBezEffect;if(!pend||!['laehmendes_nervengift','trank_der_staerke'].includes(pend.type))
+    return {ok:false,msg:'Keine passende Gegenstandsauswahl aktiv.'};
+  const sourcePlayer=pend.sourcePlayer,sourceAzrSlot=pend.sourceAzrSlot;
+  const p=state.players[sourcePlayer];
+
+  if(pend.type==='laehmendes_nervengift'){
+    const enemy=state.players[1-sourcePlayer],t=enemy.bezSlots[Number(id)];
+    if(!t)return {ok:false,msg:'Ungültige gegnerische Bezwingerin.'};
+    t.effectState=t.effectState||{};
+    t.effectState.secondaryAttackActive=true;
+    t.effectState.secondaryAttackExpiresRoundSerial=state.roundSerial;
+    state.pendingBezEffect=null;
+    discardAzrInstantItem(state,sourcePlayer,sourceAzrSlot);
+    log(state,`${cardData(t)?.name}: erhält durch Lähmendes Nervengift Sekundärangriff für diese Kampfrunde.`);
+    return {ok:true,msg:'Sekundärangriff für diese Kampfrunde vergeben.'};
+  }
+
+  const t=p.bezSlots[Number(id)];
+  if(!t)return {ok:false,msg:'Ungültige eigene Bezwingerin.'};
+  t.effectState=t.effectState||{};
+  t.effectState.trankStaerkePhysicalBonus=Number(t.effectState.trankStaerkePhysicalBonus||0)+1;
+  t.effectState.trankStaerkeExpiresRoundSerial=state.roundSerial;
+  state.pendingBezEffect=null;
+  discardAzrInstantItem(state,sourcePlayer,sourceAzrSlot);
+  log(state,`${cardData(t)?.name}: +1 physische Stärke durch Trank der Stärke für den nächsten Kampf dieser Kampfrunde.`);
+  return {ok:true,msg:'+1 physische Stärke für einen Kampf in dieser Kampfrunde vergeben.'};
+}
+function expireRoundLimitedItemEffects(state){
+  for(const p of state.players){
+    for(const r of p.bezSlots||[]){
+      if(!r?.effectState)continue;
+      if(r.effectState.secondaryAttackActive && r.effectState.secondaryAttackExpiresRoundSerial===state.roundSerial){
+        r.effectState.secondaryAttackActive=false;
+        delete r.effectState.secondaryAttackExpiresRoundSerial;
+      }
+      if(r.effectState.trankStaerkePhysicalBonus && r.effectState.trankStaerkeExpiresRoundSerial===state.roundSerial){
+        delete r.effectState.trankStaerkePhysicalBonus;
+        delete r.effectState.trankStaerkeExpiresRoundSerial;
+        log(state,`${cardData(r)?.name}: ungenutzter Bonus des Tranks der Stärke verfällt am Ende der Kampfrunde.`);
+      }
+    }
+  }
+}
+function consumeTrankStaerkeBonus(r){
+  if(!r?.effectState?.trankStaerkePhysicalBonus)return 0;
+  const n=Number(r.effectState.trankStaerkePhysicalBonus||0);
+  delete r.effectState.trankStaerkePhysicalBonus;
+  delete r.effectState.trankStaerkeExpiresRoundSerial;
+  return n;
+}
 function setFaceDown(state,handIndex,slot){
   const p=active(state);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Karten können hier nur in Versorgungs- oder Nachschubphase gesetzt werden.'};
@@ -1452,6 +1611,7 @@ function playOpenAzr(state,handIndex,slot){
   }
   p.azr[slot]=r;
   log(state,`${p.name} spielt ${c.name} offen in die ASTRAL-/Rüstkammer-Zone.${c?.effekte?.some(e=>e.engine_key==='fluestern_brut')?' Kampfrundendauer: 2 eigene KR.':''}`);
+  if(isInstantRuestkammerItem(c))return startInstantRuestkammerItem(state,p.index,slot);
   return {ok:true};
 }
 function playFieldFromHand(state,handIndex,area){
@@ -1555,6 +1715,32 @@ function equipRuntimeToBez(state,p,r,bezSlot,kind){
     log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} wird auf 1 Herz reduziert und erhält +3 physische Schilde. Kampfrundendauer: 2.`);
   }
 
+  if(c?.effekte?.some(e=>e.engine_key==='legionsbrustpanzer_honor')){
+    const bez=p.bezSlots[bezSlot];
+    bez.honor=Number(bez.honor||0)+1;
+    log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält durch den Blitz-Effekt +1 Ehre.`);
+  }
+
+  if(c?.effekte?.some(e=>e.engine_key==='legionsschild_honor')){
+    const bez=p.bezSlots[bezSlot];
+    bez.honor=Number(bez.honor||0)+1;
+    log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält durch den Blitz-Effekt +1 Ehre.`);
+  }
+
+  if(c?.effekte?.some(e=>e.engine_key==='hut_der_weisheit_honor')){
+    const bez=p.bezSlots[bezSlot];
+    bez.honor=Number(bez.honor||0)+1;
+    log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält durch den Blitz-Effekt +1 Ehre.`);
+  }
+
+  if(c?.effekte?.some(e=>e.engine_key==='parierdolch_dodge')){
+    r.effectState=r.effectState||{};
+    r.effectState.counterDodgeUses=1;
+    r.effectState.counterDodgeActive=false;
+    r.effectState.counterDodgeActivatedTurn=null;
+    log(state,`${c.name}: einmaliges Ausweichen gegen einen Gegenangriff wurde auf dem Dolch gespeichert.`);
+  }
+
   return {
     ok:true,
     needsShieldChoice:!!prof.shieldChoice && !r.shieldChoice,
@@ -1635,6 +1821,10 @@ function reveal(state,slot){
 
   if(!['honor','supply','rush','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'In dieser Phase kann die gesetzte Karte in der Grundversion nicht aktiviert werden.'};
   r.faceDown=false;
+  if(isInstantRuestkammerItem(c)){
+    log(state,`${p.name} deckt ${c.name} auf; der Gegenstandseffekt wird sofort aktiviert.`);
+    return startInstantRuestkammerItem(state,p.index,slot);
+  }
   log(state,`${p.name} deckt ${c?.name||'eine gesetzte Karte'} auf. Der individuelle Karteneffekt ist noch nicht implementiert.`);
   return {ok:true};
 }
@@ -2177,7 +2367,13 @@ function resolveCombat(state){
   // Sie wird daher nach der Kampfbeteiligung verbraucht – unabhängig davon,
   // ob der Kampf physisch oder ASTRAL geführt wurde.
   consumePsiloBonus(a);
-  if(target.type==='bez')consumePsiloBonus(d);
+  const trankAtk=consumeTrankStaerkeBonus(a);
+  if(trankAtk)log(state,`${cardData(a)?.name}: Bonus des Tranks der Stärke (+${trankAtk}) nach diesem Kampf verbraucht.`);
+  if(target.type==='bez'){
+    consumePsiloBonus(d);
+    const trankDef=consumeTrankStaerkeBonus(d);
+    if(trankDef)log(state,`${cardData(d)?.name}: Bonus des Tranks der Stärke (+${trankDef}) nach diesem Kampf verbraucht.`);
+  }
   if(a?.effectState?.primaryAttackActive)a.effectState.primaryAttackActive=false;
   if(target.type==='bez' && d?.effectState?.primaryAttackActive)d.effectState.primaryAttackActive=false;
 
@@ -2197,7 +2393,13 @@ function resolveCombat(state){
   let attackerPacket=counterValue>0 && attackerKind!=='refuge' ? {
     role:'attacker',playerIndex:p.index,bezSlot:state.attack.attackerSlot,type,remaining:counterValue,shieldLoss:0,heartLoss:0
   }:null;
-  if(attackerPacket&&a?.effectState?.counterDodgeActive){a.effectState.counterDodgeActive=false;attackerPacket=null;log(state,`${cardData(a)?.name}: weicht dem Gegenangriff vollständig aus.`);}
+  if(attackerPacket){
+    const dodgeSource=consumeCounterDodgeIfActive(state,p,state.attack.attackerSlot,a);
+    if(dodgeSource){
+      attackerPacket=null;
+      log(state,`${cardData(a)?.name}: weicht dem Gegenangriff vollständig aus (${dodgeSource}).`);
+    }
+  }
   if(attackerKind==='refuge' && counterValue>0){
     const dmg=applyDamage(a,counterValue,type);
     if(dmg.shield||dmg.hearts)log(state,`Angreifende Zuflucht: −${dmg.shield} Basisschild/−${dmg.hearts} Herzen durch Gegenangriff.`);
@@ -2305,6 +2507,7 @@ function advancePhase(state){
     expireDeathPrimaryAttack(state);
     expireAliceDodge(state);
     expireBaronesse2Arm(state);
+    expireRoundLimitedItemEffects(state);
     p.turnCount+=1;
     state.activePlayer=1-state.activePlayer;
     state.roundSerial+=1;
@@ -2424,10 +2627,11 @@ window.G5Engine={
   startPsiloWonder,psiloTargets,resolvePsiloTarget,keylaSearchTargets,resolveKeylaSearch,
   startQueen2Wonder,queenStackTargets,resolveQueenSearch,queenDiscardTargets,resolveQueen2Discard,
   fragmentfresserSchlundTargets,startFragmentfresserSchlundEffect,resolveFragmentfresserSchlund,
+  startInstantRuestkammerItem,instantRuestkammerTargets,resolveInstantRuestkammerTarget,
   startKristallharnischEffect,resolveKristallharnischEffect,
   triggerLebensfresserschildHunger,resolveLebensfresserschildHungerAtSupplyStart,
   activateDeathPrimaryAttack,hasPrimaryAttack,hasSecondaryAttack,
-  activateAliceDodge,startLilou2Wonder,lilou2Targets,resolveLilou2Discard,startBaronesse2Wonder,
+  activateAliceDodge,activateParierdolchDodge,startLilou2Wonder,lilou2Targets,resolveLilou2Discard,startBaronesse2Wonder,
   keyla2DestroyTargets,keyla2DiscardTargets,resolveKeyla2Choice,resolveKeyla2Destroy,resolveKeyla2Discard,
   fragmentRewardTargets,resolveFragmentReward,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,resolveCombat,currentShieldChoice,chooseShieldSource,returnToRush,cardData

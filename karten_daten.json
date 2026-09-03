@@ -3485,8 +3485,29 @@
     "astraler_schild": null,
     "ehre": null,
     "wunder": null,
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "trigger": "continuous",
+        "engine_key": "equipment_physical_shield",
+        "target": "equipped_bez",
+        "physicalShield": 1,
+        "permanent_while_equipped": true
+      },
+      {
+        "trigger": "on_equip",
+        "engine_key": "legionsschild_honor",
+        "target": "equipped_bez",
+        "honor_delta": 1
+      }
+    ],
+    "tags": [
+      "physischer-schild",
+      "ehre",
+      "permanent",
+      "on-play"
+    ],
+    "effekt_symbol": "permanent+on_play",
+    "effekt_text": "Solange dieser Schild ausgerüstet ist, fügt er der ausgerüsteten Bezwingerin 1 physischen Schild hinzu. Beim Anlegen erhält diese Bezwingerin zusätzlich einmalig 1 Ehre."
   },
   {
     "id": "1.01-13-32-50fc6534",
@@ -3512,8 +3533,23 @@
     "astraler_schild": null,
     "ehre": null,
     "wunder": null,
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "trigger": "on_equip",
+        "engine_key": "parierdolch_dodge",
+        "target": "equipped_bez",
+        "uses": 1,
+        "activation_phase": "supply",
+        "effect": "dodge_counterattack"
+      }
+    ],
+    "tags": [
+      "gegenangriff",
+      "ausweichen",
+      "on-play"
+    ],
+    "effekt_symbol": "on_play",
+    "effekt_text": "Beim Anlegen erhält die ausgerüstete Bezwingerin eine einmalige gespeicherte Fähigkeit: In einer frei gewählten eigenen Kampfrunde kann sie in der Versorgungsphase aktiviert werden, um einem Gegenangriff auszuweichen."
   },
   {
     "id": "1.01-14-32-4c9f364b",
@@ -3539,8 +3575,22 @@
     "astraler_schild": null,
     "ehre": null,
     "wunder": null,
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "trigger": "on_play",
+        "engine_key": "laehmendes_nervengift",
+        "target": "enemy_bez",
+        "grant": "secondary_attack",
+        "duration": "current_round"
+      }
+    ],
+    "tags": [
+      "sekundärangriff",
+      "gegnerische-bezwingerin",
+      "on-play"
+    ],
+    "effekt_symbol": "on_play",
+    "effekt_text": "Gib einer gegnerischen Bezwingerin in dieser Kampfrunde Sekundärangriff."
   },
   {
     "id": "1.01-15-32-89d3e6b0",
@@ -3566,8 +3616,23 @@
     "astraler_schild": null,
     "ehre": null,
     "wunder": null,
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "trigger": "on_play",
+        "engine_key": "trank_der_staerke",
+        "target": "own_bez",
+        "physical_delta": 1,
+        "duration": "current_round",
+        "max_combats": 1
+      }
+    ],
+    "tags": [
+      "physische-stärke",
+      "ein-kampf",
+      "on-play"
+    ],
+    "effekt_symbol": "on_play",
+    "effekt_text": "Gib einer eigenen Bezwingerin für diese Kampfrunde +1 physische Stärke, jedoch nur für einen Kampf."
   },
   {
     "id": "1.01-16-32-c5143f03",
@@ -3593,8 +3658,29 @@
     "astraler_schild": null,
     "ehre": null,
     "wunder": null,
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "trigger": "continuous",
+        "engine_key": "equipment_physical_shield",
+        "target": "equipped_bez",
+        "physicalShield": 1,
+        "permanent_while_equipped": true
+      },
+      {
+        "trigger": "on_equip",
+        "engine_key": "legionsbrustpanzer_honor",
+        "target": "equipped_bez",
+        "honor_delta": 1
+      }
+    ],
+    "tags": [
+      "physischer-schild",
+      "ehre",
+      "permanent",
+      "on-play"
+    ],
+    "effekt_symbol": "permanent+on_play",
+    "effekt_text": "Solange diese Rüstung ausgerüstet ist, erhält die ausgerüstete Bezwingerin 1 physischen Schild. Beim Anlegen erhält diese Bezwingerin zusätzlich einmalig 1 Ehre."
   },
   {
     "id": "1.01-28-32-c3001160",
@@ -3620,8 +3706,20 @@
     "astraler_schild": null,
     "ehre": null,
     "wunder": null,
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "trigger": "on_equip",
+        "engine_key": "hut_der_weisheit_honor",
+        "target": "equipped_bez",
+        "honor_delta": 1
+      }
+    ],
+    "tags": [
+      "ehre",
+      "on-play"
+    ],
+    "effekt_symbol": "on_play",
+    "effekt_text": "Beim Anlegen erhält die ausgerüstete Bezwingerin einmalig 1 Ehre."
   },
   {
     "id": "1.01-29-32-b570c797",
@@ -3647,8 +3745,23 @@
     "astraler_schild": null,
     "ehre": null,
     "wunder": null,
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "trigger": "continuous",
+        "engine_key": "equipment_dual_shield",
+        "target": "equipped_bez",
+        "physicalShield": 1,
+        "astralShield": 1,
+        "permanent_while_equipped": true
+      }
+    ],
+    "tags": [
+      "physischer-schild",
+      "astral-schild",
+      "permanent"
+    ],
+    "effekt_symbol": "permanent",
+    "effekt_text": "Solange diese Rüstung ausgerüstet ist, fügt sie der ausgerüsteten Bezwingerin 1 physischen Schild und 1 ASTRAL-Schild hinzu."
   },
   {
     "id": "1.01-30-32-c21d5a48",
@@ -4025,8 +4138,21 @@
     "astraler_schild": null,
     "ehre": null,
     "wunder": null,
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "trigger": "on_play",
+        "engine_key": "bastion_erleuchtung",
+        "target": "own_refuge",
+        "honor_delta": 1
+      }
+    ],
+    "tags": [
+      "ehre",
+      "zuflucht",
+      "on-play"
+    ],
+    "effekt_symbol": "on_play",
+    "effekt_text": "Füge deiner eigenen Zuflucht 1 Ehre hinzu."
   },
   {
     "id": "1.02-02-32-198048cd",
@@ -4079,8 +4205,21 @@
     "astraler_schild": null,
     "ehre": null,
     "wunder": null,
-    "effekte": [],
-    "tags": []
+    "effekte": [
+      {
+        "trigger": "continuous",
+        "engine_key": "equipment_physical_shield",
+        "target": "equipped_bez",
+        "physicalShield": 1,
+        "permanent_while_equipped": true
+      }
+    ],
+    "tags": [
+      "physischer-schild",
+      "permanent"
+    ],
+    "effekt_symbol": "permanent",
+    "effekt_text": "Solange dieser Kopfschutz ausgerüstet ist, fügt er der ausgerüsteten Bezwingerin 1 physischen Schild hinzu."
   },
   {
     "id": "1.02-04-32-f75466c1",
