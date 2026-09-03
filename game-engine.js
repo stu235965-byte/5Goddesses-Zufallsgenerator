@@ -596,7 +596,7 @@ function lilou2Targets(state,playerIndex){
   const p=state.players[playerIndex];
   return (p.discard||[]).map((entry,i)=>{const bild=typeof entry==='string'?entry:entry?.bild,c=dbCard(bild);return c?.deck_bereich==='bezwingerinnen'&&Number(c?.stufe)===1?{id:String(i),name:c.name,bild}:null}).filter(Boolean);
 }
-function matchingDevelopmentsForBase(baseBild){return DB.filter(c=>c.deck_bereich==='entwicklung'&&c.grundkarte_bild===baseBild)}
+function matchingDevelopmentsForBase(baseBild){return (window.GODDESSES_DB?.karten||[]).filter(c=>c.deck_bereich==='entwicklung'&&c.grundkarte_bild===baseBild)}
 function startLilou2Wonder(state,slot){
   const p=active(state),r=p.bezSlots[slot],c=cardData(r);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
@@ -612,14 +612,45 @@ function resolveLilou2Discard(state,index){
   if(!src||!entry||c?.deck_bereich!=='bezwingerinnen'||Number(c?.stufe)!==1)return {ok:false,msg:'Ungültige Stufe-1-Bezwingerin.'};
   const free=(p.bezSlots||[]).map((x,j)=>!x?j:null).filter(j=>j!==null);if(!free.length)return {ok:false,msg:'Keine freie Bezwingerinnen-Feldposition mehr.'};
   const cost=Number(src.wonderCostCurrent??cardData(src)?.wunder?.kosten_ehre??3);if((src.honor||0)<cost)return {ok:false,msg:'Lilou besitzt nicht mehr genügend Ehre.'};
-  src.honor-=cost;src.wonderTurn=p.turnCount;src.wonderCostCurrent=cost+1;p.discard.splice(i,1);
-  const r=makeRuntimeCard(bild,p.index,p.turnCount);r.hearts=2;r.physical=0;r.honor=0;r.ready=false;r.effectState=r.effectState||{};r.effectState.baseHeartsOverride=2;r.effectState.basePhysicalOverride=0;r.effectState.baseHonorOverride=0;
+
+  src.honor-=cost;
+  src.wonderTurn=p.turnCount;
+  src.wonderCostCurrent=cost+1;
+  p.discard.splice(i,1);
+
+  const r=makeRuntimeCard(bild,p.index,p.turnCount);
+  // Lilou verändert laut Karte nur diese Basiswerte:
+  // Herzen = 2; physischer Schild = 0; ASTRAL-Schild = 0; Ehre = 0.
+  // Die aufgedruckten Angriffs-/Stärkewerte der wiederbelebten Bezwingerin bleiben erhalten.
+  r.hearts=2;
+  r.physicalShield=0;
+  r.astralShield=0;
+  r.honor=0;
+  r.ready=false;
+  r.effectState=r.effectState||{};
+  r.effectState.baseHeartsOverride=2;
+  r.effectState.basePhysicalShieldOverride=0;
+  r.effectState.baseAstralShieldOverride=0;
+  r.effectState.baseHonorOverride=0;
   p.bezSlots[free[0]]=r;
+
+  // Alle Entwicklungen dieser wiederbelebten Bezwingerin aus der eigenen Ablage
+  // zurück ins Entwicklungsdeck legen.
   const devs=matchingDevelopmentsForBase(bild);
-  const di=(p.discard||[]).findIndex(e=>{const b=typeof e==='string'?e:e?.bild;return devs.some(d=>d.bild===b)});
-  if(di>=0){const de=p.discard.splice(di,1)[0],devBild=typeof de==='string'?de:de?.bild;if(devBild)p.development.push(devBild);}
-  state.pendingBezEffect=null;log(state,`${c.name} wurde durch Lilou wiederbelebt. Basis: Herzen 2, physische Stärke 0, Ehre 0. Nächste Wunderkosten ${src.wonderCostCurrent}.`);
-  return {ok:true,msg:`${c.name} wiederbelebt. Nächste Lilou-Wunderkosten: ${src.wonderCostCurrent} Ehre.`};
+  const devBilder=new Set(devs.map(d=>d.bild));
+  const returned=[];
+  for(let di=(p.discard||[]).length-1;di>=0;di--){
+    const de=p.discard[di],devBild=typeof de==='string'?de:de?.bild;
+    if(devBilder.has(devBild)){
+      p.discard.splice(di,1);
+      p.development.push(devBild);
+      returned.push(devBild);
+    }
+  }
+
+  state.pendingBezEffect=null;
+  log(state,`${c.name} wurde durch Lilou wiederbelebt. Basis: Herzen 2, physischer Schild 0, ASTRAL-Schild 0, Ehre 0; Angriffs-/Stärkewerte bleiben unverändert. ${returned.length} Entwicklung(en) zurückgelegt. Nächste Wunderkosten ${src.wonderCostCurrent}.`);
+  return {ok:true,msg:`${c.name} wiederbelebt. ${returned.length} Entwicklung(en) ins Entwicklungsdeck zurückgelegt. Nächste Lilou-Wunderkosten: ${src.wonderCostCurrent} Ehre.`};
 }
 function startBaronesse2Wonder(state,slot){
   const p=active(state),r=p.bezSlots[slot],c=cardData(r);
