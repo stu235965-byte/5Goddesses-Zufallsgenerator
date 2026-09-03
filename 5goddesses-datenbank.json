@@ -1210,7 +1210,7 @@
           "trigger": "on_play",
           "engine_key": "baronesse",
           "requires_other_own_subtype": "Vengeresse",
-          "target": "other_own_vengeresse",
+          "target": "self",
           "honor_gain": 1
         }
       ],
@@ -1220,7 +1220,7 @@
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
-      "effekt_text": "Wenn du diese Bezwingerin rekrutierst und sich bereits eine andere Vengeresse-Bezwingerin auf deiner Spielfeldseite befindet, erhält die andere Vengeresse-Bezwingerin 1 Ehre."
+      "effekt_text": "Wenn du diese Bezwingerin rekrutierst und sich bereits eine andere Vengeresse-Bezwingerin auf deiner Spielfeldseite befindet, erhält diese Bezwingerin 1 Ehre."
     },
     {
       "id": "1.02-14-32-08775875",

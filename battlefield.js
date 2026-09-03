@@ -938,9 +938,46 @@ function renderActions(){
     root.appendChild(info);
   }
 }
+function trySerinithCharge(slot,r){
+  const fx=E().bezEffectInfo?.(state,slot),c=E().cardData(r);
+  if(c?.effekte?.[0]?.engine_key!=='serinith' || fx?.symbol!=='charges' ||
+     (fx.usesRemaining??0)<=0 || fx.usedThisTurn)return false;
+
+  const a=Number(r.astralShield||0),p=Number(r.physicalShield||0);
+  if(a<=0 && p<=0)return false;
+
+  let choice=null;
+  if(a>0 && p>0){
+    const answer=prompt(
+      `Serinith Solthar – Ladung einsetzen?\\n`+
+      `1 = 1 ASTRAL-Schild → 1 physischer Schild\\n`+
+      `2 = 1 physischer Schild → 1 ASTRAL-Schild\\n`+
+      `Abbrechen = normale Kartenaktion`
+    );
+    if(answer===null || answer==='')return false;
+    if(answer==='1')choice='astral_to_physical';
+    else if(answer==='2')choice='physical_to_astral';
+    else {message('Bitte 1 oder 2 wählen.','warn');return true;}
+  }else if(a>0){
+    if(!confirm('Serinith Solthar: Eine Ladung einsetzen und 1 ASTRAL-Schild in 1 physischen Schild umwandeln?'))return false;
+    choice='astral_to_physical';
+  }else{
+    if(!confirm('Serinith Solthar: Eine Ladung einsetzen und 1 physischen Schild in 1 ASTRAL-Schild umwandeln?'))return false;
+    choice='physical_to_astral';
+  }
+
+  const rr=E().activateBezEffect(state,slot,choice);
+  saveRender(rr.msg||'Seriniths Ladung eingesetzt.');
+  return true;
+}
+
 function handleOwnBez(slot){
   const p=E().active(state),r=p.bezSlots[slot],ph=phase();
   if(!r)return;
+
+  // Ladungseffekte wie Serinith sind nicht auf VP/NP beschränkt:
+  // höchstens einmal pro eigener KR, solange Ladungen vorhanden sind.
+  if(trySerinithCharge(slot,r))return;
 
   if(ph.id==='supply'){
     const c=E().cardData(r);
@@ -978,19 +1015,6 @@ function handleOwnBez(slot){
       return saveRender(rr.msg||'Einsatzbereit.');
     }
     const fx=E().bezEffectInfo?.(state,slot);
-    if(fx?.symbol==='charges' && (fx.usesRemaining??0)>0 && !fx.usedThisTurn){
-      const c=E().cardData(r);
-      if(c?.effekte?.[0]?.engine_key==='serinith'){
-        let choice=null;
-        if((r.astralShield||0)>0 && (r.physicalShield||0)>0){
-          choice=confirm('Serinith Solthar: Schild umwandeln?\n\nOK = 1 ASTRAL-Schild → 1 physischer Schild\nAbbrechen = 1 physischer Schild → 1 ASTRAL-Schild')?'astral_to_physical':'physical_to_astral';
-        }else if((r.astralShield||0)>0)choice='astral_to_physical';
-        else if((r.physicalShield||0)>0)choice='physical_to_astral';
-        if(!choice)return message('Serinith besitzt aktuell keinen Schildpunkt, den sie umwandeln kann.','warn');
-        const rr=E().activateBezEffect(state,slot,choice);
-        return saveRender(rr.msg||'Seriniths Ladung eingesetzt.');
-      }
-    }
     if(fx?.symbol==='wonder' && !fx.wonderUsed){
       const c=E().cardData(r);
       const base=Number((r.wonderCostCurrent ?? c?.wunder?.kosten_ehre) || 0);

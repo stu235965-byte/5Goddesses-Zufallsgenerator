@@ -446,7 +446,10 @@ function resolveBezOnPlay(state,p,slot,r,c){
     if(t){t.honor=Number(t.honor||0)-1;log(state,`${c.name}: ${cardData(t)?.name||'gegnerische Bezwingerin'} verliert 1 Ehre (${t.honor}).`);}else log(state,`${c.name}: keine gegnerische Bezwingerin direkt gegenüber.`);
   }else if(key==='baronesse'){
     const other=p.bezSlots.find((x,i)=>i!==slot&&x&&isVengeresseCard(cardData(x)));
-    if(other){other.honor=Number(other.honor||0)+1;log(state,`${c.name}: ${cardData(other)?.name||'andere Vengeresse'} erhält +1 Ehre.`);}
+    if(other){
+      r.honor=Number(r.honor||0)+1;
+      log(state,`${c.name}: Eine andere eigene Vengeresse liegt bereits aus → Baronesse erhält +1 Ehre.`);
+    }
   }else if(key==='skorpia'){
     const n=countOwnAzrCards(p);
     if(n>=2){
@@ -572,6 +575,15 @@ function activateAliceDodge(state,slot){
   return {ok:true,msg:'Alices Ausweichen aktiviert.'};
 }
 function expireAliceDodge(state){for(const p of state.players)for(const r of p.bezSlots||[])if(r?.effectState?.counterDodgeActive){r.effectState.counterDodgeActive=false;log(state,`${cardData(r)?.name||'Alice'}: aktiviertes Ausweichen verfällt am Ende der Kampfrunde.`);}}
+function expireBaronesse2Arm(state){
+  const p=active(state);
+  for(const r of p.bezSlots||[]){
+    if(r?.effectState?.baronesse2Armed){
+      r.effectState.baronesse2Armed=false;
+      log(state,`${cardData(r)?.name||'Baronesse'}: ungenutzter Wunder-Bonus verfällt am Ende der Kampfrunde.`);
+    }
+  }
+}
 function lilou2Targets(state,playerIndex){
   const p=state.players[playerIndex];
   return (p.discard||[]).map((entry,i)=>{const bild=typeof entry==='string'?entry:entry?.bild,c=dbCard(bild);return c?.deck_bereich==='bezwingerinnen'&&Number(c?.stufe)===1?{id:String(i),name:c.name,bild}:null}).filter(Boolean);
@@ -603,10 +615,18 @@ function resolveLilou2Discard(state,index){
 }
 function startBaronesse2Wonder(state,slot){
   const p=active(state),r=p.bezSlots[slot],c=cardData(r);
-  if(currentPhase(state).id!=='rush')return {ok:false,msg:'Baronesse kann dieses Wunder nur in der Ansturmphase vorbereiten.'};
+  if(!['supply','resupply'].includes(currentPhase(state).id))
+    return {ok:false,msg:'Baronesse kann ihr Wunder nur in VP oder NP wirken.'};
   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
-  const cost=Number(r.wonderCostCurrent??c?.wunder?.kosten_ehre??2);if((r.honor||0)<cost)return {ok:false,msg:`Baronesse benötigt ${cost} Ehre.`};
-  r.effectState=r.effectState||{};r.effectState.baronesse2Armed=true;return {ok:true,msg:'Baronesse-Wunder bereit. Greife eine verletzte gegnerische Bezwingerin an.'};
+  const cost=Number(r.wonderCostCurrent??c?.wunder?.kosten_ehre??2);
+  if((r.honor||0)<cost)return {ok:false,msg:`Baronesse benötigt ${cost} Ehre.`};
+  r.honor-=cost;
+  r.wonderTurn=p.turnCount;
+  r.effectState=r.effectState||{};
+  r.effectState.baronesse2Armed=true;
+  r.effectState.baronesse2ArmedTurn=p.turnCount;
+  log(state,`${c.name}: Wunder für ${cost} Ehre aktiviert. +1 physische Stärke beim nächsten passenden Angriff dieser KR.`);
+  return {ok:true,msg:`Baronesse-Wunder aktiviert (${cost} Ehre bezahlt).`};
 }
 function baronesse2CanBuff(state,attackerSlot,target){
   const p=active(state),r=p.bezSlots[attackerSlot],c=cardData(r),d=target?.type==='bez'?opponent(state).bezSlots[target.slot]:null;
@@ -856,19 +876,15 @@ function resolvePsiloTarget(state,id){
   if((src.honor||0)<cost)return {ok:false,msg:'Psilo besitzt nicht mehr genügend Ehre.'};
   src.honor-=cost;src.wonderTurn=p.turnCount;
   target.r.effectState=target.r.effectState||{};
-  target.r.effectState.psiloPhysicalBonus=1;
-  target.r.effectState.psiloBonusRoundSerial=state.roundSerial;
+  target.r.effectState.psiloPhysicalBonus=Number(target.r.effectState.psiloPhysicalBonus||0)+1;
   state.pendingBezEffect=null;
-  log(state,`${cardData(target.r)?.name}: +1 physische Stärke für den nächsten Kampf dieser Kampfrunde.`);
-  return {ok:true,msg:'Psilos Bonus wurde vergeben.'};
+  log(state,`${cardData(target.r)?.name}: Psilo-Bonus jetzt +${target.r.effectState.psiloPhysicalBonus} physische Stärke für den nächsten Kampf dieser KREATUR.`);
+  return {ok:true,msg:`Psilos Bonus wurde gestapelt: +${target.r.effectState.psiloPhysicalBonus} physische Stärke bis zum nächsten Kampf.`};
 }
 function expirePsiloBonuses(state){
-  allRuntimeCards(state).forEach(x=>{
-    if(x.r?.effectState?.psiloPhysicalBonus){
-      delete x.r.effectState.psiloPhysicalBonus;
-      delete x.r.effectState.psiloBonusRoundSerial;
-    }
-  });
+  // Psilos Bonus besitzt keine Kampfrundendauer. Er bleibt auch über mehrere
+  // Kampfrunden erhalten und wird ausschließlich durch den nächsten Kampf
+  // der gewählten KREATUR verbraucht.
 }
 function consumePsiloBonus(runtime){
   if(!runtime?.effectState?.psiloPhysicalBonus)return 0;
@@ -1496,7 +1512,29 @@ function attackTargets(state,attackerSource){
   }
 
   const forcedJeanne=jeanneForcedTarget(state,attackerSource);
-  if(forcedJeanne)return targets.filter(t=>targetKey(t)===targetKey(forcedJeanne));
+  const forcedJeanneTarget=forcedJeanne
+    ? targets.find(t=>targetKey(t)===targetKey(forcedJeanne))
+    : null;
+
+  // Arcadia: Solange ihre Kampfrundendauer aktiv ist, muss die erste
+  // gegnerische Bezwingerin, die in dieser KR tatsächlich kämpft, Arcadia
+  // physisch angreifen. 0 physische Stärke macht den Angriff nicht unmöglich.
+  // Ein anderer bereits zwingender Zieleffekt (z.B. Jeanne auf einem anderen
+  // Ziel) kann Arcadias "falls möglich" aufheben.
+  if(src.kind==='bez' && !firstEnemyBezFightUsed(state,active(state).index)){
+    const arc=activeArcadiaConstraint(state,active(state).index);
+    if(arc){
+      const arcTarget=targets.find(t=>t.type==='bez' && t.slot===arc.slot);
+      const conflictingJeanne=forcedJeanneTarget && targetKey(forcedJeanneTarget)!==targetKey(arcTarget||{});
+      if(arcTarget && !conflictingJeanne){
+        return [{...arcTarget,forcedAttackType:'physical'}];
+      }
+    }
+  }
+
+  // Jeanne gilt nur, wenn Jeanne nach den übrigen Grundregeln tatsächlich
+  // ein legales Ziel ist ("falls möglich").
+  if(forcedJeanneTarget)return [forcedJeanneTarget];
 
   const noBez=opp.bezSlots.every(x=>!x);
   if(src.kind==='bez'){
@@ -1524,15 +1562,20 @@ function prepareAttack(state,attackerSource,target,attackType){
     if(!canRefugeAttack(state,p.index))return {ok:false,msg:'Die Zuflucht kann nur angreifen, wenn auf deiner Spielfeldseite keine Bezwingerin vorhanden ist.'};
   }else if(!canAttack(r,p)){
     return {ok:false,msg:'Diese Bezwingerin ist einsatzverzögert oder hat bereits angegriffen.'};
-  }else{
-    const tax=applyPoliceAttackTax(state,p,r);
-    if(!tax.ok)return tax;
   }
   if(!['physical','astral'].includes(attackType))return {ok:false,msg:'Ungültige Angriffsart.'};
   const legalTarget=attackTargets(state,attackerSource).find(t=>targetKey(t)===targetKey(target));
   if(legalTarget?.forcedAttackType && attackType!==legalTarget.forcedAttackType)return {ok:false,msg:'Arcadia erzwingt für diesen Kampf einen physischen Angriff.'};
   const legal=!!legalTarget;
   if(!legal)return {ok:false,msg:'Dieses Angriffsziel ist nach der Grundregel nicht zulässig.'};
+
+  // Z.E.R.O. P.O.L.I.C.E. greift erst, wenn die Bezwingerin einen ansonsten
+  // vollständig legalen Angriff beginnen möchte. Ein ungültiges Ziel oder eine
+  // falsche Angriffsart verbraucht weder Ehre noch den permanenten Effekt.
+  if(src.kind==='bez'){
+    const tax=applyPoliceAttackTax(state,p,r);
+    if(!tax.ok)return tax;
+  }
 
   state.attack={
     attackerKind:src.kind,
@@ -1821,9 +1864,15 @@ function resolveCombat(state){
     ? {base:type==='physical'?(a.physical ?? ac?.physische_staerke ?? 0):(a.astral ?? ac?.astrale_staerke ?? 0),equipment:0,total:type==='physical'?(a.physical ?? ac?.physische_staerke ?? 0):(a.astral ?? ac?.astrale_staerke ?? 0)}
     : combatStrength(state,p.index,state.attack.attackerSlot,type,true);
   let attackValue=atk.total;
-  if(attackerKind==='bez'&&type==='physical'&&a?.effectState?.baronesse2Armed&&baronesse2CanBuff(state,state.attack.attackerSlot,target)){
-    const cost=Number(a.wonderCostCurrent??cardData(a)?.wunder?.kosten_ehre??2);
-    if((a.honor||0)>=cost){a.honor-=cost;a.wonderTurn=p.turnCount;a.effectState.baronesse2Armed=false;attackValue+=1;log(state,`${cardData(a)?.name}: +1 physische Stärke für diesen Kampf.`);}
+  if(attackerKind==='bez' && a?.effectState?.baronesse2Armed &&
+     a.effectState.baronesse2ArmedTurn===p.turnCount &&
+     baronesse2CanBuff(state,state.attack.attackerSlot,target)){
+    a.effectState.baronesse2Armed=false;
+    // Der Karteneffekt verleiht physische Stärke. Bei einem ASTRAL-Angriff
+    // wird der Effekt dennoch ausgelöst/verbraucht, erhöht aber nicht den
+    // ASTRAL-Schadenswert.
+    if(type==='physical')attackValue+=1;
+    log(state,`${cardData(a)?.name}: +1 physische Stärke für diesen Kampf${type==='physical'?'.':' (bei ASTRAL-Angriff ohne zusätzlichen ASTRAL-Schaden).'}`);
   }
 
   let counterValue=0,counter={base:0,equipment:0,total:0};
@@ -1844,8 +1893,11 @@ function resolveCombat(state){
   log(state,`${ac?.name||'Angreifer'} verursacht ${attackValue}${atkBonus} ${type==='physical'?'physischen':'ASTRAL'} Schaden; ${dc?.name||'Ziel'} hat ${counterValue}${counterBonus} Gegenangriff${timingText}.`);
 
   a.attackedTurn=p.turnCount;
-  if(type==='physical')consumePsiloBonus(a);
-  if(target.type==='bez' && type==='physical')consumePsiloBonus(d);
+  // Psilos Verstärkung gilt genau für den nächsten Kampf der KREATUR.
+  // Sie wird daher nach der Kampfbeteiligung verbraucht – unabhängig davon,
+  // ob der Kampf physisch oder ASTRAL geführt wurde.
+  consumePsiloBonus(a);
+  if(target.type==='bez')consumePsiloBonus(d);
   if(a?.effectState?.primaryAttackActive)a.effectState.primaryAttackActive=false;
   if(target.type==='bez' && d?.effectState?.primaryAttackActive)d.effectState.primaryAttackActive=false;
 
@@ -1971,6 +2023,7 @@ function advancePhase(state){
     expirePsiloBonuses(state);
     expireDeathPrimaryAttack(state);
     expireAliceDodge(state);
+    expireBaronesse2Arm(state);
     p.turnCount+=1;
     state.activePlayer=1-state.activePlayer;
     state.roundSerial+=1;
