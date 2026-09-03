@@ -29,6 +29,87 @@ function saveRender(msg=''){
   if(state)E().save(state);
   render(msg);
 }
+
+function prefersReducedMotion(){
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
+}
+function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+function ensureTurnHandoffOverlay(){
+  let overlay=document.getElementById('turnHandoffOverlay');
+  if(overlay)return overlay;
+  overlay=document.createElement('div');
+  overlay.id='turnHandoffOverlay';
+  overlay.className='turn-handoff-overlay';
+  overlay.setAttribute('aria-live','polite');
+  overlay.innerHTML='<div class="turn-handoff-card"><div class="turn-handoff-small">Runde übergeben</div><strong></strong></div>';
+  document.getElementById('gameShell')?.appendChild(overlay);
+  return overlay;
+}
+async function animateRoundHandoff(){
+  if(!state)return;
+  const nextButton=document.getElementById('gameNextPhase');
+  const battlefield=document.getElementById('battlefield');
+  const shell=document.getElementById('gameShell');
+
+  // Regeln zuerst prüfen, ohne den Spielerwechsel vorwegzunehmen:
+  // In der Endphase gibt es normalerweise keine offene Pflichtauswahl mehr,
+  // aber falls doch, soll die Engine weiterhin die maßgebliche Fehlermeldung liefern.
+  if(phase()?.id!=='end'){
+    const r=E().advancePhase(state);
+    selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;refugeActionSelected=false;
+    return saveRender(r.msg||'');
+  }
+
+  if(prefersReducedMotion() || !battlefield || !shell){
+    const r=E().advancePhase(state);
+    selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;refugeActionSelected=false;
+    return saveRender(r.msg||'');
+  }
+
+  const oldPlayer=E().active(state)?.name||'Spieler';
+  const nextPlayer=state.players?.[1-state.activePlayer]?.name||'Nächster Spieler';
+  const overlay=ensureTurnHandoffOverlay();
+  const overlayName=overlay.querySelector('strong');
+  if(overlayName)overlayName.textContent=`${nextPlayer} ist am Zug`;
+
+  shell.classList.add('turn-handoff-active');
+  nextButton.disabled=true;
+  battlefield.classList.remove('turn-flip-in');
+  battlefield.classList.add('turn-flip-out');
+
+  // Erst wenn das Brett fast nur noch von der Kante sichtbar ist, wird intern gewechselt.
+  await wait(330);
+
+  const r=E().advancePhase(state);
+  if(!r.ok){
+    battlefield.classList.remove('turn-flip-out');
+    shell.classList.remove('turn-handoff-active');
+    nextButton.disabled=false;
+    return saveRender(r.msg||'Runde konnte nicht übergeben werden.');
+  }
+
+  selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;selectedAttackType=null;refugeActionSelected=false;
+
+  // Neuen Spieler hinter der "Brettkante" rendern.
+  E().save(state);
+  render('');
+  overlay.classList.add('visible');
+  battlefield.classList.remove('turn-flip-out');
+  battlefield.classList.add('turn-flip-in');
+
+  // Ein sehr kurzer Halt macht die Übergabe verständlicher, ohne den Spielfluss zu bremsen.
+  await wait(120);
+  requestAnimationFrame(()=>battlefield.classList.add('turn-flip-in-active'));
+
+  await wait(430);
+
+  battlefield.classList.remove('turn-flip-in','turn-flip-in-active');
+  overlay.classList.remove('visible');
+  shell.classList.remove('turn-handoff-active');
+  nextButton.disabled=false;
+  message(`${nextPlayer} beginnt die Kampfrunde.`);
+  requestAnimationFrame(updateStickyGameOffsets);
+}
 function gamePageOpened(){
   window.addEventListener('resize',updateStickyGameOffsets);
 
@@ -311,6 +392,7 @@ function renderBoards(){
     btn.addEventListener('click',()=>handleEquipmentSlot(btn.dataset.equip,Number(btn.dataset.equipBez)));
   });
   document.querySelector('#playerBoard [data-refuge]')?.addEventListener('click',()=>handleRefuge());
+  document.querySelector('#sharedPrimaryZone [data-primary-target]')?.addEventListener('click',()=>{const r=state.sharedPrimary,c=E().cardData(r);if(r?.owner===state.activePlayer&&c?.effekte?.some(e=>e.engine_key==='ruth_shop')&&['supply','resupply'].includes(phase().id)){const rr=E().startRuthEffect(state);saveRender(rr.msg);}});
   document.querySelector('#sharedPrimaryZone [data-primary-target]')?.addEventListener('click',handleOwnPrimary);
 
   if(state.pendingEquipment && state.pendingEquipment.owner===state.activePlayer){
@@ -459,6 +541,9 @@ function renderActions(){
     });
     return;
   }
+  if(state.pendingBezEffect?.type==='ruth_target'){const title=document.createElement('strong');title.textContent='Dorfschmiedin Ruth – Bezwingerin wählen';root.appendChild(title);E().ruthTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.onclick=()=>{const rr=E().resolveRuthTarget(state,t.id);saveRender(rr.msg)};root.appendChild(b)});return;}
+  if(state.pendingBezEffect?.type==='ruth_choice'){const title=document.createElement('strong');title.textContent='Dorfschmiedin Ruth – Schild wählen';root.appendChild(title);[['physical','+1 physischer Schild'],['astral','+1 ASTRAL-Schild']].forEach(([id,label])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>{const rr=E().resolveRuthChoice(state,id);saveRender(rr.msg)};root.appendChild(b)});return;}
+  if(state.pendingBezEffect?.type==='ehris_select'){const title=document.createElement('strong');title.textContent='Ehris Ohrringe – Oberwelt-Bezwingerin wählen';root.appendChild(title);E().ehrisTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.onclick=()=>{const rr=E().resolveEhrisSelection(state,t.id);saveRender(rr.msg)};root.appendChild(b)});return;}
   if(state.pendingBezEffect && ['laehmendes_nervengift','trank_der_staerke'].includes(state.pendingBezEffect.type)){
     const title=document.createElement('strong');
     title.textContent=state.pendingBezEffect.type==='laehmendes_nervengift'
@@ -885,7 +970,10 @@ function renderActions(){
         root.appendChild(info);
       }else{
         const info=document.createElement('span');
-        info.innerHTML=`Ziel gewählt. Wähle jetzt die Angriffsart für <strong>${esc(cardName(selectedAttackerRuntime()))}</strong>.`;
+        const selectedMeta=E().attackTargets(state,selectedAttacker).find(t=>t.type===selectedTarget.type&&t.slot===selectedTarget.slot);
+        info.innerHTML=selectedMeta?.vacationOwnerChoosesAttackType
+          ? `Urlaub erzwingt dieses Ziel. <strong>Der Besitzer von Urlaub</strong> bestimmt jetzt die Angriffsart für <strong>${esc(cardName(selectedAttackerRuntime()))}</strong>.`
+          : `Ziel gewählt. Wähle jetzt die Angriffsart für <strong>${esc(cardName(selectedAttackerRuntime()))}</strong>.`;
         root.appendChild(info);
 
         const physical=document.createElement('button');
@@ -1342,10 +1430,11 @@ function render(msg=''){
 document.getElementById('gameStart')?.addEventListener('click',startGame);
 document.getElementById('gameResume')?.addEventListener('click',resumeGame);
 document.getElementById('gameNew')?.addEventListener('click',newGame);
-document.getElementById('gameNextPhase')?.addEventListener('click',()=>{
+document.getElementById('gameNextPhase')?.addEventListener('click',async()=>{
   if(!state)return;
+  if(phase()?.id==='end')return animateRoundHandoff();
   const r=E().advancePhase(state);
-  selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;refugeActionSelected=false;
+  selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;selectedAttackType=null;refugeActionSelected=false;
   saveRender(r.msg||'');
 });
 

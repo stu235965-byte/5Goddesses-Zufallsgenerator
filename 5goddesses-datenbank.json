@@ -3807,10 +3807,11 @@
         }
       ],
       "tags": [
-        "schild"
+        "schild",
+        "implementiert-v1.44"
       ],
       "effekt_symbol": "permanent",
-      "effekt_text": "Die ausgerüstete Bezwingerin erhält +1 physischen und +1 ASTRAL-Schild."
+      "effekt_text": "Solange ausgerüstet erhält die Bezwingerin +1 physischen Schild und +1 ASTRAL-Schild."
     },
     {
       "id": "1.01-31-32-9e8ce748",
@@ -3836,8 +3837,35 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "duration",
+          "engine_key": "urlaub_forced_opposite_attack",
+          "dauer_kr": 2,
+          "opposite_enemy_bez_must_attack": true,
+          "attack_type_chosen_by": "urlaub_owner",
+          "weapon_slot_locked": true
+        },
+        {
+          "trigger": "on_equip",
+          "engine_key": "urlaub_on_equip",
+          "target": "equipped_bez",
+          "set_physical_shield": 0,
+          "set_astral_shield": 0,
+          "discard_other_equipment": true
+        }
+      ],
+      "tags": [
+        "kampfrundendauer",
+        "zwangsangriff",
+        "gegenüber",
+        "waffensperre",
+        "on-play",
+        "rüstung"
+      ],
+      "effekt_symbol": "duration+on_play",
+      "effekt_dauer_kr": 2,
+      "effekt_text": "Für 2 eigene Kampfrunden: Die gegnerische Bezwingerin direkt gegenüber der ausgerüsteten Bezwingerin muss, wenn sie in ihrer Kampfrunde kämpft und es möglich ist, die Urlaub-Trägerin angreifen. Der Besitzer von Urlaub bestimmt bei jedem erzwungenen Angriff neu die Angriffsart. Solange dieser Zeiteffekt aktiv ist, kann die Urlaub-Trägerin keine Waffe ausrüsten. Beim Anlegen: Setze ihren physischen und ASTRAL-Schild auf 0 und lege alle anderen an ihr angelegten Ausrüstungen auf die Ablage."
     },
     {
       "id": "1.01-32-32-32c67d98",
@@ -3866,28 +3894,23 @@
       "effekte": [
         {
           "trigger": "activated",
-          "engine_key": "ruth_kaufladen",
-          "target": "own_bez",
-          "cost_honor_on_target": 1,
-          "charges": 3,
+          "engine_key": "ruth_shop",
+          "uses": 3,
           "once_per_round": true,
-          "phases": [
+          "activation_phases": [
             "supply",
             "resupply"
           ],
-          "choice": [
-            "physicalShield",
-            "astralShield"
-          ],
-          "cannot_attack_this_round": true
+          "cost_from_target_honor": 1
         }
       ],
       "tags": [
         "ladungen",
-        "kaufladen"
+        "kaufladen",
+        "implementiert-v1.44"
       ],
       "effekt_symbol": "charges",
-      "effekt_text": "Einmal pro Kampfrunde kann eine eigene Bezwingerin, die in dieser KR noch nicht gekämpft hat, 1 Ehre bezahlen und +1 physischen oder +1 ASTRAL-Schild erhalten. Danach kann sie in dieser KR nicht angreifen.",
+      "effekt_text": "Einmal pro Kampfrunde kann eine eigene Bezwingerin, die in dieser Kampfrunde noch nicht gekämpft hat, 1 Ehre bezahlen und +1 physischen oder +1 ASTRAL-Schild erhalten. Danach kann diese Bezwingerin in dieser Kampfrunde nicht angreifen.",
       "effekt_zaehler_max": 3
     },
     {
@@ -3917,7 +3940,7 @@
       "effekte": [
         {
           "trigger": "continuous",
-          "engine_key": "victores_shield",
+          "engine_key": "victores_physical_shield",
           "physicalShield": 1
         },
         {
@@ -3928,10 +3951,11 @@
       ],
       "tags": [
         "schild",
-        "ehre"
+        "ehre",
+        "implementiert-v1.44"
       ],
       "effekt_symbol": "permanent+on_play",
-      "effekt_text": "Die ausgerüstete Bezwingerin erhält dauerhaft durch die Ausrüstung +1 physischen Schild. Beim Anlegen erhält sie einmalig +1 Ehre."
+      "effekt_text": "Solange ausgerüstet erhält die Bezwingerin +1 physischen Schild. Beim Anlegen erhält sie einmalig +1 Ehre."
     },
     {
       "id": "1.03-02-32-38e3f5fb",
@@ -3994,10 +4018,11 @@
       ],
       "tags": [
         "ehre",
-        "kombination"
+        "kombination",
+        "implementiert-v1.44"
       ],
       "effekt_symbol": "permanent",
-      "effekt_text": "Ist die ausgerüstete Bezwingerin zusätzlich mit Glorreicher Helm Victores ausgerüstet, erhält sie in der eigenen Kampfrunde nach jeder ihrer abgeschlossenen Kampfphasen +1 Ehre."
+      "effekt_text": "Falls die Bezwingerin gleichzeitig mit Glorreicher Helm Victores ausgerüstet ist, erhält sie in deiner Kampfrunde nach jeder ihrer abgeschlossenen Kampfphasen 1 Ehre."
     },
     {
       "id": "1.03-04-32-1a4b4379",
@@ -4029,15 +4054,16 @@
           "engine_key": "titan_refuge_redirect",
           "target": "own_refuge",
           "optional": true,
-          "overflow_to_original_target": true
+          "overflow_to_original": true
         }
       ],
       "tags": [
         "schadensumleitung",
-        "zuflucht"
+        "zuflucht",
+        "implementiert-v1.44"
       ],
       "effekt_symbol": "permanent",
-      "effekt_text": "Schaden an der eigenen Zuflucht kann auf T.I.T.A.N. umgeleitet werden. Überschüssiger Schaden wird der Zuflucht zugefügt."
+      "effekt_text": "Schaden, der deiner Zuflucht zugefügt wird, kann auf T.I.T.A.N. umgeleitet werden. Überschüssiger Schaden wird deiner Zuflucht zugefügt."
     },
     {
       "id": "1.03-05-32-958b7be8",
@@ -4067,21 +4093,22 @@
         {
           "trigger": "continuous",
           "engine_key": "ehris_ohrringe",
+          "duration_own_rounds": 3,
           "requires_own_faction_bez": {
             "fraktion": "Oberwelt",
             "min": 2
           },
-          "choose_one": true,
           "wonder_cost_delta": -1
         }
       ],
       "tags": [
         "reliquie",
         "oberwelt",
-        "wunderkosten"
+        "wunderkosten",
+        "implementiert-v1.44"
       ],
       "effekt_symbol": "duration",
-      "effekt_text": "Wenn mindestens zwei eigene Oberwelt-Bezwingerinnen auf dem Feld liegen, wähle eine davon. Ihre Wunderkosten sind um 1 Ehre reduziert, solange die Bedingung erfüllt und die Reliquie offen liegt.",
+      "effekt_text": "Wenn sich auf deiner Spielfeldseite zwei oder mehr Bezwingerinnen aus der Oberwelt befinden, wähle eine von ihnen. Reduziere ihre Wunder-Kosten um 1 Ehre. Der Effekt bleibt aktiv, solange die Bedingung erfüllt ist und die Karte offen auf dem Spielfeld liegt.",
       "effekt_dauer_kr": 3
     },
     {
@@ -4113,21 +4140,22 @@
           "trigger": "on_equip",
           "engine_key": "hyhde_temp_astral",
           "astral_delta": 1,
-          "until_next_supply": true
+          "until_next_supply": true,
+          "duration_until": "next_supply_start"
         },
         {
           "trigger": "continuous",
-          "engine_key": "hyhde_allows_jakyl_shield",
-          "allows_card": "Die Morgenröte Jakyl",
-          "slot": "shield"
+          "engine_key": "hyhde_allows_jakyl_shield"
         }
       ],
       "tags": [
         "zeit",
-        "sonderausrüstung"
+        "sonderausrüstung",
+        "implementiert-v1.44"
       ],
       "effekt_symbol": "duration+permanent",
-      "effekt_text": "Die ausgerüstete Bezwingerin erhält bis zum Anfang der nächsten eigenen Versorgungsphase +1 ASTRAL-Stärke. Solange Hyhde ausgerüstet ist, darf Die Morgenröte Jakyl als Schild ausgerüstet werden."
+      "effekt_text": "Die ausgerüstete Bezwingerin erhält bis zum Anfang deiner nächsten Versorgungsphase +1 ASTRAL-Stärke. Solange Hyhde ausgerüstet ist, darf dieselbe Bezwingerin Die Morgenröte Jakyl als Schild ausrüsten.",
+      "effekt_dauer_kr": null
     },
     {
       "id": "1.03-07-32-da49cc07",
@@ -4158,21 +4186,22 @@
           "trigger": "on_equip",
           "engine_key": "jakyl_temp_physical",
           "physical_delta": 1,
-          "until_next_supply": true
+          "until_next_supply": true,
+          "duration_until": "next_supply_start"
         },
         {
           "trigger": "continuous",
-          "engine_key": "jakyl_allows_hyhde_shield",
-          "allows_card": "Die Abenddämmerung Hyhde",
-          "slot": "shield"
+          "engine_key": "jakyl_allows_hyhde_shield"
         }
       ],
       "tags": [
         "zeit",
-        "sonderausrüstung"
+        "sonderausrüstung",
+        "implementiert-v1.44"
       ],
       "effekt_symbol": "duration+permanent",
-      "effekt_text": "Die ausgerüstete Bezwingerin erhält bis zum Anfang der nächsten eigenen Versorgungsphase +1 physische Stärke. Solange Jakyl ausgerüstet ist, darf Die Abenddämmerung Hyhde als Schild ausgerüstet werden."
+      "effekt_text": "Die ausgerüstete Bezwingerin erhält bis zum Anfang deiner nächsten Versorgungsphase +1 physische Stärke. Solange Jakyl ausgerüstet ist, darf dieselbe Bezwingerin Die Abenddämmerung Hyhde als Schild ausrüsten.",
+      "effekt_dauer_kr": null
     },
     {
       "id": "1.03-08-32-7dedc4d6",

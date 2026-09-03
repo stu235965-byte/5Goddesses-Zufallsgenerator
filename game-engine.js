@@ -130,6 +130,29 @@ function fieldArea(c){
   if(b.includes('sekundär') || b.includes('sekundaer'))return 'secondary';
   return null;
 }
+function isJakyl(c){return c?.name==='Die Morgenröte Jakyl'}
+function isHyhde(c){return c?.name==='Die Abenddämmerung Hyhde'}
+function pairedTwilightName(c){return isJakyl(c)?'Die Abenddämmerung Hyhde':isHyhde(c)?'Die Morgenröte Jakyl':null}
+function canUseWeaponAsShield(p,bezSlot,c){if(!c||!(isJakyl(c)||isHyhde(c)))return false;const wc=cardData(p.equipment?.[bezSlot]?.weapon);return pairedTwilightName(c)===wc?.name}
+function effectiveWonderCost(state,playerIndex,r){const c=cardData(r);let cost=Number(r?.wonderCostCurrent??c?.wunder?.kosten_ehre??0);const p=state.players[playerIndex];const earrings=(p.azr||[]).find(x=>x&&!x.faceDown&&!x.effectDisabled&&cardData(x)?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'));if(earrings){const ober=(p.bezSlots||[]).filter(x=>x&&cardData(x)?.fraktion==='Oberwelt');if(ober.length>=2&&earrings.effectState?.selectedBezBild===r?.bild)cost-=1;}return Math.max(0,cost)}
+function activeUrlaubArmor(p,bezSlot){
+  const armor=p?.equipment?.[bezSlot]?.armor;
+  const c=cardData(armor);
+  if(!armor || c?.name!=='Urlaub')return null;
+  if(armor.effectDisabled)return null;
+  if(armor.effectRoundsRemaining===null || armor.effectRoundsRemaining===undefined)return null;
+  if(Number(armor.effectRoundsRemaining)<=0)return null;
+  return armor;
+}
+function activeUrlaubConstraint(state,attackerPlayerIndex,attackerSlot){
+  const defender=state.players[1-attackerPlayerIndex];
+  const targetSlot=oppositeBezSlot(attackerSlot);
+  const target=defender?.bezSlots?.[targetSlot];
+  if(!target)return null;
+  const armor=activeUrlaubArmor(defender,targetSlot);
+  if(!armor)return null;
+  return {slot:targetSlot,target,armor,ownerIndex:defender.index};
+}
 function equipmentLabel(kind){
   return ({weapon:'Waffe',shield:'Schild',armor:'Rüstung',helmet:'Kopfschutz'})[kind]||kind;
 }
@@ -923,6 +946,7 @@ function expireTimedFieldCardNow(state,x){
    return;
  }
  if(isAstralFragment(c)){destroyFieldRuntime(state,x,'nach Ablauf der Kampfrundendauer zerstört');startNextFragmentReward(state);return;}
+ if(c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe')){destroyFieldRuntime(state,x,'nach Ablauf der Kampfrundendauer zerstört');return;}
  x.r.effectDisabled=true;
 }
 function thalZirisTargets(state){
@@ -1524,6 +1548,10 @@ function tickBezEffectDurations(state){
  }
 }
 
+function ehrisTargets(state,playerIndex=state.activePlayer){const p=state.players[playerIndex];return (p.bezSlots||[]).map((r,i)=>r&&cardData(r)?.fraktion==='Oberwelt'?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean)}
+function startEhrisSelection(state,azrSlot){const p=active(state),r=p.azr[azrSlot],c=cardData(r);if(!r||r.faceDown||!c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'))return {ok:false,msg:'Ehris Ohrringe liegen hier nicht offen.'};const t=ehrisTargets(state,p.index);if(t.length<2){r.effectState.selectedBezBild=null;return {ok:true,msg:'Rabatt wird aktiv, sobald zwei Oberwelt-Bezwingerinnen vorhanden sind.'};}state.pendingBezEffect={type:'ehris_select',sourcePlayer:p.index,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine Oberwelt-Bezwingerin.'}}
+function resolveEhrisSelection(state,id){const q=state.pendingBezEffect,p=state.players[q?.sourcePlayer],r=p?.azr?.[q?.sourceAzrSlot],b=p?.bezSlots?.[Number(id)];if(q?.type!=='ehris_select'||!r||!b||cardData(b)?.fraktion!=='Oberwelt'||ehrisTargets(state,p.index).length<2)return {ok:false,msg:'Ungültige Auswahl.'};r.effectState=r.effectState||{};r.effectState.selectedBezBild=b.bild;state.pendingBezEffect=null;return {ok:true,msg:'Ehris Rabatt gewählt.'}}
+function maintainEhris(state){for(const p of state.players)for(let i=0;i<(p.azr||[]).length;i++){const r=p.azr[i],c=cardData(r);if(!r||r.faceDown||r.effectDisabled||!c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'))continue;const t=ehrisTargets(state,p.index),sel=(p.bezSlots||[]).find(b=>b&&b.bild===r.effectState?.selectedBezBild);if(t.length<2)r.effectState.selectedBezBild=null;else if(!sel&&p.index===state.activePlayer&&['supply','resupply'].includes(currentPhase(state).id)&&!state.pendingBezEffect)state.pendingBezEffect={type:'ehris_select',sourcePlayer:p.index,sourceAzrSlot:i};}}
 function isInstantRuestkammerItem(c){
   return c?.deck_bereich==='ruestkammer' && c?.kartentyp==='Gegenstand' &&
     c?.effekte?.some(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke'].includes(e.engine_key));
@@ -1666,11 +1694,18 @@ function playOpenAzr(state,handIndex,slot){
   if(c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe')){
     r.effectRoundsRemaining=3;r.effectState=r.effectState||{};r.effectState.durationOwnRounds=true;
   }
+  if(c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe')){r.effectRoundsRemaining=3;r.effectState=r.effectState||{};}
   p.azr[slot]=r;
   log(state,`${p.name} spielt ${c.name} offen in die ASTRAL-/Rüstkammer-Zone.${c?.effekte?.some(e=>e.engine_key==='fluestern_brut')?' Kampfrundendauer: 2 eigene KR.':''}`);
+  if(c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'))return startEhrisSelection(state,slot);
   if(isInstantRuestkammerItem(c))return startInstantRuestkammerItem(state,p.index,slot);
   return {ok:true};
 }
+function isRuth(r){return cardData(r)?.effekte?.some(e=>e.engine_key==='ruth_shop')}
+function ruthTargets(state){const p=active(state),r=state.sharedPrimary;if(!r||r.owner!==p.index||!isRuth(r)||!['supply','resupply'].includes(currentPhase(state).id)||(r.effectUsesRemaining??0)<=0||r.effectUsedTurn===p.turnCount)return [];return p.bezSlots.map((b,i)=>b&&b.attackedTurn!==p.turnCount&&Number(b.honor||0)>=1?{id:String(i),name:cardData(b)?.name||'Bezwingerin'}:null).filter(Boolean)}
+function startRuthEffect(state){const p=active(state),r=state.sharedPrimary;if(!r||r.owner!==p.index||!isRuth(r))return {ok:false,msg:'Ruth liegt nicht in deinem Primärbereich.'};if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Ruth kann nur in VP oder NP genutzt werden.'};if(r.effectUsedTurn===p.turnCount)return {ok:false,msg:'Ruth wurde in dieser KR bereits genutzt.'};if((r.effectUsesRemaining??0)<=0)return {ok:false,msg:'Ruth besitzt keine Ladungen mehr.'};if(!ruthTargets(state).length)return {ok:false,msg:'Keine Bezwingerin erfüllt Ruths Bedingungen.'};state.pendingBezEffect={type:'ruth_target',sourcePlayer:p.index};return {ok:true,pending:true,msg:'Wähle eine Bezwingerin.'}}
+function resolveRuthTarget(state,id){const p=active(state),r=state.sharedPrimary,b=p.bezSlots[Number(id)];if(state.pendingBezEffect?.type!=='ruth_target'||!r||!isRuth(r)||!b)return {ok:false,msg:'Ungültige Auswahl.'};if(b.attackedTurn===p.turnCount||Number(b.honor||0)<1)return {ok:false,msg:'Diese Bezwingerin kann Ruth nicht nutzen.'};state.pendingBezEffect={type:'ruth_choice',sourcePlayer:p.index,targetSlot:Number(id)};return {ok:true,pending:true,msg:'Wähle einen Schild.'}}
+function resolveRuthChoice(state,choice){const p=active(state),pend=state.pendingBezEffect,r=state.sharedPrimary,b=p.bezSlots[pend?.targetSlot];if(pend?.type!=='ruth_choice'||!r||!isRuth(r)||!b||!['physical','astral'].includes(choice))return {ok:false,msg:'Ungültige Auswahl.'};if(Number(b.honor||0)<1)return {ok:false,msg:'Nicht genug Ehre.'};b.honor--;if(choice==='physical')b.physicalShield=Number(b.physicalShield||0)+1;else b.astralShield=Number(b.astralShield||0)+1;b.effectState=b.effectState||{};b.effectState.ruthCannotAttackTurn=p.turnCount;r.effectUsesRemaining=Math.max(0,Number(r.effectUsesRemaining||0)-1);r.effectUsedTurn=p.turnCount;state.pendingBezEffect=null;return {ok:true,msg:'Ruths Effekt ausgeführt.'}}
 function playFieldFromHand(state,handIndex,area){
   const p=active(state);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Primär- und Sekundärkarten können nur in Versorgungs- oder Nachschubphase ausgespielt werden.'};
@@ -1689,6 +1724,7 @@ function playFieldFromHand(state,handIndex,area){
   r.faceDown=false;
   if(c?.effekte?.some(e=>e.engine_key==='ruth_kaufladen')){r.effectUsesRemaining=3;r.effectUsedTurn=null;}
 
+  if(c?.effekte?.some(e=>e.engine_key==='ruth_shop'))r.effectUsesRemaining=3;
   if(area==='primary')state.sharedPrimary=r;
   else p.secondary=r;
 
@@ -1737,6 +1773,9 @@ function equipRuntimeToBez(state,p,r,bezSlot,kind){
   ensureEquipmentState(p);
   if(!p.bezSlots[bezSlot])return {ok:false,msg:'In diesem Bereich liegt keine Bezwingerin.'};
   const c=cardData(r);
+  if(kind==='weapon' && activeUrlaubArmor(p,bezSlot)){
+    return {ok:false,msg:'Solange Urlaub aktiv ist, kann diese Bezwingerin keine Waffe ausrüsten.'};
+  }
   const actualKind=equipmentKind(c);
   const specialPair=(kind==='shield'&&actualKind==='weapon'&&(
     (c?.name==='Die Abenddämmerung Hyhde'&&cardData(p.equipment?.[bezSlot]?.weapon)?.name==='Die Morgenröte Jakyl')||
@@ -1800,6 +1839,29 @@ function equipRuntimeToBez(state,p,r,bezSlot,kind){
     log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält durch den Blitz-Effekt +1 Ehre.`);
   }
 
+  if(c?.effekte?.some(e=>e.engine_key==='urlaub_on_equip')){
+    const bez=p.bezSlots[bezSlot];
+
+    // Urlaub bleibt selbst als Rüstung liegen; alle ANDEREN Ausrüstungen gehen auf die Ablage.
+    for(const otherKind of ['weapon','shield','helmet']){
+      const other=p.equipment?.[bezSlot]?.[otherKind];
+      if(other){
+        discardRuntime(p,other);
+        p.equipment[bezSlot][otherKind]=null;
+        log(state,`${cardData(other)?.name||'Ausrüstung'} wird durch Urlaub abgelegt.`);
+      }
+    }
+
+    // Karten-/Marken-Schildwerte der Bezwingerin selbst werden hart auf 0 gesetzt.
+    bez.physicalShield=0;
+    bez.astralShield=0;
+
+    r.effectRoundsRemaining=2;
+    r.effectDisabled=false;
+    r.effectState=r.effectState||{};
+    log(state,`${c.name}: physischer und ASTRAL-Schild von ${cardData(bez)?.name||'Bezwingerin'} werden auf 0 gesetzt; Kampfrundendauer 2.`);
+  }
+
   if(c?.effekte?.some(e=>e.engine_key==='parierdolch_dodge')){
     r.effectState=r.effectState||{};
     r.effectState.counterDodgeUses=1;
@@ -1819,12 +1881,14 @@ function equipFromHand(state,handIndex,bezSlot,kind){
   const p=active(state);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Ausrüstungen können nur in Versorgungs- oder Nachschubphase angelegt werden.'};
   const bild=p.hand[handIndex],c=dbCard(bild);
-  if(!c || equipmentKind(c)!==kind)return {ok:false,msg:'Diese Handkarte gehört nicht in diesen Ausrüstungsbereich.'};
+  if(!c || (equipmentKind(c)!==kind && !(kind==='shield'&&equipmentKind(c)==='weapon'&&canUseWeaponAsShield(p,bezSlot,c))))return {ok:false,msg:'Diese Handkarte gehört nicht in diesen Ausrüstungsbereich.'};
   if(!p.bezSlots[bezSlot])return {ok:false,msg:'Hier liegt keine Bezwingerin, an die die Ausrüstung angelegt werden kann.'};
 
-  p.hand.splice(handIndex,1);
   const r=makeRuntimeCard(bild,p.index,p.turnCount);
-  return equipRuntimeToBez(state,p,r,bezSlot,kind);
+  const result=equipRuntimeToBez(state,p,r,bezSlot,kind);
+  // Eine wegen Kartenregeln unzulässige Ausrüstung darf nicht aus der Hand verschwinden.
+  if(result.ok)p.hand.splice(handIndex,1);
+  return result;
 }
 function equipFromAzr(state,azrSlot,bezSlot,kind){
   const p=active(state);
@@ -1832,7 +1896,7 @@ function equipFromAzr(state,azrSlot,bezSlot,kind){
   const r=p.azr[azrSlot];
   if(!r || r.faceDown)return {ok:false,msg:'Die Ausrüstung muss zuerst aufgedeckt werden.'};
   const c=cardData(r);
-  if(!c || equipmentKind(c)!==kind)return {ok:false,msg:'Diese Karte gehört nicht in diesen Ausrüstungsbereich.'};
+  if(!c || (equipmentKind(c)!==kind && !(kind==='shield'&&equipmentKind(c)==='weapon'&&canUseWeaponAsShield(p,bezSlot,c))))return {ok:false,msg:'Diese Karte gehört nicht in diesen Ausrüstungsbereich.'};
 
   const result=equipRuntimeToBez(state,p,r,bezSlot,kind);
   if(result.ok){
@@ -1841,6 +1905,7 @@ function equipFromAzr(state,azrSlot,bezSlot,kind){
   }
   return result;
 }
+function normalizeTwilightPairAfterRemoval(state,p,bezSlot,removed){const rc=cardData(removed);if(!(isJakyl(rc)||isHyhde(rc)))return;const shield=p.equipment?.[bezSlot]?.shield,sc=cardData(shield);if(!shield||pairedTwilightName(rc)!==sc?.name)return;p.equipment[bezSlot].shield=null;if(!p.equipment[bezSlot].weapon){p.equipment[bezSlot].weapon=shield;log(state,`${sc.name} wird automatisch vom Schild- in den Waffen-Slot verschoben.`);}else{discardRuntime(p,shield);log(state,`${sc.name} kann nicht in den belegten Waffen-Slot wechseln und wird abgelegt.`);}}
 function discardEquipment(state,bezSlot,kind){
   const p=active(state);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Ausrüstungen können nur in Versorgungs- oder Nachschubphase freiwillig abgelegt werden.'};
@@ -2070,6 +2135,21 @@ function attackTargets(state,attackerSource){
     }
   }
 
+  // Urlaub: Die direkt gegenüberliegende gegnerische Bezwingerin muss die
+  // Urlaub-Trägerin angreifen, falls sie kämpft und dies nicht durch einen
+  // bereits zwingenden Zieleffekt unmöglich wird. Die Angriffsart bestimmt
+  // der Besitzer von Urlaub bei jedem Kampf neu.
+  if(src.kind==='bez'){
+    const uc=activeUrlaubConstraint(state,active(state).index,src.slot);
+    if(uc){
+      const vacationTarget=targets.find(t=>t.type==='bez' && t.slot===uc.slot);
+      const conflictingJeanne=forcedJeanneTarget && targetKey(forcedJeanneTarget)!==targetKey(vacationTarget||{});
+      if(vacationTarget && !conflictingJeanne){
+        return [{...vacationTarget,vacationOwnerChoosesAttackType:true,vacationOwnerIndex:uc.ownerIndex}];
+      }
+    }
+  }
+
   // Jeanne gilt nur, wenn Jeanne nach den übrigen Grundregeln tatsächlich
   // ein legales Ziel ist ("falls möglich").
   if(forcedJeanneTarget)return [forcedJeanneTarget];
@@ -2104,6 +2184,7 @@ function prepareAttack(state,attackerSource,target,attackType){
   if(!['physical','astral'].includes(attackType))return {ok:false,msg:'Ungültige Angriffsart.'};
   const legalTarget=attackTargets(state,attackerSource).find(t=>targetKey(t)===targetKey(target));
   if(legalTarget?.forcedAttackType && attackType!==legalTarget.forcedAttackType)return {ok:false,msg:'Arcadia erzwingt für diesen Kampf einen physischen Angriff.'};
+  const vacationTypeChoice=!!legalTarget?.vacationOwnerChoosesAttackType;
   const legal=!!legalTarget;
   if(!legal)return {ok:false,msg:'Dieses Angriffsziel ist nach der Grundregel nicht zulässig.'};
 
@@ -2123,8 +2204,8 @@ function prepareAttack(state,attackerSource,target,attackType){
     defenderConfirmed:false,
     revealedDuringDefense:false
   };
-  log(state,`${p.name} kündigt mit ${cardData(r)?.name||'einer Karte'} einen ${attackType==='physical'?'physischen':'ASTRAL'} Angriff an.`);
-  return {ok:true};
+  log(state,`${p.name} kündigt mit ${cardData(r)?.name||'einer Karte'} einen ${attackType==='physical'?'physischen':'ASTRAL'} Angriff an.${vacationTypeChoice?' Die Angriffsart wurde durch den Besitzer von Urlaub festgelegt.':''}`);
+  return {ok:true,vacationTypeChoice};
 }
 function defenderFaceDownSlots(state){
   if(!state.attack)return [];
@@ -2465,7 +2546,7 @@ function resolveCombat(state){
   if(a?.effectState?.primaryAttackActive)a.effectState.primaryAttackActive=false;
   if(target.type==='bez' && d?.effectState?.primaryAttackActive)d.effectState.primaryAttackActive=false;
 
-  // Primär/Sekundär/Zuflucht haben keine anliegende Bezwingerinnen-Ausrüstung
+// Primär/Sekundär/Zuflucht haben keine anliegende Bezwingerinnen-Ausrüstung
   // und werden deshalb weiterhin direkt abgewickelt.
   if(target.type!=='bez'){
     const dmg=target.type==='refuge'?applyDamageWithTitanOverflow(state,d,attackValue,type,opp):applyDamage(d,attackValue,type);
@@ -2521,6 +2602,7 @@ function resolveCombat(state){
 }
 function beginPhase(state){
   const p=active(state),phase=currentPhase(state);
+  maintainEhris(state);
   if(phase.id==='supply')releaseMiraDelayLocks(state);
   if(phase.id==='start'){
     tickBezEffectDurations(state);
@@ -2716,6 +2798,7 @@ window.G5Engine={
   startQueen2Wonder,queenStackTargets,resolveQueenSearch,queenDiscardTargets,resolveQueen2Discard,
   fragmentfresserSchlundTargets,startFragmentfresserSchlundEffect,resolveFragmentfresserSchlund,
   startInstantRuestkammerItem,instantRuestkammerTargets,resolveInstantRuestkammerTarget,
+  ruthTargets,startRuthEffect,resolveRuthTarget,resolveRuthChoice,ehrisTargets,startEhrisSelection,resolveEhrisSelection,effectiveWonderCost,
   startKristallharnischEffect,resolveKristallharnischEffect,
   triggerLebensfresserschildHunger,resolveLebensfresserschildHungerAtSupplyStart,
   activateDeathPrimaryAttack,hasPrimaryAttack,hasSecondaryAttack,
