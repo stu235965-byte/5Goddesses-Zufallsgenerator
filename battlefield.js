@@ -458,6 +458,24 @@ function renderActions(){
     });
     return;
   }
+  if(state.pendingBezEffect?.type==='kristallharnisch_choice'){
+    const title=document.createElement('strong');title.textContent='Kristallharnisch – Blitz-Effekt';root.appendChild(title);
+    const yes=document.createElement('button');yes.type='button';yes.textContent='1 ASTRAL-Stärke → +2 ASTRAL-Schilde';
+    yes.addEventListener('click',()=>{const rr=E().resolveKristallharnischEffect(state,true);saveRender(rr.msg);});root.appendChild(yes);
+    const no=document.createElement('button');no.type='button';no.textContent='Effekt nicht nutzen';
+    no.addEventListener('click',()=>{const rr=E().resolveKristallharnischEffect(state,false);saveRender(rr.msg);});root.appendChild(no);
+    return;
+  }
+  if(state.pendingBezEffect?.type==='fragmentfresser_schlund_discard'){
+    const title=document.createElement('strong');title.textContent='Fragmentfresser Schlund – ASTRALFRAGMENT aus Ablage wählen';root.appendChild(title);
+    E().fragmentfresserSchlundTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{
+      const b=document.createElement('button');b.type='button';b.textContent=t.name;
+      b.addEventListener('click',()=>{const rr=E().resolveFragmentfresserSchlund(state,t.id);saveRender(rr.msg);});root.appendChild(b);
+    });
+    const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Effekt nicht nutzen';
+    cancel.addEventListener('click',()=>{const rr=E().cancelPendingBezEffect(state);saveRender('Fragmentfresser Schlunds optionaler Effekt wurde nicht genutzt.');});root.appendChild(cancel);
+    return;
+  }
   if(state.pendingBezEffect?.type==='keyla2_discard'){
     const title=document.createElement('strong');title.textContent='Keyla Dorn – ASTRALFRAGMENT aus Ablage wählen';root.appendChild(title);
     E().keyla2DiscardTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{

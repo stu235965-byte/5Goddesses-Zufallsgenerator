@@ -746,8 +746,72 @@ function startNemesisWonder(state,slot){
  log(state,`Nemesis wirkt ihr Wunder für ${cost} Ehre.`);
  return {ok:true,pending:true,msg:'Wähle einen freien Bereich für den Mornak-Brut-Token.'};
 }
+function isLebensfresserschildHunger(c){
+  return !!c?.effekte?.some(e=>e.engine_key==='lebensfresserschild_hunger_cycle');
+}
+
+function equippedBezForRuntime(state,x){
+  if(!x || x.zone!=='equipment')return null;
+  const p=state.players[x.playerIndex];
+  const r=p?.bezSlots?.[x.slot];
+  return r ? {p,r,slot:x.slot} : null;
+}
+
+function triggerLebensfresserschildHunger(state,x,reason='Kampfrundendauer 0'){
+  const c=cardData(x?.r);
+  if(!x?.r || !isLebensfresserschildHunger(c))return {ok:false,msg:'Kein Lebensfresserschild-Hunger-Zyklus.'};
+
+  const equipped=equippedBezForRuntime(state,x);
+  if(!equipped){
+    // Ohne ausgerüstete Bezwingerin endet die Wiederholung.
+    x.r.effectRoundsRemaining=0;
+    x.r.effectDisabled=true;
+    return {ok:false,msg:'Keine ausgerüstete Bezwingerin mehr vorhanden.'};
+  }
+
+  const {p,r,slot}=equipped;
+  r.hearts=Number(r.hearts||0)-1;
+  log(state,`${c.name}: ${cardData(r)?.name||'Bezwingerin'} verliert 1 Herz (${r.hearts}) – ${reason}.`);
+
+  // Zuerst prüfen, ob der Herzverlust die Bezwingerin auf die Ablage schickt.
+  if(r.hearts<=0){
+    killIfNeeded(state,p.index,'bez',slot);
+    return {ok:true,ended:true,msg:'Lebensfresserschild Hunger hat die ausgerüstete Bezwingerin auf 0 Herzen gebracht.'};
+  }
+
+  // Solange die Bezwingerin (und damit die Ausrüstung) im Spiel bleibt,
+  // beginnt der wiederkehrende Zyklus erneut bei 2.
+  const stillEquipped=p.equipment?.[slot]?.shield===x.r;
+  if(stillEquipped){
+    x.r.effectRoundsRemaining=2;
+    x.r.effectDisabled=false;
+    x.r.effectState=x.r.effectState||{};
+    x.r.effectState.hungerPendingAtSupply=false;
+    log(state,`${c.name}: Kampfrundendauer beginnt erneut bei 2.`);
+  }
+  return {ok:true,msg:'Hunger-Zyklus ausgelöst.'};
+}
+
+function resolveLebensfresserschildHungerAtSupplyStart(state,p){
+  ensureEquipmentState(p);
+  for(let slot=0;slot<(p.equipment||[]).length;slot++){
+    const shield=p.equipment?.[slot]?.shield;
+    if(!shield)continue;
+    const c=cardData(shield);
+    if(!isLebensfresserschildHunger(c))continue;
+    if(Number(shield.effectRoundsRemaining)!==0 && !shield.effectState?.hungerPendingAtSupply)continue;
+
+    const x={playerIndex:p.index,zone:'equipment',slot,kind:'shield',r:shield};
+    triggerLebensfresserschildHunger(state,x,'Beginn der Versorgungsphase');
+  }
+}
+
 function expireTimedFieldCardNow(state,x){
  const c=cardData(x.r);
+ if(isLebensfresserschildHunger(c)){
+   triggerLebensfresserschildHunger(state,x,'Kampfrundendauer wurde auf 0 gesetzt');
+   return;
+ }
  if(c?.effekte?.some(e=>e.engine_key==='fluestern_brut')){
    destroyFieldRuntime(state,x,'nach Ablauf der eigenen Kampfrundendauer zerstört');
    return;
@@ -964,6 +1028,84 @@ function keyla2DestroyTargets(state){
     own:x.playerIndex===state.pendingBezEffect?.sourcePlayer
   }));
 }
+function fragmentfresserSchlundTargets(state,playerIndex){
+  const p=state.players[playerIndex];
+  return (p.discard||[]).map((entry,i)=>{
+    const bild=typeof entry==='string'?entry:entry?.bild;
+    const c=dbCard(bild);
+    return isAstralFragment(c)?{id:String(i),name:c.name,bild}:null;
+  }).filter(Boolean);
+}
+function startFragmentfresserSchlundEffect(state,playerIndex,equipmentRuntime,bezSlot){
+  const c=cardData(equipmentRuntime);
+  if(c?.effekte?.[0]?.engine_key!=='fragmentfresser_schlund')
+    return {ok:false,msg:'Diese Karte besitzt nicht den Fragmentfresser-Schlund-Effekt.'};
+
+  const targets=fragmentfresserSchlundTargets(state,playerIndex);
+  if(!targets.length){
+    log(state,`${c.name}: keine ASTRALFRAGMENT-Reliquie in der eigenen Ablage.`);
+    return {ok:true,skipped:true,msg:'Keine ASTRALFRAGMENT-Reliquie in deiner Ablage.'};
+  }
+
+  state.pendingBezEffect={
+    type:'fragmentfresser_schlund_discard',
+    sourcePlayer:playerIndex,
+    sourceEquipmentBild:equipmentRuntime.bild,
+    sourceBezSlot:bezSlot
+  };
+  log(state,`${c.name}: optionaler Blitz-Effekt – wähle bis zu 1 ASTRALFRAGMENT-Reliquie aus deiner Ablage.`);
+  return {ok:true,pending:true,optional:true,msg:'Du kannst 1 ASTRALFRAGMENT-Reliquie aus deiner Ablage auf die Hand nehmen.'};
+}
+function resolveFragmentfresserSchlund(state,index){
+  const pend=state.pendingBezEffect;
+  if(!pend||pend.type!=='fragmentfresser_schlund_discard')
+    return {ok:false,msg:'Keine Fragmentfresser-Schlund-Auswahl aktiv.'};
+
+  const p=state.players[pend.sourcePlayer],i=Number(index),entry=p.discard?.[i];
+  const bild=typeof entry==='string'?entry:entry?.bild,c=dbCard(bild);
+  if(!entry||!isAstralFragment(c))
+    return {ok:false,msg:'Diese Karte ist keine RELIQUIE vom Typ ASTRALFRAGMENT.'};
+
+  p.discard.splice(i,1);
+  p.hand.push(bild);
+  state.pendingBezEffect=null;
+  log(state,`Fragmentfresser Schlund: ${c.name} wurde aus der eigenen Ablage auf die Hand genommen.`);
+  return {ok:true,msg:`${c.name} wurde auf deine Hand genommen.`};
+}
+
+
+function startKristallharnischEffect(state,playerIndex,equipmentRuntime,bezSlot){
+  const p=state.players[playerIndex],bez=p?.bezSlots?.[bezSlot],c=cardData(equipmentRuntime);
+  if(!bez||!c?.effekte?.some(e=>e.engine_key==='kristallharnisch_tausch'))
+    return {ok:false,msg:'Kristallharnisch-Effekt ist nicht verfügbar.'};
+  if(Number(bez.astral||0)<1){
+    log(state,`${c.name}: Blitz-Effekt kann nicht genutzt werden, da die ausgerüstete Bezwingerin keine ASTRAL-Stärke besitzt.`);
+    return {ok:true,skipped:true,msg:'Für den optionalen Kristallharnisch-Effekt wird mindestens 1 ASTRAL-Stärke benötigt.'};
+  }
+  state.pendingBezEffect={type:'kristallharnisch_choice',sourcePlayer:playerIndex,sourceBezSlot:bezSlot,sourceEquipmentBild:equipmentRuntime.bild};
+  return {ok:true,pending:true,optional:true,msg:'Kristallharnisch: 1 ASTRAL-Stärke gegen +2 ASTRAL-Schilde tauschen?'};
+}
+function resolveKristallharnischEffect(state,useEffect){
+  const pend=state.pendingBezEffect;
+  if(!pend||pend.type!=='kristallharnisch_choice')return {ok:false,msg:'Keine Kristallharnisch-Auswahl aktiv.'};
+  const p=state.players[pend.sourcePlayer],bez=p?.bezSlots?.[pend.sourceBezSlot],armor=p?.equipment?.[pend.sourceBezSlot]?.armor;
+  if(!bez||!armor||armor.bild!==pend.sourceEquipmentBild){
+    state.pendingBezEffect=null;
+    return {ok:false,msg:'Kristallharnisch ist nicht mehr korrekt ausgerüstet.'};
+  }
+  if(!useEffect){
+    state.pendingBezEffect=null;
+    log(state,'Kristallharnisch: optionaler Blitz-Effekt wurde nicht genutzt.');
+    return {ok:true,msg:'Kristallharnisch-Effekt nicht genutzt.'};
+  }
+  if(Number(bez.astral||0)<1)return {ok:false,msg:'Die Bezwingerin besitzt nicht genügend ASTRAL-Stärke.'};
+  bez.astral=Number(bez.astral||0)-1;
+  bez.astralShield=Number(bez.astralShield||0)+2;
+  state.pendingBezEffect=null;
+  log(state,`Kristallharnisch: ${cardData(bez)?.name||'Bezwingerin'} verliert 1 ASTRAL-Stärke und erhält +2 ASTRAL-Schilde.`);
+  return {ok:true,msg:'−1 ASTRAL-Stärke, +2 ASTRAL-Schilde.'};
+}
+
 function keyla2DiscardTargets(state,playerIndex){
   const p=state.players[playerIndex];
   return (p.discard||[]).map((r,i)=>{
@@ -1073,30 +1215,71 @@ function tickFieldDurations(state){
     x.r.effectRoundsRemaining--;
     if(x.r.effectRoundsRemaining<=0){
       x.r.effectRoundsRemaining=0;
-      expireTimedFieldCardNow(state,x);
+      const c=cardData(x.r);
+      if(isLebensfresserschildHunger(c)){
+        x.r.effectState=x.r.effectState||{};
+        x.r.effectState.hungerPendingAtSupply=true;
+        log(state,`${c.name}: Kampfrundendauer erreicht 0; der Herzverlust wird zu Beginn der Versorgungsphase ausgelöst.`);
+      }else{
+        expireTimedFieldCardNow(state,x);
+      }
     }
   }
   startNextFragmentReward(state);
 }
-function awardEvelynBerserkerMarks(state,attackSnapshot){
+function awardBerserkerMarksAfterCombat(state,attackSnapshot){
   if(!attackSnapshot)return;
-  const refs=[];
-  const ap=state.players[attackSnapshot.attackerPlayer];
+
+  const participants=[];
+
   if(attackSnapshot.attackerKind==='bez'){
-    const r=ap?.bezSlots?.[attackSnapshot.attackerSlot];if(r)refs.push(r);
+    const p=state.players[attackSnapshot.attackerPlayer];
+    const r=p?.bezSlots?.[attackSnapshot.attackerSlot];
+    if(r)participants.push({
+      playerIndex:attackSnapshot.attackerPlayer,
+      bezSlot:attackSnapshot.attackerSlot,
+      r
+    });
   }
+
   if(attackSnapshot.targetType==='bez'){
-    const dp=state.players[attackSnapshot.defenderPlayer];
-    const r=dp?.bezSlots?.[attackSnapshot.defenderSlot];if(r)refs.push(r);
+    const p=state.players[attackSnapshot.defenderPlayer];
+    const r=p?.bezSlots?.[attackSnapshot.defenderSlot];
+    if(r)participants.push({
+      playerIndex:attackSnapshot.defenderPlayer,
+      bezSlot:attackSnapshot.defenderSlot,
+      r
+    });
   }
+
   const seen=new Set();
-  refs.forEach(r=>{
-    if(seen.has(r))return;seen.add(r);
-    if(cardData(r)?.effekte?.some(e=>e.engine_key==='evelyn_berserker')){
-      r.berserkerMarks=(r.berserkerMarks||0)+1;
-      log(state,`${cardData(r).name}: +1 Berserkermarke am Ende der Kampfphase (${r.berserkerMarks}).`);
+  for(const part of participants){
+    if(seen.has(part.r))continue;
+    seen.add(part.r);
+
+    let gained=0;
+    const reasons=[];
+
+    // Evelyns eigener Effekt.
+    if(cardData(part.r)?.effekte?.some(e=>e.engine_key==='evelyn_berserker')){
+      gained+=1;
+      reasons.push('Evelyn');
     }
-  });
+
+    // Schattenfluchkralle: permanenter Effekt, solange sie als Waffe
+    // genau an dieser Bezwingerin ausgerüstet ist.
+    const weapon=state.players[part.playerIndex]?.equipment?.[part.bezSlot]?.weapon;
+    const wc=cardData(weapon);
+    if(weapon && wc?.effekte?.some(e=>e.engine_key==='schattenfluchkralle_berserker')){
+      gained+=1;
+      reasons.push('Schattenfluchkralle');
+    }
+
+    if(gained>0){
+      part.r.berserkerMarks=Number(part.r.berserkerMarks||0)+gained;
+      log(state,`${cardData(part.r)?.name||'Bezwingerin'}: +${gained} Berserkermarke${gained===1?'':'n'} nach Abschluss der Kampfphase (${part.r.berserkerMarks})${reasons.length?` – ${reasons.join(' + ')}`:''}.`);
+    }
+  }
 }
 function startZahiraWonder(state,slot){
   const p=active(state),r=p.bezSlots[slot];
@@ -1351,7 +1534,33 @@ function equipRuntimeToBez(state,p,r,bezSlot,kind){
   initializeEquipmentCombatState(r,p);
   const prof=equipmentCombatProfile(r);
   log(state,`${p.name} legt ${c?.name||'eine Ausrüstung'} als ${equipmentLabel(kind)} an Bezwingerin ${bezSlot+1} an.`);
-  return {ok:true,needsShieldChoice:!!prof.shieldChoice && !r.shieldChoice};
+
+  let onPlayResult=null;
+  if(c?.effekte?.[0]?.engine_key==='fragmentfresser_schlund'){
+    onPlayResult=startFragmentfresserSchlundEffect(state,p.index,r,bezSlot);
+  }
+
+  if(c?.effekte?.some(e=>e.engine_key==='kristallharnisch_tausch')){
+    onPlayResult=startKristallharnischEffect(state,p.index,r,bezSlot);
+  }
+
+  if(c?.effekte?.some(e=>e.engine_key==='lebensfresserschild_hunger')){
+    const bez=p.bezSlots[bezSlot];
+    bez.hearts=1;
+    bez.physicalShield=Number(bez.physicalShield||0)+3;
+    r.effectRoundsRemaining=2;
+    r.effectDisabled=false;
+    r.effectState=r.effectState||{};
+    r.effectState.hungerPendingAtSupply=false;
+    log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} wird auf 1 Herz reduziert und erhält +3 physische Schilde. Kampfrundendauer: 2.`);
+  }
+
+  return {
+    ok:true,
+    needsShieldChoice:!!prof.shieldChoice && !r.shieldChoice,
+    pendingEffect:!!onPlayResult?.pending,
+    msg:onPlayResult?.msg
+  };
 }
 function equipFromHand(state,handIndex,bezSlot,kind){
   const p=active(state);
@@ -1839,7 +2048,7 @@ function finalizePendingCombat(state){
 
   const attack=state.attack;
   if(attack){
-    awardEvelynBerserkerMarks(state,{
+    awardBerserkerMarksAfterCombat(state,{
       attackerPlayer:pd.attackerIndex,attackerKind:pd.attackerKind||'bez',attackerSlot:pd.attackerSlot,
       defenderPlayer:pd.defenderIndex,targetType:pd.defKind,defenderSlot:pd.defSlot
     });
@@ -2044,6 +2253,7 @@ function beginPhase(state){
   }
   if(phase.id==='supply_start'){
     expireEquipmentCombatBonuses(state,p);
+    resolveLebensfresserschildHungerAtSupplyStart(state,p);
     log(state,`Anfang der Versorgungsphase von ${p.name}: unterstützte zeitlich begrenzte Ausrüstungsboni wurden geprüft.`);
   }
   return phase;
@@ -2213,6 +2423,9 @@ window.G5Engine={
   startZahiraWonder,startCassandraWonder,meniaDaggerTargets,resolveMeniaDagger,
   startPsiloWonder,psiloTargets,resolvePsiloTarget,keylaSearchTargets,resolveKeylaSearch,
   startQueen2Wonder,queenStackTargets,resolveQueenSearch,queenDiscardTargets,resolveQueen2Discard,
+  fragmentfresserSchlundTargets,startFragmentfresserSchlundEffect,resolveFragmentfresserSchlund,
+  startKristallharnischEffect,resolveKristallharnischEffect,
+  triggerLebensfresserschildHunger,resolveLebensfresserschildHungerAtSupplyStart,
   activateDeathPrimaryAttack,hasPrimaryAttack,hasSecondaryAttack,
   activateAliceDodge,startLilou2Wonder,lilou2Targets,resolveLilou2Discard,startBaronesse2Wonder,
   keyla2DestroyTargets,keyla2DiscardTargets,resolveKeyla2Choice,resolveKeyla2Destroy,resolveKeyla2Discard,

@@ -3058,8 +3058,23 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "after_combat_phase",
+          "engine_key": "schattenfluchkralle_berserker",
+          "target": "equipped_bez",
+          "condition": "equipped_bez_participated_in_combat",
+          "resource": "berserkerMarks",
+          "amount": 1,
+          "permanent_while_equipped": true
+        }
+      ],
+      "tags": [
+        "berserkermarke",
+        "kampfabschluss"
+      ],
+      "effekt_symbol": "permanent",
+      "effekt_text": "Wenn die ausgerüstete Bezwingerin einen Kampf durchführt, erhält sie nach Abschluss der Kampfphase 1 Berserkermarke."
     },
     {
       "id": "1.04-13-32-13781dbc",
@@ -3085,8 +3100,34 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "continuous",
+          "engine_key": "equipment_astral_shield",
+          "target": "equipped_bez",
+          "astralShield": 1,
+          "permanent_while_equipped": true
+        },
+        {
+          "trigger": "on_equip",
+          "engine_key": "kristallharnisch_tausch",
+          "target": "equipped_bez",
+          "optional": true,
+          "astral_delta": -1,
+          "astralShield_delta": 2
+        }
+      ],
+      "tags": [
+        "astral-schild",
+        "permanent",
+        "blitz",
+        "optional"
+      ],
+      "effekt_symbol": [
+        "permanent",
+        "on_play"
+      ],
+      "effekt_text": "Füge der ausgerüsteten Bezwingerin 1 ASTRAL-Schild hinzu. Beim Ausspielen kannst du dieser Bezwingerin 1 ASTRAL-Stärke abziehen, um ihr 2 ASTRAL-Schilde hinzuzufügen."
     },
     {
       "id": "1.04-14-32-7168e6d1",
@@ -3357,8 +3398,24 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "on_play",
+          "engine_key": "fragmentfresser_schlund",
+          "optional": true,
+          "source": "own_discard",
+          "target_kartentyp": "Reliquie",
+          "target_untertyp": "Astralfragment",
+          "move_to": "hand",
+          "amount": 1
+        }
+      ],
+      "tags": [
+        "astralfragment-suche",
+        "ablage-zu-hand"
+      ],
+      "effekt_symbol": "on_play",
+      "effekt_text": "Du kannst dir aus deiner Ablage eine RELIQUIE vom Typ ASTRALFRAGMENT suchen und diese auf deine Hand nehmen."
     },
     {
       "id": "1.04-32-32-36458e8f",
@@ -3384,8 +3441,36 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "on_equip",
+          "engine_key": "lebensfresserschild_hunger",
+          "target": "equipped_bez",
+          "set_hearts": 1,
+          "physicalShield_delta": 3
+        },
+        {
+          "trigger": "recurring_duration",
+          "engine_key": "lebensfresserschild_hunger_cycle",
+          "target": "equipped_bez",
+          "dauer_kr": 2,
+          "on_zero": {
+            "hearts_delta": -1
+          },
+          "reset_to": 2,
+          "repeat_while_equipped": true,
+          "natural_trigger_phase": "supply_start"
+        }
+      ],
+      "tags": [
+        "kampfrundendauer",
+        "wiederholend",
+        "herzverlust",
+        "physischer-schild"
+      ],
+      "effekt_symbol": "permanent",
+      "effekt_dauer_kr": 2,
+      "effekt_text": "Reduziere die Herzen der ausgerüsteten Bezwingerin auf 1 und füge ihr 3 physische Schilde hinzu. Zusätzlich verliert diese Bezwingerin nach jeweils 2 eigenen Kampfrunden zu Beginn der entsprechenden Versorgungsphase 1 Herz. Danach beginnt die Kampfrundendauer erneut bei 2, solange die Karte ausgerüstet ist."
     },
     {
       "id": "1.01-12-32-c6880e0f",
@@ -4032,8 +4117,21 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "continuous",
+          "engine_key": "equipment_astral_shield",
+          "target": "equipped_bez",
+          "astralShield": 1,
+          "permanent_while_equipped": true
+        }
+      ],
+      "tags": [
+        "astral-schild",
+        "permanent"
+      ],
+      "effekt_symbol": "permanent",
+      "effekt_text": "Füge der ausgerüsteten Bezwingerin 1 ASTRAL-Schild hinzu."
     },
     {
       "id": "1.02-05-32-7d0610e6",

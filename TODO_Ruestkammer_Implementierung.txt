@@ -1,0 +1,54 @@
+Rüstkammer – laufende Implementierung
+
+Fragmentfresser Schlund – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:
+- Waffe | Axt | Organisch
+- Blitz / beim tatsächlichen offenen Anlegen der Waffe.
+- Optional.
+- Durchsucht ausschließlich die eigene Ablage.
+- Gültig sind ausschließlich RELIQUIEN vom Typ ASTRALFRAGMENT.
+- Zeigt alle passenden ASTRALFRAGMENTE in der Ablage zur Auswahl.
+- Genau 1 gewählte Karte wird aus der Ablage entfernt und auf die eigene Hand genommen.
+- Bei 0 gültigen Zielen endet der Effekt ohne weitere Aktion.
+- Über „Effekt nicht nutzen“ kann die optionale Wirkung abgelehnt werden.
+- Funktioniert sowohl beim direkten Ausspielen aus der Hand als auch beim Aufdecken aus der AZR und anschließenden Anlegen.
+
+
+Schattenfluchkralle – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:
+- Waffe | Kralle | Eisen
+- Permanenter Effekt, solange die Waffe ausgerüstet ist.
+- Wenn die ausgerüstete Bezwingerin an einem tatsächlich abgewickelten Kampf beteiligt ist,
+  erhält diese Bezwingerin nach Abschluss der Kampfphase +1 Berserkermarke.
+- Gilt sowohl beim eigenen Angriff als auch bei einer Beteiligung als verteidigende Bezwingerin.
+- Die Marke wird auf der Bezwingerin gespeichert, nicht auf der Waffe.
+- Wird die Waffe später entfernt, bleiben bereits erhaltene Berserkermarken bestehen.
+- Evelyns eigener Berserkermarken-Effekt und Schattenfluchkralle sind getrennte Effekte:
+  Evelyn + Schattenfluchkralle = +2 Berserkermarken nach einem Kampf.
+- Nutzt dasselbe sichtbare berserkerMarks-System wie Evelyn.
+
+
+Mantel der Stille Dunkelglanz – FÜR SPÄTER DOKUMENTIERT:
+- Rüstkammer | Rüstung | Mantel | Seide | Astralwelt.
+- ∞ = permanenter Effekt, solange der Mantel ausgerüstet ist.
+- Die ausgerüstete Bezwingerin kann nicht als Ziel der auf der Karte bezeichneten
+  gegnerischen ASTRAL-Spruchkarten oder Gegenstandskarten gewählt werden.
+- Es handelt sich um eine Zielwahlsperre, nicht pauschal um Schadens-/Effektimmunität.
+- Keine Ladungen und keine zeitliche Begrenzung.
+- Schutz endet, sobald Dunkelglanz nicht mehr ausgerüstet ist.
+- Später gemeinsam mit Strikelyns zentraler Zielschutzprüfung implementieren,
+  sobald die betreffenden ASTRAL-/Rüstkammer-Zielsysteme vollständig vorhanden sind.
+
+
+Lebensfresserschild Hunger – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:
+- Rüstkammer | Schild | Wappenschild | Organisch | Astralwelt.
+- Beim Anlegen: aktuelle Herzen der ausgerüsteten Bezwingerin werden auf 1 gesetzt.
+- Beim Anlegen: die Bezwingerin erhält +3 physische Schilde.
+- Wiederkehrende Kampfrundendauer startet bei 2.
+- Nur eigene Kampfrunden der kontrollierenden Karte zählen herunter.
+- Beim natürlichen Erreichen von 0 wird der Herzverlust zu Beginn der dazugehörigen eigenen AVP ausgelöst.
+- Die ausgerüstete Bezwingerin verliert dann 1 Herz.
+- Überlebt sie, startet die Kampfrundendauer sofort wieder bei 2.
+- Dieser Zyklus wiederholt sich unbegrenzt, solange Schild und Bezwingerin zusammen im Spiel bleiben.
+- Fällt die Bezwingerin durch den Herzverlust auf 0 Herzen, wird sie samt Ausrüstung auf die Ablage gelegt; der Zyklus endet.
+- Thal Ziris kann die Kampfrundendauer verändern. Wird sie durch einen solchen Effekt direkt auf 0 gesetzt,
+  löst Hunger den Herzverlust sofort aus und startet bei Überleben wieder mit 2.
+- Die +3 physischen Schilde liegen auf der Bezwingerin selbst; bereits verbleibende Schildpunkte bleiben auch bei späterem Entfernen des Schildes bestehen.
