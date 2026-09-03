@@ -430,7 +430,15 @@ function resolveBezOnPlay(state,p,slot,r,c){
   }else if(key==='effrayer'){
     const other=p.bezSlots.find((x,i)=>i!==slot&&x&&isVengeresseCard(cardData(x)));
     if(other){other.honor=Number(other.honor||0)+1;log(state,`${c.name}: ${cardData(other)?.name||'andere Vengeresse'} erhält +1 Ehre.`)}
-  }else if(key==='amelia' && opp){opp.astralShield=Math.max(0,(opp.astralShield||0)-1);log(state,`${c.name}: Gegenüber verliert bis zu 1 ASTRAL-Schild.`)}
+  }else if(key==='amelia'){
+    const oi=oppositeBezSlot(slot),t=state.players[1-p.index].bezSlots?.[oi];
+    if(t){
+      t.astralShield=Math.max(0,Number(t.astralShield||0)-1);
+      log(state,`${c.name}: gegenüberliegende ${cardData(t)?.name||'Bezwingerin'} verliert bis zu 1 ASTRAL-Schild.`);
+    }else{
+      log(state,`${c.name}: keine gegnerische Bezwingerin direkt gegenüber.`);
+    }
+  }
   else if(key==='mira'){
     const targets=state.players[1-p.index].bezSlots.map((x,i)=>x?i:null).filter(i=>i!==null);
     if(targets.length)state.pendingBezEffect={type:'mira',sourcePlayer:p.index,sourceSlot:slot};
@@ -738,13 +746,20 @@ function resolveThalZiris(state,targetId,delta){
    return {ok:false,msg:'Dieses Ziel besitzt keine aktive Kampfrundendauer.'};
  if(target.playerIndex===pend.sourcePlayer && target.zone==='equipment' && target.kind==='weapon')
    return {ok:false,msg:'Eigene Waffen können von diesem Wunder nicht gewählt werden.'};
- const own=target.playerIndex===pend.sourcePlayer;
- const cost=2+(own?1:0);
+ const targetCard=cardData(target.r);
+ const isStage2=Number(targetCard?.stufe||target.r?.stufe||0)===2;
+ const cost=2+(isStage2?1:0);
  if((src.honor||0)<cost)return {ok:false,msg:`Für dieses Ziel werden ${cost} Ehre benötigt.`};
  src.honor-=cost;src.wonderTurn=p.turnCount;
  target.r.effectRoundsRemaining=Math.max(0,(target.r.effectRoundsRemaining||0)+delta);
- if(target.r.effectRoundsRemaining<=0){target.r.effectRoundsRemaining=0;target.r.effectDisabled=true;}
+ // Thal-Auswahl zuerst abschließen. Falls die Zielkarte bei 0 eine eigene
+ // Folgewirkung startet (z.B. ASTRALFRAGMENT), darf diese neue Pending-Auswahl
+ // nicht anschließend wieder gelöscht werden.
  state.pendingBezEffect=null;
+ if(target.r.effectRoundsRemaining<=0){
+   target.r.effectRoundsRemaining=0;
+   expireTimedFieldCardNow(state,target);
+ }
  const direction=delta>0?'erhöht':'verringert';
  log(state,`${c.name}: Kampfrundendauer von ${cardData(target.r)?.name||'Karte'} um 1 ${direction} (${target.r.effectRoundsRemaining} verbleibend). Kosten: ${cost} Ehre.`);
  return {ok:true,msg:`Kampfrundendauer um 1 ${direction}. Noch ${target.r.effectRoundsRemaining} Kampfrunde(n).`};
@@ -1134,7 +1149,16 @@ function resolveCheckedEffectTarget(state,id){
    src.honor-=3;src.wonderTurn=p.turnCount;t.hearts=(t.hearts||0)+1;state.pendingBezEffect=null;
    log(state,`${c.name}: ${cardData(t)?.name} erhält 1 Herz.`);return {ok:true,msg:'1 Herz hinzugefügt.'};
  }
- if(pend.type==='mira'){const t=enemy.bezSlots[Number(id)];if(!t)return {ok:false,msg:'Ungültiges Ziel.'};t.ready=false;t.effectState=t.effectState||{};t.effectState.delayLockedUntilSupply={sourcePlayer:pend.sourcePlayer,sourceTurn:p.turnCount+1};state.pendingBezEffect=null;log(state,`${c.name}: ${cardData(t)?.name} bleibt bis zum Beginn der nächsten eigenen VP in Einsatzverzögerung.`);return {ok:true,msg:'Einsatzverzögerung erzwungen.'};}
+ if(pend.type==='mira'){
+   const t=enemy.bezSlots[Number(id)];
+   if(!t)return {ok:false,msg:'Ungültiges Ziel.'};
+   t.ready=false;
+   t.effectState=t.effectState||{};
+   t.effectState.delayLockedUntilSupply={sourcePlayer:pend.sourcePlayer,sourceTurn:p.turnCount+1,sourceCardBild:src.bild};
+   state.pendingBezEffect=null;
+   log(state,`${c.name}: ${cardData(t)?.name} bleibt bis zum Beginn von ${p.name}s nächster VP in Einsatzverzögerung.`);
+   return {ok:true,msg:'Einsatzverzögerung bis zu deiner nächsten VP erzwungen.'};
+ }
  if(pend.type==='talisia2'){const t=enemy.bezSlots[Number(id)];if(!t||(t.astralShield||0)<1)return {ok:false,msg:'Ziel besitzt keinen ASTRAL-Schild.'};t.astralShield--;src.astralShield=(src.astralShield||0)+1;state.pendingBezEffect=null;log(state,`${c.name}: 1 ASTRAL-Schild übernommen.`);return {ok:true,msg:'1 ASTRAL-Schild auf Talisia übertragen.'};}
  if(pend.type==='talisia1_source'){let s=id==='refuge'?p.refuge:(String(id).startsWith('bez:')?p.bezSlots[Number(String(id).split(':')[1])]:null);if(!s||(s.astralShield||0)<1)return {ok:false,msg:'Quelle besitzt keinen ASTRAL-Schild.'};state.pendingBezEffect={...pend,type:'talisia1_target',sourceCardId:id};return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin, die 1 Herz erhält.'};}
  if(pend.type==='talisia1_target'){const t=p.bezSlots[Number(id)];if(!t)return {ok:false,msg:'Ungültiges Ziel.'};const sid=pend.sourceCardId;let s=sid==='refuge'?p.refuge:(String(sid).startsWith('bez:')?p.bezSlots[Number(String(sid).split(':')[1])]:null);if(!s||(s.astralShield||0)<1)return {ok:false,msg:'Quelle besitzt keinen ASTRAL-Schild mehr.'};if((src.honor||0)<2)return {ok:false,msg:'Talisia besitzt nicht mehr genügend Ehre.'};s.astralShield--;t.hearts=(t.hearts||0)+1;src.honor-=2;src.wonderTurn=p.turnCount;state.pendingBezEffect=null;log(state,`${c.name}: 1 ASTRAL-Schild in 1 Herz umgewandelt.`);return {ok:true,msg:'Talisias Wunder ausgeführt.'};}
@@ -1143,7 +1167,23 @@ function resolveCheckedEffectTarget(state,id){
 function startTalisia1Wonder(state,slot){
  const p=active(state),r=p.bezSlots[slot],c=cardData(r);if(c?.effekte?.[0]?.engine_key!=='talisia1')return {ok:false,msg:'Falsche Karte.'};if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder nur in VP oder NP.'};if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Wunder bereits benutzt.'};if((r.honor||0)<2)return {ok:false,msg:'Benötigt 2 Ehre.'};if(!(p.bezSlots.some(x=>x&&(x.astralShield||0)>0)||(p.refuge&&(p.refuge.astralShield||0)>0)))return {ok:false,msg:'Keine Quelle mit ASTRAL-Schild.'};state.pendingBezEffect={type:'talisia1_source',sourcePlayer:p.index,sourceSlot:slot};return {ok:true,pending:true,msg:'Wähle die Quelle des ASTRAL-Schildes.'};
 }
-function releaseMiraDelayLocks(state){const p=active(state);p.bezSlots.forEach(r=>{const lock=r?.effectState?.delayLockedUntilSupply;if(lock&&lock.sourcePlayer===p.index&&p.turnCount>=lock.sourceTurn){delete r.effectState.delayLockedUntilSupply;r.ready=true;log(state,`${cardData(r)?.name}: Miras Einsatzverzögerung endet.`);}});}
+function hasOtherDeploymentDelay(r){
+  if(!r)return false;
+  const es=r.effectState||{};
+  return !!(es.otherDeploymentDelay||es.externalDelayActive||es.delayLockedByOtherEffect);
+}
+function releaseMiraDelayLocks(state){
+  const sourcePlayer=active(state);
+  for(const owner of state.players){
+    for(const r of owner.bezSlots||[]){
+      const lock=r?.effectState?.delayLockedUntilSupply;
+      if(!lock||lock.sourcePlayer!==sourcePlayer.index||sourcePlayer.turnCount<lock.sourceTurn)continue;
+      delete r.effectState.delayLockedUntilSupply;
+      if(!hasOtherDeploymentDelay(r))r.ready=true;
+      log(state,`${cardData(r)?.name}: Miras Einsatzverzögerung endet zu Beginn von ${sourcePlayer.name}s VP.`);
+    }
+  }
+}
 function jeanneForcedTarget(state,attackerSource){const src=attackerKindAndSlot(attackerSource);if(src.kind!=='bez')return null;const p=active(state),opp=opponent(state),attacker=p.bezSlots[src.slot];if(!attacker)return null;const js=opp.bezSlots.map((r,i)=>r&&cardData(r)?.effekte?.[0]?.engine_key==='jeanne_taunt'?{r,slot:i}:null).filter(Boolean);for(const j of js){const n=Number(cardData(j.r)?.effekte?.[0]?.forced_attackers||0);if(n>=2)return {type:'bez',slot:j.slot,label:cardData(j.r)?.name};if(n===1&&p.bezSlots.filter(x=>x&&x.attackedTurn===p.turnCount).length===0)return {type:'bez',slot:j.slot,label:cardData(j.r)?.name};}return null;}
 
 function tickBezEffectDurations(state){
