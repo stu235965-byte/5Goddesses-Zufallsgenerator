@@ -1175,3 +1175,14 @@ h1{font-size:30px;margin:0 0 16px}
     transform:none !important;
   }
 }
+
+.builder-card.locked{
+  opacity:.46;
+  cursor:not-allowed;
+  filter:grayscale(.75);
+}
+.builder-card.locked:hover{transform:none}
+.builder-card-badge.locked-badge{
+  background:rgba(0,0,0,.82);
+  border-color:rgba(255,255,255,.35);
+}

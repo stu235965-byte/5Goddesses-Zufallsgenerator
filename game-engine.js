@@ -1242,6 +1242,16 @@ function expireTimedFieldCardNow(state,x){
  }
  if(isAstralFragment(c)){destroyFieldRuntime(state,x,'nach Ablauf der Kampfrundendauer zerstört');startNextFragmentReward(state);return;}
  if(c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe')){destroyFieldRuntime(state,x,'nach Ablauf der Kampfrundendauer zerstört');return;}
+ if(c?.effekte?.some(e=>e.engine_key==='kraken_lock')){
+   const p=state.players[x.playerIndex],slot=Number(x.slot);
+   ensureEquipmentState(p);
+   if(p.equipment?.[slot]?.helmet===x.r){
+     p.equipment[slot].helmet=null;
+     discardRuntime(p,x.r);
+     log(state,'Überwachungseinheit KRAKEN erreicht Kampfrundendauer 0 und wird auf den Ablagestapel gelegt.');
+   }
+   return;
+ }
  if(c?.effekte?.some(e=>e.engine_key==='astrana_suit_survival')){
    const p=state.players[x.playerIndex],slot=Number(x.slot);
    ensureEquipmentState(p);
@@ -1861,7 +1871,7 @@ function resolveEhrisSelection(state,id){const q=state.pendingBezEffect,p=state.
 function maintainEhris(state){for(const p of state.players)for(let i=0;i<(p.azr||[]).length;i++){const r=p.azr[i],c=cardData(r);if(!r||r.faceDown||r.effectDisabled||!c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'))continue;const t=ehrisTargets(state,p.index),sel=(p.bezSlots||[]).find(b=>b&&b.bild===r.effectState?.selectedBezBild);if(t.length<2)r.effectState.selectedBezBild=null;else if(!sel&&p.index===state.activePlayer&&['supply','resupply'].includes(currentPhase(state).id)&&!state.pendingBezEffect)state.pendingBezEffect={type:'ehris_select',sourcePlayer:p.index,sourceAzrSlot:i};}}
 function isInstantRuestkammerItem(c){
   return c?.deck_bereich==='ruestkammer' && c?.kartentyp==='Gegenstand' &&
-    c?.effekte?.some(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke','erlass_umverteilung','ueberladung','trank_der_astral_macht','die_kanone','skyflux_swap'].includes(e.engine_key));
+    c?.effekte?.some(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke','erlass_umverteilung','ueberladung','trank_der_astral_macht','die_kanone','skyflux_swap','portalbazooka_smashr'].includes(e.engine_key));
 }
 function discardAzrInstantItem(state,playerIndex,azrSlot){
   const p=state.players[playerIndex],r=p?.azr?.[azrSlot];
@@ -1978,7 +1988,7 @@ function ueberladungTargets(state,playerIndex){
 function startInstantRuestkammerItem(state,playerIndex,azrSlot){
   const p=state.players[playerIndex],r=p?.azr?.[azrSlot],c=cardData(r);
   if(!r||!isInstantRuestkammerItem(c))return {ok:false,msg:'Kein unterstützter Rüstkammer-Gegenstand.'};
-  const key=c.effekte.find(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke','erlass_umverteilung','ueberladung','trank_der_astral_macht','die_kanone','skyflux_swap'].includes(e.engine_key))?.engine_key;
+  const key=c.effekte.find(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke','erlass_umverteilung','ueberladung','trank_der_astral_macht','die_kanone','skyflux_swap','portalbazooka_smashr'].includes(e.engine_key))?.engine_key;
 
   if(key==='skyflux_swap'){
     const targets=(p.bezSlots||[]).map((x,i)=>{
@@ -1991,6 +2001,24 @@ function startInstantRuestkammerItem(state,playerIndex,azrSlot){
     }
     state.pendingBezEffect={type:'skyflux',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
     return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin. Sie wechselt auf die freie Feldposition und erhält +1 Ehre.'};
+  }
+
+  if(key==='portalbazooka_smashr'){
+    if(Number(p.refuge?.honor||0)<2)return {ok:false,msg:'Portalbazooka SMASHR benötigt 2 Ehre auf der eigenen Zuflucht.'};
+    const enemy=state.players[1-playerIndex];
+    let target=enemy.refuge,targetKind='refuge',targetName=cardData(enemy.refuge)?.name||'gegnerische Zuflucht';
+    if(state.sharedPrimary && state.sharedPrimary.owner===enemy.index && !state.sharedPrimary.faceDown){
+      target=state.sharedPrimary;
+      targetKind='primary';
+      targetName=cardData(target)?.name||'gegnerische Primär-Karte';
+    }
+    if(!target)return {ok:false,msg:'Kein gültiges Ziel für Portalbazooka SMASHR vorhanden.'};
+    p.refuge.honor=Number(p.refuge.honor||0)-2;
+    const dealt=applyDamage(target,1,'astral');
+    discardAzrInstantItem(state,playerIndex,azrSlot);
+    killIfNeeded(state,enemy.index,targetKind,null);
+    log(state,`${c.name}: 2 Ehre von der eigenen Zuflucht bezahlt; ${targetName} erleidet 1 ASTRAL-Schaden${targetKind==='primary'?' (Primär-Karte war zwingendes Ziel)':''}.`);
+    return {ok:true,msg:`Portalbazooka SMASHR: ${targetName} erhält 1 ASTRAL-Schaden.`};
   }
 
   if(key==='bastion_erleuchtung'){
@@ -2277,6 +2305,80 @@ function playOpenAzr(state,handIndex,slot){
 }
 function isRuth(r){return cardData(r)?.effekte?.some(e=>e.engine_key==='ruth_shop')}
 function ruthTargets(state){const p=active(state),r=state.sharedPrimary;if(!r||r.owner!==p.index||!isRuth(r)||!['supply','resupply'].includes(currentPhase(state).id)||(r.effectUsesRemaining??0)<=0||r.effectUsedTurn===p.turnCount)return [];return p.bezSlots.map((b,i)=>b&&b.attackedTurn!==p.turnCount&&Number(b.honor||0)>=1?{id:String(i),name:cardData(b)?.name||'Bezwingerin'}:null).filter(Boolean)}
+
+function isChronokrypta(r){return cardData(r)?.effekte?.some(e=>e.engine_key==='chronokrypta_duration_trade')}
+function chronokryptaBezTargets(state){
+  const p=active(state),r=state.sharedPrimary;
+  if(!r||r.owner!==p.index||!isChronokrypta(r)||r.effectDisabled||Number(r.effectRoundsRemaining||0)<=0)return [];
+  return (p.bezSlots||[]).map((b,i)=>{
+    if(!b)return null;
+    if(Number(b.honor||0)<2)return null;
+    if(b.effectState?.foughtRoundSerial===state.roundSerial)return null;
+    return {id:String(i),slot:i,name:cardData(b)?.name||`Bezwingerin ${i+1}`,honor:Number(b.honor||0)};
+  }).filter(Boolean);
+}
+function chronokryptaEquipmentTargets(state){
+  const out=[];
+  for(const x of allRuntimeCards(state)){
+    if(x.zone!=='equipment'||x.kind==='weapon'||!x.r||x.r.faceDown||x.r.effectDisabled)continue;
+    if(x.r.effectRoundsRemaining===null||x.r.effectRoundsRemaining===undefined||Number(x.r.effectRoundsRemaining)<=0)continue;
+    out.push({
+      id:`${x.playerIndex}|${x.slot}|${x.kind}`,
+      playerIndex:x.playerIndex,slot:Number(x.slot),kind:x.kind,
+      name:cardData(x.r)?.name||'Ausrüstung',
+      roundsRemaining:Number(x.r.effectRoundsRemaining),
+      own:x.playerIndex===state.activePlayer
+    });
+  }
+  return out;
+}
+function startChronokrypta(state){
+  const p=active(state),r=state.sharedPrimary;
+  if(!r||r.owner!==p.index||!isChronokrypta(r))return {ok:false,msg:'Chronokrypta liegt nicht offen in deinem Primärbereich.'};
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Chronokrypta kann nur in VP oder NP genutzt werden.'};
+  if(r.effectDisabled||Number(r.effectRoundsRemaining||0)<=0)return {ok:false,msg:'Chronokryptas Kampfrundendauer ist abgelaufen.'};
+  if(r.effectUsedTurn===p.turnCount)return {ok:false,msg:'Chronokrypta wurde in dieser Kampfrunde bereits genutzt.'};
+  if(!chronokryptaBezTargets(state).length)return {ok:false,msg:'Keine eigene Bezwingerin mit mindestens 2 Ehre hat in dieser Kampfrunde noch nicht gekämpft.'};
+  if(!chronokryptaEquipmentTargets(state).length)return {ok:false,msg:'Es gibt keine gültige Rüstkammer-Ausrüstung mit aktiver Kampfrundendauer.'};
+  state.pendingBezEffect={type:'chronokrypta_payer',sourcePlayer:p.index};
+  return {ok:true,pending:true,msg:'Wähle die eigene Bezwingerin, die 2 Ehre bezahlt.'};
+}
+function selectChronokryptaPayer(state,id){
+  const p=active(state),pend=state.pendingBezEffect,r=state.sharedPrimary,b=p.bezSlots[Number(id)];
+  if(pend?.type!=='chronokrypta_payer'||pend.sourcePlayer!==p.index||!r||!isChronokrypta(r)||!b)return {ok:false,msg:'Ungültige Chronokrypta-Auswahl.'};
+  if(Number(b.honor||0)<2)return {ok:false,msg:'Diese Bezwingerin besitzt nicht genug Ehre.'};
+  if(b.effectState?.foughtRoundSerial===state.roundSerial)return {ok:false,msg:'Diese Bezwingerin hat in dieser Kampfrunde bereits gekämpft.'};
+  state.pendingBezEffect={type:'chronokrypta_equipment',sourcePlayer:p.index,payerSlot:Number(id)};
+  return {ok:true,pending:true,msg:'Wähle nun eine eigene oder gegnerische Nicht-Waffen-Ausrüstung mit Kampfrundendauer.'};
+}
+function resolveChronokrypta(state,targetId,delta){
+  const p=active(state),pend=state.pendingBezEffect,r=state.sharedPrimary;
+  if(pend?.type!=='chronokrypta_equipment'||pend.sourcePlayer!==p.index||!r||!isChronokrypta(r))return {ok:false,msg:'Keine Chronokrypta-Auswahl aktiv.'};
+  if(delta!==1&&delta!==-1)return {ok:false,msg:'Die Kampfrundendauer kann nur um 1 erhöht oder verringert werden.'};
+  const b=p.bezSlots[pend.payerSlot];
+  if(!b||Number(b.honor||0)<2)return {ok:false,msg:'Die zahlende Bezwingerin ist nicht mehr gültig oder hat nicht genug Ehre.'};
+  if(b.effectState?.foughtRoundSerial===state.roundSerial)return {ok:false,msg:'Die zahlende Bezwingerin hat inzwischen in dieser Kampfrunde gekämpft.'};
+  const target=chronokryptaEquipmentTargets(state).find(x=>x.id===targetId);
+  if(!target)return {ok:false,msg:'Dieses Ausrüstungsziel ist nicht mehr gültig.'};
+  const tp=state.players[target.playerIndex],tr=tp.equipment?.[target.slot]?.[target.kind];
+  if(!tr||target.kind==='weapon')return {ok:false,msg:'Waffen können durch Chronokrypta nicht verändert werden.'};
+
+  b.honor=Number(b.honor||0)-2;
+  b.effectState=b.effectState||{};
+  b.effectState.chronokryptaCannotAttackTurn=p.turnCount;
+  r.effectUsedTurn=p.turnCount;
+
+  tr.effectRoundsRemaining=Math.max(0,Number(tr.effectRoundsRemaining||0)+delta);
+  const after=tr.effectRoundsRemaining;
+  log(state,`Chronokrypta: ${cardData(b)?.name||'Bezwingerin'} zahlt 2 Ehre; ${cardData(tr)?.name||'Ausrüstung'} erhält ${delta>0?'+1':'−1'} Kampfrundendauer (${after}).`);
+  state.pendingBezEffect=null;
+
+  if(after<=0){
+    const x={r:tr,playerIndex:target.playerIndex,zone:'equipment',slot:target.slot,kind:target.kind};
+    expireTimedFieldCardNow(state,x);
+  }
+  return {ok:true,msg:`Chronokrypta ausgeführt: Kampfrundendauer ${delta>0?'um 1 erhöht':'um 1 verringert'}.`};
+}
 function startRuthEffect(state){const p=active(state),r=state.sharedPrimary;if(!r||r.owner!==p.index||!isRuth(r))return {ok:false,msg:'Ruth liegt nicht in deinem Primärbereich.'};if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Ruth kann nur in VP oder NP genutzt werden.'};if(r.effectUsedTurn===p.turnCount)return {ok:false,msg:'Ruth wurde in dieser KR bereits genutzt.'};if((r.effectUsesRemaining??0)<=0)return {ok:false,msg:'Ruth besitzt keine Ladungen mehr.'};if(!ruthTargets(state).length)return {ok:false,msg:'Keine Bezwingerin erfüllt Ruths Bedingungen.'};state.pendingBezEffect={type:'ruth_target',sourcePlayer:p.index};return {ok:true,pending:true,msg:'Wähle eine Bezwingerin.'}}
 function resolveRuthTarget(state,id){const p=active(state),r=state.sharedPrimary,b=p.bezSlots[Number(id)];if(state.pendingBezEffect?.type!=='ruth_target'||!r||!isRuth(r)||!b)return {ok:false,msg:'Ungültige Auswahl.'};if(b.attackedTurn===p.turnCount||Number(b.honor||0)<1)return {ok:false,msg:'Diese Bezwingerin kann Ruth nicht nutzen.'};state.pendingBezEffect={type:'ruth_choice',sourcePlayer:p.index,targetSlot:Number(id)};return {ok:true,pending:true,msg:'Wähle einen Schild.'}}
 function resolveRuthChoice(state,choice){const p=active(state),pend=state.pendingBezEffect,r=state.sharedPrimary,b=p.bezSlots[pend?.targetSlot];if(pend?.type!=='ruth_choice'||!r||!isRuth(r)||!b||!['physical','astral'].includes(choice))return {ok:false,msg:'Ungültige Auswahl.'};if(Number(b.honor||0)<1)return {ok:false,msg:'Nicht genug Ehre.'};b.honor--;if(choice==='physical')b.physicalShield=Number(b.physicalShield||0)+1;else b.astralShield=Number(b.astralShield||0)+1;b.effectState=b.effectState||{};b.effectState.ruthCannotAttackTurn=p.turnCount;r.effectUsesRemaining=Math.max(0,Number(r.effectUsesRemaining||0)-1);r.effectUsedTurn=p.turnCount;state.pendingBezEffect=null;return {ok:true,msg:'Ruths Effekt ausgeführt.'}}
@@ -2355,10 +2457,25 @@ function equipmentOnEquipConditionMatches(effect,bezRuntime){
     return false;
   });
 }
+function activeKrakenAt(state,ownerIndex,bezSlot){
+  const p=state.players[ownerIndex]; ensureEquipmentState(p);
+  const r=p.equipment?.[bezSlot]?.helmet;
+  return r && !r.faceDown && !r.effectDisabled && Number(r.effectRoundsRemaining||0)>0 &&
+    cardData(r)?.effekte?.some(e=>e.engine_key==='kraken_lock') ? r : null;
+}
 function equipRuntimeToBez(state,p,r,bezSlot,kind){
   ensureEquipmentState(p);
   if(!p.bezSlots[bezSlot])return {ok:false,msg:'In diesem Bereich liegt keine Bezwingerin.'};
   const c=cardData(r);
+  const opp=state.players[1-p.index];
+  if(kind==='helmet' && activeKrakenAt(state,opp.index,bezSlot)){
+    return {ok:false,msg:'KRAKEN verhindert, dass die gegenüberliegende Bezwingerin einen Helm ausrüstet.'};
+  }
+  if(c?.effekte?.some(e=>e.engine_key==='kraken_lock')){
+    if(!opp?.bezSlots?.[bezSlot])return {ok:false,msg:'KRAKEN benötigt eine gegenüberliegende gegnerische Bezwingerin.'};
+    ensureEquipmentState(opp);
+    if(opp.equipment?.[bezSlot]?.helmet)return {ok:false,msg:'KRAKEN darf nur ausgespielt werden, wenn die gegenüberliegende Bezwingerin keinen Helm trägt.'};
+  }
   if(kind==='weapon' && activeUrlaubArmor(p,bezSlot)){
     return {ok:false,msg:'Solange Urlaub aktiv ist, kann diese Bezwingerin keine Waffe ausrüsten.'};
   }
@@ -2683,7 +2800,9 @@ function develop(state,kind,slot=null){
 }
 function canAttack(runtime,p){
   // Einsatzverzögerte Karten können angegriffen werden, aber selbst nicht angreifen.
-  return !!runtime && runtime.ready && runtime.attackedTurn!==p.turnCount && runtime.effectState?.ruthCannotAttackTurn!==p.turnCount;
+  return !!runtime && runtime.ready && runtime.attackedTurn!==p.turnCount &&
+    runtime.effectState?.ruthCannotAttackTurn!==p.turnCount &&
+    runtime.effectState?.chronokryptaCannotAttackTurn!==p.turnCount;
 }
 function hasHeartAttribute(runtime){
   if(!runtime)return false;
@@ -2728,8 +2847,10 @@ function attackTargets(state,attackerSource){
   const src=attackerKindAndSlot(attackerSource);
 
   opp.bezSlots.forEach((r,i)=>{
-    if(r && hasHeartAttribute(r) && !queenProtectedFromAttack(state,opp.index,r))
-      targets.push({type:'bez',slot:i,label:cardData(r)?.name||`Bezwingerin ${i+1}`});
+    if(r && hasHeartAttribute(r) && !queenProtectedFromAttack(state,opp.index,r)){
+      const blockedByKraken=(src.kind==='bez' && src.slot===i && !!activeKrakenAt(state,opp.index,i));
+      if(!blockedByKraken)targets.push({type:'bez',slot:i,label:cardData(r)?.name||`Bezwingerin ${i+1}`});
+    }
   });
   if(opp.secondary && hasHeartAttribute(opp.secondary))targets.push({type:'secondary',label:cardData(opp.secondary)?.name||'Sekundärbereich'});
   if(state.sharedPrimary && state.sharedPrimary.owner===opp.index && hasHeartAttribute(state.sharedPrimary)){
@@ -2780,11 +2901,11 @@ function attackTargets(state,attackerSource){
   if(src.kind==='bez'){
     const ar=attackerRuntime(state,attackerSource),ac=cardData(ar);
     const calypsoBlocked=ac?.effekte?.[0]?.engine_key==='calypso' && ar?.enteredTurn===active(state).turnCount;
-    // Eine Bezwingerin darf die gegnerische Zuflucht nur angreifen,
-    // wenn beim Gegner überhaupt keine Bezwingerin mehr auf dem Feld liegt.
-    // Dadurch gilt die Zielregel bereits in der allerersten nutzbaren Ansturmphase
-    // genauso wie in allen späteren Kampfrunden.
-    if(!calypsoBlocked && noBez && hasHeartAttribute(opp.refuge)){
+    // Eine Bezwingerin darf die gegnerische Zuflucht angreifen, wenn
+    // entweder gar keine gegnerische Bezwingerin mehr liegt ODER der
+    // direkt gegenüberliegende Bezwingerinnen-Slot leer ist.
+    const oppositeSlotEmpty=!opp.bezSlots?.[src.slot];
+    if(!calypsoBlocked && (noBez || oppositeSlotEmpty) && hasHeartAttribute(opp.refuge)){
       targets.push({type:'refuge',label:`Zuflucht von ${opp.name}`});
     }
   }else{
@@ -3192,6 +3313,14 @@ function resolveCombat(state){
   log(state,`${ac?.name||'Angreifer'} verursacht ${attackValue}${atkBonus} ${type==='physical'?'physischen':'ASTRAL'} Schaden; ${dc?.name||'Ziel'} hat ${counterValue}${counterBonus} Gegenangriff${timingText}.`);
 
   a.attackedTurn=p.turnCount;
+  if(attackerKind==='bez'){
+    a.effectState=a.effectState||{};
+    a.effectState.foughtRoundSerial=state.roundSerial;
+  }
+  if(target.type==='bez'){
+    d.effectState=d.effectState||{};
+    d.effectState.foughtRoundSerial=state.roundSerial;
+  }
   // Psilos Verstärkung gilt genau für den nächsten Kampf der KREATUR.
   // Sie wird daher nach der Kampfbeteiligung verbraucht – unabhängig davon,
   // ob der Kampf physisch oder ASTRAL geführt wurde.
@@ -3458,7 +3587,7 @@ function clear(){localStorage.removeItem('5goddesses_active_game_v1')}
 window.G5Engine={
   PHASES,decks,validDeck,normalizeDeckForBattle,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,autoReadyEligibleBez,recruit,setFaceDown,playOpenAzr,reveal,
-  equipmentKind,isEquipmentCard,fieldArea,mornakAllowedAreas,playFieldFromHand,moveRevealedFieldCard,moveMornakFromAzr,equipFromHand,equipFromAzr,discardEquipment,
+  equipmentKind,isEquipmentCard,activeKrakenAt,fieldArea,mornakAllowedAreas,playFieldFromHand,moveRevealedFieldCard,moveMornakFromAzr,equipFromHand,equipFromAzr,discardEquipment,
   chooseEquipmentShieldBonus,equipmentCombatProfile,effectiveBezStats,combatStrength,startMantaWonder,consumeMantaCombatBonus,effectiveWonderCost,ruthTargets,activateRuth,selectEhrisTarget,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,destroyedQueenProtectionActive,prepareAttack,
   refugeWonderAvailable,activateRefugeWonder,resolveWonderDraw,chooseRefugeStage2Bonus,
@@ -3470,7 +3599,7 @@ window.G5Engine={
   startQueen2Wonder,queenStackTargets,resolveQueenSearch,queenDiscardTargets,resolveQueen2Discard,
   fragmentfresserSchlundTargets,startFragmentfresserSchlundEffect,resolveFragmentfresserSchlund,
   startInstantRuestkammerItem,instantRuestkammerTargets,resolveInstantRuestkammerTarget,instinctCandidates,instinctWindowNeeded,passInstinctWindow,activateInstinctCard,ueberladungTargets,erlassHonorSources,erlassBegin,erlassRemoveHonor,erlassTargets,resolveErlassTarget,
-  ruthTargets,startRuthEffect,resolveRuthTarget,resolveRuthChoice,startWunderumwandlungsapparatur,wunderumwandlungsapparaturHonorSources,resolveWunderumwandlungsapparaturHonor,wunderumwandlungsapparaturTargets,resolveWunderumwandlungsapparaturTarget,ehrisTargets,startEhrisSelection,resolveEhrisSelection,effectiveWonderCost,
+  chronokryptaBezTargets,chronokryptaEquipmentTargets,startChronokrypta,selectChronokryptaPayer,resolveChronokrypta,ruthTargets,startRuthEffect,resolveRuthTarget,resolveRuthChoice,startWunderumwandlungsapparatur,wunderumwandlungsapparaturHonorSources,resolveWunderumwandlungsapparaturHonor,wunderumwandlungsapparaturTargets,resolveWunderumwandlungsapparaturTarget,ehrisTargets,startEhrisSelection,resolveEhrisSelection,effectiveWonderCost,
   startKristallharnischEffect,resolveKristallharnischEffect,
   triggerLebensfresserschildHunger,resolveLebensfresserschildHungerAtSupplyStart,
   activateDeathPrimaryAttack,hasPrimaryAttack,hasSecondaryAttack,

@@ -4961,7 +4961,17 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
+      "effekte": [
+        {
+          "engine_key": "portalbazooka_smashr",
+          "trigger": "on_play",
+          "cost_refuge_honor": 2,
+          "damage_type": "astral",
+          "damage": 1,
+          "target": "enemy_refuge",
+          "forced_open_enemy_primary": true
+        }
+      ],
       "tags": []
     },
     {
@@ -5115,8 +5125,27 @@ window.GODDESSES_DB = {
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "chronokrypta_duration_trade",
+          "trigger": "activate",
+          "once_per_round": true,
+          "payer": "own_bez",
+          "cost_honor": 2,
+          "requires_not_fought_this_round": true,
+          "payer_cannot_attack_after": true,
+          "target": "any_equipment_on_any_bez_with_duration",
+          "exclude_equipment_kind": "weapon",
+          "duration_delta": [
+            -1,
+            1
+          ]
+        }
+      ],
+      "tags": [
+        "KAMPFRUNDENDAUER"
+      ],
+      "effekt_dauer_kr": 3
     },
     {
       "id": "1.05-30-32-efc62695",
@@ -5222,8 +5251,20 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "kraken_lock",
+          "trigger": "permanent",
+          "duration_rounds": 1,
+          "requires_opposite_bez_without_helmet": true,
+          "blocks_opposite_attack_on_wearer": true,
+          "blocks_opposite_helmet": true,
+          "discard_at_zero_duration": true
+        }
+      ],
+      "tags": [
+        "KAMPFRUNDENDAUER"
+      ]
     },
     {
       "id": "1.04-02-32-573a39eb",

@@ -52,3 +52,87 @@ Lebensfresserschild Hunger – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:
 - Thal Ziris kann die Kampfrundendauer verändern. Wird sie durch einen solchen Effekt direkt auf 0 gesetzt,
   löst Hunger den Herzverlust sofort aus und startet bei Überleben wieder mit 2.
 - Die +3 physischen Schilde liegen auf der Bezwingerin selbst; bereits verbleibende Schildpunkte bleiben auch bei späterem Entfernen des Schildes bestehen.
+
+
+Legionsbrustpanzer – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:
+- Rüstkammer | Rüstung | Brustpanzer | Eisen | Mittelwelt.
+- ∞: Solange ausgerüstet, stellt der Brustpanzer +1 physischen Ausrüstungsschild bereit.
+- Blitz beim Anlegen: die ausgerüstete Bezwingerin erhält einmalig +1 Ehre.
+- Der permanente Schild gehört zur Ausrüstung und verschwindet mit ihr.
+- Die durch den Blitz erhaltene Ehre liegt auf der Bezwingerin und bleibt auch nach Entfernen der Rüstung bestehen.
+
+
+Ubusa Brustpanzer – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:
+- Rüstkammer | Rüstung | Brustpanzer | Eisen | Mittelwelt.
+- ∞ = permanenter Effekt.
+- Solange ausgerüstet, stellt die Rüstung +1 physischen Schild und +1 ASTRAL-Schild bereit.
+- Beide Schildpunkte liegen auf der Ausrüstung und verschwinden mit ihr.
+- Kein zusätzlicher Blitz-, Ladungs- oder Kampfrundendauereffekt.
+
+
+Legionshelm – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:
+- Rüstkammer | Kopfschutz | Helm | Eisen | Unterwelt.
+- ∞ = permanenter Effekt.
+- Solange ausgerüstet, stellt der Helm +1 physischen Schild bereit.
+- Der Schildpunkt liegt auf der Ausrüstung und verschwindet mit ihr.
+- Kein Blitz-, Ladungs- oder Kampfrundendauereffekt.
+
+
+Legionsschild – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:
+- Rüstkammer | Schild | Turmschild | Eisen | Mittelwelt.
+- ∞: Solange ausgerüstet, stellt der Schild +1 physischen Ausrüstungsschild bereit.
+- Blitz beim Anlegen: die ausgerüstete Bezwingerin erhält einmalig +1 Ehre.
+- Der permanente Schildpunkt verschwindet mit der Ausrüstung.
+- Die durch den Blitz erhaltene Ehre bleibt auf der Bezwingerin.
+
+
+Hut der Weisheit – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:
+- Rüstkammer | Kopfschutz | Hut | Stoff | Mittelwelt.
+- Blitz beim Anlegen: die ausgerüstete Bezwingerin erhält einmalig +1 Ehre.
+- Kein permanenter Bonus, keine Ladungen und keine Kampfrundendauer.
+- Die erhaltene Ehre liegt auf der Bezwingerin und bleibt nach Entfernen des Huts bestehen.
+
+
+Parierdolch – VOLLSTÄNDIG IMPLEMENTIERT:
+- Waffe | Dolch | Eisen | Mittelwelt.
+- Blitz beim Anlegen speichert 1 einmalige Gegenangriff-Ausweichnutzung auf dem Dolch.
+- Aktivierung in einer frei gewählten eigenen VP.
+- Nutzung wird erst verbraucht, wenn tatsächlich ein Gegenangriff verhindert wird.
+- Aktiviert, aber nicht genutzt: Aktivstatus endet am KR-Ende; die gespeicherte Nutzung bleibt für eine spätere KR.
+- Alice und Parierdolch sind getrennte Ausweichquellen.
+
+Die Bastion bringt Dir Erleuchtung – VOLLSTÄNDIG IMPLEMENTIERT:
+- Rüstkammer | Gegenstand | Epiphanie | Unterwelt.
+- Blitz: eigene Zuflucht erhält +1 Ehre.
+- Nach Auflösung wird der Gegenstand aus der AZR auf die Ablage gelegt.
+
+Lähmendes Nervengift – VOLLSTÄNDIG IMPLEMENTIERT:
+- Rüstkammer | Gegenstand | Trank | Mittelwelt.
+- Blitz: eine gegnerische Bezwingerin wählen.
+- Diese erhält Sekundärangriff für die aktuelle Kampfrunde.
+- Primär-/Sekundärangriff nutzt das bestehende Kampftiming-System.
+- Status verfällt am Ende der aktuellen KR.
+- Gegenstand wird nach Zielwahl/Auflösung abgelegt.
+
+Trank der Stärke – VOLLSTÄNDIG IMPLEMENTIERT:
+- Rüstkammer | Gegenstand | Trank | Mittelwelt.
+- Blitz: eine eigene Bezwingerin wählen.
+- +1 physische Stärke für genau einen Kampf in der aktuellen KR.
+- Bonus gilt auch, wenn die Bezwingerin zuerst als Verteidigerin an einem Kampf beteiligt ist.
+- Nach dem ersten Kampf wird der Bonus verbraucht; ungenutzt verfällt er am Ende der KR.
+- Gegenstand wird nach Zielwahl/Auflösung abgelegt.
+
+
+Urlaub – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:
+- Rüstkammer | Rüstung | Bikini | Stoff | Mittelwelt.
+- Kampfrundendauer: 2 eigene KR. Nach 2 -> 1 -> 0 bleibt Urlaub als Rüstung liegen,
+  aber Zwangsangriff und Waffensperre sind deaktiviert.
+- Während der aktiven Dauer muss die gegnerische Bezwingerin direkt gegenüber,
+  wenn sie in ihrer eigenen KR kämpft und Urlaub ein legales Ziel ist, die Urlaub-Trägerin angreifen.
+- Gegenüber wird über die gespiegelte Feldposition 0<->1 bestimmt.
+- Der Besitzer von Urlaub bestimmt bei jedem erzwungenen Angriff neu die Angriffsart.
+- 0 Stärke in der gewählten Angriffsart verhindert den erzwungenen Angriff nicht.
+- Solange der Zeiteffekt aktiv ist, kann die Urlaub-Trägerin keine Waffe ausrüsten.
+- Blitz beim Anlegen: physischer und ASTRAL-Schild der Trägerin werden auf 0 gesetzt.
+- Blitz beim Anlegen: alle anderen angelegten Ausrüstungen (Waffe, Schild, Kopfschutz)
+  werden auf die Ablage gelegt; Urlaub selbst bleibt im Rüstungs-Slot.

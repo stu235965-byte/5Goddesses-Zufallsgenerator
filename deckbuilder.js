@@ -15,6 +15,7 @@ let editorPreviewBild=null;
 
 function deckDb(){return window.GODDESSES_DB?.karten||[]}
 function deckKarte(bild){return deckDb().find(k=>k.bild===bild)||null}
+function istGesperrteDeckkarte(k){return k?.name==='Genova Toshi'}
 function deckPoolSet(){
   try{
     const raw=localStorage.getItem('5goddesses_kartenpool_v2');
@@ -77,6 +78,10 @@ function deckValidierung(karten){
     if(new Set(klassen).size!==3){
       fehler.push('Die 3 Bezwingerinnen müssen 3 unterschiedliche Klassen haben.');
     }
+  }
+
+  if((karten.zuflucht||[]).some(b=>istGesperrteDeckkarte(deckKarte(b)))){
+    fehler.push('Genova Toshi ist gesperrt, bis eine offizielle Stufe-2-Entwicklung verfügbar ist.');
   }
 
   if((karten.zuflucht||[]).length===1){
@@ -365,6 +370,11 @@ function erzwingePassendeZufluchtEntwicklung(zufluchtBild){
 function toggleDeckKarte(bereich,karte){
   deckMeldung();
 
+  if(istGesperrteDeckkarte(karte)){
+    deckMeldung('Genova Toshi ist gesperrt, bis eine offizielle Stufe-2-Entwicklung verfügbar ist.');
+    return;
+  }
+
   const arr=editorDeck[bereich];
   const vorhanden=arr.includes(karte.bild);
 
@@ -476,8 +486,10 @@ function renderDeckEditor(){
       const selected=deckEnthaelt(bereich,karte.bild);
       const el=document.createElement('button');
       el.type='button';
-      el.className='builder-card'+(selected?' selected':'');
-      el.title=karte.name||'';
+      const locked=istGesperrteDeckkarte(karte);
+      el.className='builder-card'+(selected?' selected':'')+(locked?' locked':'');
+      el.title=locked ? `${karte.name} – gesperrt: keine offizielle Stufe-2-Entwicklung` : (karte.name||'');
+      if(locked)el.disabled=true;
 
       if(bereich==='entwicklung' && editorDeck.zuflucht.length===1){
         const pflicht=passendeZufluchtEntwicklung(editorDeck.zuflucht[0]);
@@ -491,8 +503,15 @@ function renderDeckEditor(){
 
       const mark=document.createElement('span');
       mark.className='builder-card-mark';
-      mark.textContent=selected?'✓':'+';
+      mark.textContent=locked?'🔒':(selected?'✓':'+');
       el.append(img,mark);
+
+      if(locked){
+        const badge=document.createElement('span');
+        badge.className='builder-card-badge locked-badge';
+        badge.textContent='GESPERRT';
+        el.appendChild(badge);
+      }
 
       if(bereich==='bezwingerinnen' && karte.klasse){
         const badge=document.createElement('span');

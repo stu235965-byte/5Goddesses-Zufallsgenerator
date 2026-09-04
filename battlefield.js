@@ -1368,6 +1368,26 @@ Abbrechen = 1 ASTRAL → 1 physische`) ? 'physical_to_astral' : 'astral_to_physi
 function handleOwnPrimary(){
   const r=state.sharedPrimary,p=E().active(state),c=E().cardData(r);
   if(!r || r.owner!==p.index)return;
+  if(c?.effekte?.some(e=>e.engine_key==='chronokrypta_duration_trade')){
+    if(!['supply','resupply'].includes(phase()?.id||''))return message('Chronokrypta kann nur in VP oder NP benutzt werden.','warn');
+    let rr=E().startChronokrypta(state);
+    if(!rr.ok)return message(rr.msg,'warn');
+    const payers=E().chronokryptaBezTargets(state);
+    const payerRaw=prompt(`Chronokrypta – welche eigene Bezwingerin zahlt 2 Ehre?\n\n${payers.map((t,i)=>`${i+1}: ${t.name} (${t.honor} Ehre)`).join('\n')}`);
+    if(payerRaw===null){state.pendingBezEffect=null;return;}
+    const payer=payers[Number(payerRaw)-1];
+    if(!payer){state.pendingBezEffect=null;return message('Ungültige Auswahl.','warn');}
+    rr=E().selectChronokryptaPayer(state,payer.id);
+    if(!rr.ok){state.pendingBezEffect=null;return message(rr.msg,'warn');}
+    const targets=E().chronokryptaEquipmentTargets(state);
+    const targetRaw=prompt(`Chronokrypta – welche Ausrüstung soll verändert werden?\n\n${targets.map((t,i)=>`${i+1}: ${t.own?'Eigene':'Gegnerische'} ${t.name} (KR ${t.roundsRemaining})`).join('\n')}`);
+    if(targetRaw===null){state.pendingBezEffect=null;return;}
+    const target=targets[Number(targetRaw)-1];
+    if(!target){state.pendingBezEffect=null;return message('Ungültige Auswahl.','warn');}
+    const delta=confirm(`Chronokrypta – ${target.name}\n\nOK = Kampfrundendauer +1\nAbbrechen = Kampfrundendauer −1`) ? 1 : -1;
+    rr=E().resolveChronokrypta(state,target.id,delta);
+    return saveRender(rr.msg);
+  }
   if(c?.effekte?.some(e=>e.engine_key==='manta_wonder_physical')){
     if(!['supply','resupply'].includes(phase()?.id||''))return message('MANTAs Wunder kann nur in VP oder NP gewirkt werden.','warn');
     const rr=E().startMantaWonder(state);
