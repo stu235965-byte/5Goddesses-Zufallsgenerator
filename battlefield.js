@@ -109,7 +109,8 @@ async function animateRoundHandoff(){
   nextButton.disabled=false;
   message(`${nextPlayer} beginnt die Kampfrunde.`);
   requestAnimationFrame(updateStickyGameOffsets);
-  scheduleMobileBattlefieldFit();
+  const fitWrap=document.getElementById('battlefieldFit');
+  if(!fitWrap?.dataset.fitScale) scheduleMobileBattlefieldFit();
 }
 function gamePageOpened(){
   window.addEventListener('resize',updateStickyGameOffsets);
@@ -143,6 +144,10 @@ function fitBattlefieldToMobileViewport(){
   const board=document.getElementById('battlefield');
   const shell=document.getElementById('gameShell');
   if(!wrap||!board||!shell||shell.hidden)return;
+
+  // Einmal berechnet = eingefroren. Das ist absichtlich auch bei Pinch-Zoom
+  // und normalen Render-Vorgängen so.
+  if(wrap.dataset.fitScale)return;
 
   // Für die Grundskalierung ausschließlich den Layout-Viewport verwenden.
   // visualViewport verändert sich beim Pinch-Zoom und darf die einmal
@@ -187,22 +192,12 @@ function scheduleMobileBattlefieldFit(){
   });
 }
 
-let lastBattlefieldLayoutWidth=document.documentElement.clientWidth;
-window.addEventListener('resize',()=>{
-  const w=document.documentElement.clientWidth;
-  // Nur echte Layout-Breitenänderungen neu einpassen; Pinch-Zoom verändert
-  // visualViewport, nicht zuverlässig die Layout-Viewport-Breite.
-  if(Math.abs(w-lastBattlefieldLayoutWidth)>2){
-    lastBattlefieldLayoutWidth=w;
-    scheduleMobileBattlefieldFit();
-  }
-});
+// v1.57: Nach dem ersten Auto-Fit bleibt die Brettskalierung vollständig eingefroren.
+// Pinch-Zoom darf keinerlei Re-Fit auslösen. Nur ein echter orientationchange
+// setzt den Fit zurück und berechnet ihn einmal neu.
 window.addEventListener('orientationchange',()=>{
-  // Nach einer echten Drehung darf einmal neu berechnet werden.
-  setTimeout(()=>{
-    lastBattlefieldLayoutWidth=document.documentElement.clientWidth;
-    scheduleMobileBattlefieldFit();
-  },120);
+  resetMobileBattlefieldFit();
+  setTimeout(scheduleMobileBattlefieldFit,250);
 });
 // Kein Re-Fit bei visualViewport.resize:
  // Dieses Event feuert auf Android/iOS auch beim Pinch-Zoom und würde
