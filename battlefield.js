@@ -135,6 +135,7 @@ function resetMobileBattlefieldFit(){
   wrap.style.maxWidth='';
   board.style.transform='';
   board.style.width='';
+  delete wrap.dataset.fitScale;
 }
 
 function fitBattlefieldToMobileViewport(){
@@ -143,40 +144,40 @@ function fitBattlefieldToMobileViewport(){
   const shell=document.getElementById('gameShell');
   if(!wrap||!board||!shell||shell.hidden)return;
 
-  const viewport=window.visualViewport;
-  const viewportWidth=viewport?.width||window.innerWidth;
-  const viewportHeight=viewport?.height||window.innerHeight;
+  const vv=window.visualViewport;
+  const viewportWidth=Math.round(vv?.width||document.documentElement.clientWidth||window.innerWidth);
+  const viewportHeight=Math.round(vv?.height||document.documentElement.clientHeight||window.innerHeight);
 
   if(viewportWidth>MOBILE_BATTLEFIELD_MAX_WIDTH){
     resetMobileBattlefieldFit();
     return;
   }
 
-  // Erst in die feste Desktop-Geometrie wechseln, damit Android und iOS
-  // dieselbe Ausgangsgröße vermessen und keine horizontalen Scrollcontainer entstehen.
   wrap.classList.add('mobile-fit-active');
-  board.style.transform='none';
+
+  // Feste, vollständige Brettbreite als Ausgangsgeometrie.
+  // Das Brett wird absolut im Wrapper positioniert, sodass seine unskalierte
+  // 1260px-Breite niemals die Seite oder einzelne Spielerbereiche verbreitert.
   board.style.width='1260px';
-  wrap.style.height='auto';
+  board.style.transform='none';
 
-  const naturalWidth=Math.max(board.scrollWidth,board.offsetWidth,1260);
-  const naturalHeight=Math.max(board.scrollHeight,board.offsetHeight,1);
+  const naturalWidth=1260;
+  const naturalHeight=Math.max(board.scrollHeight,board.getBoundingClientRect().height,1);
+  const availableWidth=Math.max(240,viewportWidth-8);
 
-  // Etwas Rand lassen und das komplette Spielfeld auch in der Höhe sichtbar halten.
-  // Der Nutzer kann anschließend weiterhin per Browser-Pinch-Zoom hineinzoomen.
-  const availableWidth=Math.max(240,viewportWidth-12);
-  const availableHeight=Math.max(220,viewportHeight*0.72);
+  // Primär nach kompletter Breite einpassen. Zusätzlich darf das Brett höchstens
+  // 78 % der sichtbaren Höhe beanspruchen, damit auch Hochformatgeräte alles sehen.
+  const availableHeight=Math.max(260,viewportHeight*0.78);
   const scale=Math.min(1,availableWidth/naturalWidth,availableHeight/naturalHeight);
 
+  board.style.transformOrigin='top left';
   board.style.transform=`scale(${scale})`;
-  wrap.style.height=`${Math.ceil(naturalHeight*scale)}px`;
-  // Der Wrapper bleibt exakt in der verfügbaren Bildschirmbreite.
-  // Dadurch erzeugen weder die Spielerhälften noch Ziehstapel/Ausrüstungszonen
-  // einen eigenen horizontalen Scrollbereich.
+
   wrap.style.width='100%';
   wrap.style.maxWidth='100%';
+  wrap.style.height=`${Math.ceil(naturalHeight*scale)}px`;
+  wrap.dataset.fitScale=String(scale);
 }
-
 function scheduleMobileBattlefieldFit(){
   cancelAnimationFrame(battlefieldFitRaf);
   battlefieldFitRaf=requestAnimationFrame(()=>{
