@@ -1468,3 +1468,10 @@ h1{font-size:30px;margin:0 0 16px}
   /* Nur sichtbar, solange tatsächlich eine einzelne Karte groß geöffnet ist. */
   backdrop-filter:blur(2px);
 }
+
+/* v1.63 – alle belegten Spielfeldkarten im Vorschaumodus auswählbar */
+.card-preview-mode #playerBoard button,
+.card-preview-mode #opponentBoard button,
+.card-preview-mode #sharedSecondaryZone [role="button"]{
+  pointer-events:auto;
+}

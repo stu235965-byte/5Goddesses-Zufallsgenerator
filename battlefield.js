@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.62';
+window.G5_BATTLEFIELD_BUILD='1.63';
 
 const E=()=>window.G5Engine;
 let state=null;
@@ -378,7 +378,7 @@ function developmentHtml(p){
   return `<div class="dev-pile"><span>ENTWICKLUNG</span><b>${n}</b></div>`;
 }
 function equipmentSlot(label,kind,bezIndex,r,isActive){
-  return `<button class="equip-slot ${kind}" data-equip="${kind}" data-equip-bez="${bezIndex}" ${isActive?'':'disabled'}>
+  return `<button class="equip-slot ${kind}" data-equip="${kind}" data-equip-bez="${bezIndex}" ${(isActive||cardPreviewMode)?'':'disabled'}>
     ${runtimeCardHtml(r)}
     <span class="slot-label">${label}</span>
   </button>`;
@@ -425,7 +425,7 @@ function playerBoardHtml(p,isActive,isOpponent){
   const stacks=p.stacks||{bezwingerinnen:[],astral:[],ruestkammer:[]};
   const safePlayer={...p,azr:azrList,bezSlots,hand,discard,development,stacks,equipment:eq};
 
-  const azr=azrList.map((r,i)=>`<button class="board-slot azr-slot" data-azr="${i}" ${isActive?'':'disabled'}>${runtimeCardHtml(r,{hidden:isOpponent&&r?.faceDown})}<span class="slot-label">AZR ${i+1}</span></button>`).join('');
+  const azr=azrList.map((r,i)=>`<button class="board-slot azr-slot" data-azr="${i}" ${(isActive||cardPreviewMode)?'':'disabled'}>${runtimeCardHtml(r,{hidden:isOpponent&&r?.faceDown})}<span class="slot-label">AZR ${i+1}</span></button>`).join('');
   const oppClass=isOpponent?' mirrored':'';
 
   return `<div class="board-inner${oppClass}">
@@ -577,6 +577,61 @@ function toggleCardPreviewMode(){
     document.getElementById('gamePreviewToggle')?.setAttribute('aria-pressed',String(cardPreviewMode));
   }
 }
+
+function previewRuntimeFromBoardElement(target){
+  const own=E().active(state),opp=E().opponent(state);
+  const inOwn=!!target.closest('#playerBoard');
+  const inOpp=!!target.closest('#opponentBoard');
+  const player=inOwn?own:(inOpp?opp:null);
+
+  const bez=target.closest('[data-bez]');
+  if(bez&&player){
+    const slot=Number(bez.dataset.bez);
+    return {runtime:player.bezSlots?.[slot]||null,ownerIndex:player.index};
+  }
+  const refuge=target.closest('[data-refuge]');
+  if(refuge&&player)return {runtime:player.refuge||null,ownerIndex:player.index};
+
+  const primary=target.closest('[data-primary-target]');
+  if(primary&&player)return {runtime:player.primary||null,ownerIndex:player.index};
+
+  const secondary=target.closest('#sharedSecondaryZone [data-secondary-target]');
+  if(secondary)return {runtime:state.sharedSecondary||null,ownerIndex:state.sharedSecondary?.owner};
+
+  const azr=target.closest('[data-azr]');
+  if(azr&&player){
+    const slot=Number(azr.dataset.azr);
+    const runtime=player.azr?.[slot]||null;
+    return {runtime,ownerIndex:player.index,forceBack:inOpp&&!!runtime?.faceDown};
+  }
+
+  const equip=target.closest('[data-equip]');
+  if(equip&&player){
+    const slot=Number(equip.dataset.equipBez);
+    const kind=equip.dataset.equip;
+    return {runtime:player.equipment?.[slot]?.[kind]||null,ownerIndex:player.index};
+  }
+  return null;
+}
+
+// v1.63: zentraler Capture-Guard.
+// Er läuft VOR sämtlichen Karten-Handlern des Gefechts und verhindert im
+// Vorschaumodus garantiert Entwickeln/Wunder/Angriff/Ausrüstung usw.
+document.addEventListener('click',ev=>{
+  if(!cardPreviewMode||!state)return;
+  const boardTarget=ev.target.closest('#playerBoard,#opponentBoard,#sharedSecondaryZone');
+  if(!boardTarget)return;
+
+  ev.preventDefault();
+  ev.stopPropagation();
+  ev.stopImmediatePropagation();
+
+  const found=previewRuntimeFromBoardElement(ev.target);
+  if(found?.runtime){
+    previewCard(found.runtime,found.ownerIndex,{forceBack:!!found.forceBack});
+  }
+},true);
+
 function wirePreviewTargets(){
   if(!cardPreviewMode)return;
   const own=E().active(state),opp=E().opponent(state);
