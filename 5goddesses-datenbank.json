@@ -3179,9 +3179,29 @@
       "physischer_schild": 0,
       "astraler_schild": 0,
       "ehre": 0,
-      "wunder": null,
-      "effekte": [],
-      "tags": []
+      "wunder": {
+        "kosten_ehre": 1,
+        "text": "Entferne 2 Ehre von deiner Spielfeldseite. Dadurch erhält eine eigene Bezwingerin 1 Ehre."
+      },
+      "effekte": [
+        {
+          "trigger": "wonder",
+          "engine_key": "wunderumwandlungsapparatur_honor_convert",
+          "remove_honor_from_own_field": 2,
+          "target": "own_bez",
+          "honor_delta": 1
+        }
+      ],
+      "tags": [
+        "wunder",
+        "ehre",
+        "umwandlung",
+        "primär"
+      ],
+      "effekt_symbol": "wonder",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Entferne 2 Ehre von deiner Spielfeldseite. Dadurch erhält eine eigene Bezwingerin 1 Ehre."
     },
     {
       "id": "1.04-16-32-31af8c57",
@@ -3592,16 +3612,18 @@
           "engine_key": "laehmendes_nervengift",
           "target": "enemy_bez",
           "grant": "secondary_attack",
-          "duration": "current_round"
+          "duration": "current_round",
+          "instinkt": true
         }
       ],
       "tags": [
         "sekundärangriff",
         "gegnerische-bezwingerin",
-        "on-play"
+        "on-play",
+        "instinkt"
       ],
-      "effekt_symbol": "on_play",
-      "effekt_text": "Gib einer gegnerischen Bezwingerin in dieser Kampfrunde Sekundärangriff."
+      "effekt_symbol": "on_play+instinkt",
+      "effekt_text": "Gib einer gegnerischen Bezwingerin in dieser Kampfrunde Sekundärangriff. Instinkt: Die verdeckt gesetzte Karte darf auch in der gegnerischen Versorgungs- und Nachschubphase aktiviert werden."
     },
     {
       "id": "1.01-15-32-89d3e6b0",
@@ -3634,16 +3656,18 @@
           "target": "own_bez",
           "physical_delta": 1,
           "duration": "current_round",
-          "max_combats": 1
+          "max_combats": 1,
+          "instinkt": true
         }
       ],
       "tags": [
         "physische-stärke",
         "ein-kampf",
-        "on-play"
+        "on-play",
+        "instinkt"
       ],
-      "effekt_symbol": "on_play",
-      "effekt_text": "Gib einer eigenen Bezwingerin für diese Kampfrunde +1 physische Stärke, jedoch nur für einen Kampf."
+      "effekt_symbol": "on_play+instinkt",
+      "effekt_text": "Gib einer eigenen Bezwingerin für diese Kampfrunde +1 physische Stärke, jedoch nur für einen Kampf. Instinkt: Die verdeckt gesetzte Karte darf auch in der gegnerischen Versorgungs- und Nachschubphase aktiviert werden."
     },
     {
       "id": "1.01-16-32-c5143f03",
@@ -3967,7 +3991,7 @@
       "kartentyp": "Gegenstand",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Oberwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -3981,8 +4005,30 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "on_play",
+          "engine_key": "erlass_umverteilung",
+          "target": "own_bez",
+          "max_transfer": 2,
+          "honor_source": "own_field_cards",
+          "allow_multiple_sources": true,
+          "discard_after_resolution": true,
+          "instinkt": true
+        }
+      ],
+      "tags": [
+        "ehre",
+        "umverteilung",
+        "on-play",
+        "fraktionslos",
+        "gegenstand",
+        "instinkt"
+      ],
+      "effekt_symbol": "on_play+instinkt",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Ziehe X Ehre von deinen eigenen Karten ab und gib einer eigenen Bezwingerin X Ehre. X darf höchstens 2 sein; die entfernte Ehre darf von mehreren eigenen Karten stammen. Instinkt: Die verdeckt gesetzte Karte darf auch in der gegnerischen Versorgungs- und Nachschubphase aktiviert werden."
     },
     {
       "id": "1.03-03-32-89c156ba",
@@ -4213,7 +4259,7 @@
       "kartentyp": "Schild",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Oberwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -4227,8 +4273,32 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "continuous",
+          "engine_key": "equipment_astral_shield",
+          "target": "equipped_bez",
+          "astralShield": 1,
+          "permanent_while_equipped": true
+        },
+        {
+          "trigger": "on_equip",
+          "engine_key": "energieschild_honor",
+          "target": "equipped_bez",
+          "honor_delta": 1
+        }
+      ],
+      "tags": [
+        "astral-schild",
+        "ehre",
+        "permanent",
+        "on-play",
+        "fraktionslos"
+      ],
+      "effekt_symbol": "permanent+on_play",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Solange dieser Schild ausgerüstet ist, fügt er der ausgerüsteten Bezwingerin 1 ASTRAL-Schild hinzu. Beim Anlegen erhält diese Bezwingerin zusätzlich einmalig 1 Ehre."
     },
     {
       "id": "1.03-09-32-1451a6e2",
@@ -4240,7 +4310,7 @@
       "kartentyp": "Gegenstand",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Oberwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -4254,8 +4324,31 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "on_play",
+          "engine_key": "ueberladung",
+          "target": "own_bez",
+          "remove_physical_shield": 1,
+          "remove_astral_shield": 1,
+          "honor_delta": 3,
+          "discard_after_resolution": true,
+          "instinkt": true
+        }
+      ],
+      "tags": [
+        "gegenstand",
+        "energiekern",
+        "on-play",
+        "instinkt",
+        "ehre",
+        "schild-entfernen",
+        "fraktionslos"
+      ],
+      "effekt_symbol": "on_play+instinkt",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Entferne 1 physischen Schild und 1 ASTRAL-Schild von einer eigenen Bezwingerin, um ihr 3 Ehre zu geben. Instinkt: Eine verdeckt gesetzte Karte darf auch im gegnerischen Spielzug in den dafür erlaubten Phasen aktiviert werden."
     },
     {
       "id": "1.03-10-32-436b6b3b",
@@ -4267,7 +4360,7 @@
       "kartentyp": "Reliquie",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Oberwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -4281,8 +4374,35 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "continuous_timed",
+          "engine_key": "zerstoerte_queen_protection",
+          "duration_rounds": 3,
+          "condition": {
+            "own_face_up_bez_name_any": [
+              "Z.E.R.O. ATK",
+              "Z.E.R.O. ASTRAL"
+            ]
+          },
+          "protected_target": "own_bez_name:Q.U.E.E.N.",
+          "effect": "cannot_be_attacked"
+        }
+      ],
+      "tags": [
+        "reliquie",
+        "maschine",
+        "eisen",
+        "kampfrundendauer",
+        "schutz",
+        "queen",
+        "zero",
+        "fraktionslos"
+      ],
+      "effekt_symbol": "duration",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": 3,
+      "effekt_text": "Solange sich auf deiner Spielfeldseite eine Z.E.R.O. ATK oder Z.E.R.O. ASTRAL befindet, darf deine Q.U.E.E.N. nicht angegriffen werden."
     },
     {
       "id": "1.02-01-32-14bb436c",
@@ -4334,7 +4454,7 @@
       "kartentyp": "Waffe",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Unterwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -4348,8 +4468,24 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "continuous_timed",
+          "engine_key": "instabiler_stab_temp_astral",
+          "target": "equipped_bez",
+          "astral_delta": 1,
+          "duration": "until_next_own_supply_start"
+        }
+      ],
+      "tags": [
+        "astral-staerke",
+        "kampfrundendauer",
+        "fraktionslos"
+      ],
+      "effekt_symbol": "duration",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Die ausgerüstete Bezwingerin erhält bis zum Anfang deiner nächsten Versorgungsphase (AVP) +1 ASTRAL-Stärke."
     },
     {
       "id": "1.02-03-32-9d7bd09c",
@@ -4441,7 +4577,7 @@
       "kartentyp": "Schild",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Unterwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -4455,8 +4591,24 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "continuous",
+          "engine_key": "equipment_physical_shield",
+          "target": "equipped_bez",
+          "physicalShield": 1,
+          "permanent_while_equipped": true
+        }
+      ],
+      "tags": [
+        "physischer-schild",
+        "permanent",
+        "fraktionslos"
+      ],
+      "effekt_symbol": "permanent",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Solange dieser Schild ausgerüstet ist, fügt er der ausgerüsteten Bezwingerin 1 physischen Schild hinzu."
     },
     {
       "id": "1.02-06-32-720e8291",
@@ -4468,7 +4620,7 @@
       "kartentyp": "Gegenstand",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Unterwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -4482,8 +4634,29 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "on_play",
+          "engine_key": "die_kanone",
+          "target": "enemy_bez",
+          "damage": 1,
+          "damage_type": "physical",
+          "instinkt": true,
+          "discard_after_resolution": true
+        }
+      ],
+      "tags": [
+        "physischer-schaden",
+        "gegnerische-bezwingerin",
+        "on-play",
+        "instinkt",
+        "gegenstand",
+        "fraktionslos"
+      ],
+      "effekt_symbol": "on_play+instinkt",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Füge einer gegnerischen Bezwingerin 1 physischen Schaden zu. Instinkt: Die verdeckt gesetzte Karte darf auch in der gegnerischen Versorgungs- und Nachschubphase aktiviert werden."
     },
     {
       "id": "1.02-07-32-755fb721",
@@ -4495,7 +4668,7 @@
       "kartentyp": "Gegenstand",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Unterwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -4509,8 +4682,29 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "on_play",
+          "engine_key": "trank_der_astral_macht",
+          "target": "own_bez",
+          "astral_delta": 1,
+          "duration": "one_combat_this_round",
+          "instinkt": true,
+          "discard_after_resolution": true
+        }
+      ],
+      "tags": [
+        "astral-staerke",
+        "ein-kampf",
+        "on-play",
+        "instinkt",
+        "gegenstand",
+        "fraktionslos"
+      ],
+      "effekt_symbol": "on_play+instinkt",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Gib einer eigenen Bezwingerin für diese Kampfrunde +1 ASTRAL-Stärke, jedoch nur für einen Kampf. Instinkt: Die verdeckt gesetzte Karte darf auch in der gegnerischen Versorgungs- und Nachschubphase aktiviert werden."
     },
     {
       "id": "1.02-08-32-faae5d63",
@@ -4522,7 +4716,7 @@
       "kartentyp": "Waffe",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Unterwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -4536,8 +4730,24 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "continuous_timed",
+          "engine_key": "steinschwert_temp_physical",
+          "target": "equipped_bez",
+          "physical_delta": 1,
+          "duration": "until_next_own_supply_start"
+        }
+      ],
+      "tags": [
+        "physische-staerke",
+        "kampfrundendauer",
+        "fraktionslos"
+      ],
+      "effekt_symbol": "duration",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Die ausgerüstete Bezwingerin erhält bis zum Anfang deiner nächsten Versorgungsphase (AVP) +1 physische Stärke."
     },
     {
       "id": "1.02-09-32-6e1f69e4",
@@ -4549,7 +4759,7 @@
       "kartentyp": "Schild",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Unterwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -4563,8 +4773,34 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "combat_defense",
+          "engine_key": "goldener_dorn_defense_physical",
+          "target": "equipped_bez",
+          "physical_delta": 1,
+          "duration": "this_combat",
+          "condition": "equipped_bez_is_attacked"
+        },
+        {
+          "trigger": "continuous",
+          "engine_key": "equipment_physical_shield",
+          "target": "equipped_bez",
+          "physicalShield": 1,
+          "permanent_while_equipped": true
+        }
+      ],
+      "tags": [
+        "physische-staerke",
+        "physischer-schild",
+        "verteidigung",
+        "permanent",
+        "fraktionslos"
+      ],
+      "effekt_symbol": "combat+permanent",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Wenn eine gegnerische Bezwingerin die mit Goldener Dorn ausgerüstete Bezwingerin angreift, erhält diese nur in diesem Kampf +1 physische Stärke. Solange Goldener Dorn ausgerüstet ist, erhält sie außerdem +1 physischen Schild."
     },
     {
       "id": "1.02-10-32-4980eb3a",
@@ -4576,7 +4812,7 @@
       "kartentyp": "Kopfschutz",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
-      "fraktion": "Unterwelt",
+      "fraktion": "Fraktionslos",
       "stufe": 1,
       "klasse": null,
       "bereich": null,
@@ -4590,8 +4826,24 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "continuous",
+          "engine_key": "equipment_astral_shield",
+          "target": "equipped_bez",
+          "astralShield": 1,
+          "permanent_while_equipped": true
+        }
+      ],
+      "tags": [
+        "astral-schild",
+        "permanent",
+        "fraktionslos"
+      ],
+      "effekt_symbol": "permanent",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Solange dieser Kopfschutz ausgerüstet ist, fügt er der ausgerüsteten Bezwingerin 1 ASTRAL-Schild hinzu."
     },
     {
       "id": "1.05-12-32-ea54d8b1",
@@ -5951,7 +6203,6 @@
         "1.04-17-32-a4e9b502",
         "1.04-03-32-aa7ee080",
         "1.04-04-32-922770d8",
-        "1.04-05-32-be771e84",
         "1.04-19-32-426aa886",
         "1.04-20-32-0c8013b6",
         "1.04-21-32-a0ad6302",
@@ -5969,10 +6220,6 @@
         "1.04-13-32-13781dbc",
         "1.04-14-32-7168e6d1",
         "1.04-15-32-eea6d3ee",
-        "1.04-16-32-31af8c57",
-        "1.04-28-32-59cf6134",
-        "1.04-29-32-7d288892",
-        "1.04-30-32-f6e1d4a0",
         "1.04-31-32-5e304bb5",
         "1.04-32-32-36458e8f",
         "1.04-02-32-573a39eb",
@@ -5985,7 +6232,6 @@
         "1.01-17-32-aab9521d",
         "1.01-03-32-ff9fdb25",
         "1.01-04-32-6c8c7d2d",
-        "1.01-05-32-07ee4a59",
         "1.01-19-32-f22d48d8",
         "1.01-20-32-62cd298b",
         "1.01-21-32-9c26c16c",
@@ -6006,7 +6252,6 @@
         "1.01-16-32-c5143f03",
         "1.01-28-32-c3001160",
         "1.01-29-32-b570c797",
-        "1.01-30-32-c21d5a48",
         "1.01-31-32-9e8ce748",
         "1.01-32-32-32c67d98",
         "1.01-02-32-6bc100fd",
@@ -6020,9 +6265,7 @@
         "1.03-13-32-c61a0eda",
         "1.03-14-32-a55b62d5",
         "1.03-15-32-8f475f93",
-        "1.03-24-32-a280cfe8",
         "1.03-25-32-c8153e7a",
-        "1.03-26-32-a941d44f",
         "1.03-17-32-f817177a",
         "1.03-18-32-74bd1fd5",
         "1.03-19-32-62426e17",
@@ -6033,6 +6276,7 @@
         "1.03-30-32-7ded76d1",
         "1.03-31-32-f10a85fa",
         "1.03-32-32-fca1732d",
+        "1.01-30-32-c21d5a48",
         "1.03-01-32-92d5784a",
         "1.03-02-32-38e3f5fb",
         "1.03-03-32-89c156ba",
@@ -6040,20 +6284,17 @@
         "1.03-05-32-958b7be8",
         "1.03-06-32-60257f9d",
         "1.03-07-32-da49cc07",
-        "1.03-08-32-7dedc4d6",
         "1.03-09-32-1451a6e2",
         "1.03-10-32-436b6b3b",
         "1.03-12-32-4bd94de1",
         "1.03-16-32-02bf8e96",
-        "1.03-23-32-25356d67",
-        "1.03-27-32-d286351b"
+        "1.03-23-32-25356d67"
       ],
       "Unterwelt": [
         "1.02-11-32-fb6715c3",
         "1.02-22-32-e327b014",
         "1.02-13-32-a55290d6",
         "1.02-14-32-08775875",
-        "1.02-15-32-da3f87a2",
         "1.02-24-32-96bd7e4f",
         "1.02-25-32-8d1099b4",
         "1.02-26-32-14091659",
@@ -6087,7 +6328,6 @@
         "1.05-17-32-4bfcb0ce",
         "1.05-03-32-8b1bc93e",
         "1.05-04-32-4607b556",
-        "1.05-06-32-7d205dbd",
         "1.05-19-32-6137cea7",
         "1.05-20-32-52249a2e",
         "1.05-21-32-97e5c324",
@@ -6113,6 +6353,20 @@
         "1.05-05-32-3a672987",
         "1.05-18-32-7be7cb45",
         "1.05-22-32-86b7a35a"
+      ],
+      "Fraktionslos": [
+        "1.04-05-32-be771e84",
+        "1.01-05-32-07ee4a59",
+        "1.03-24-32-a280cfe8",
+        "1.03-26-32-a941d44f",
+        "1.02-15-32-da3f87a2",
+        "1.05-06-32-7d205dbd",
+        "1.04-16-32-31af8c57",
+        "1.04-28-32-59cf6134",
+        "1.04-29-32-7d288892",
+        "1.04-30-32-f6e1d4a0",
+        "1.03-08-32-7dedc4d6",
+        "1.03-27-32-d286351b"
       ]
     },
     "nach_klasse": {

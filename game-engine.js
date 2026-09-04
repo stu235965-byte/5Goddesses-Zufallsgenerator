@@ -213,7 +213,7 @@ const EQUIPMENT_COMBAT_PROFILES={
   'Legionshelm':                 {physicalShield:1},
   'Leichte Robe':                {astralShield:1},
   'Holzschild':                  {physicalShield:1},
-  'Goldener Dorn':               {physicalShield:1,attackPhysicalWhenAttacking:1},
+  'Goldener Dorn':               {physicalShield:1,defendPhysicalWhenDefending:1},
   'Gedankenschleier Psythra':    {astralShield:1},
   'Chikaras Stahlherz':          {shieldChoice:true},
   'Die Abenddämmerung Hyhde':    {tempAstral:1,untilNextSupply:true},
@@ -237,6 +237,7 @@ function initializeEquipmentCombatState(r,p,choice=null){
     r.tempAstralBonus=prof.tempAstral||0;
     r.attackPhysicalWhenAttacking=prof.attackPhysicalWhenAttacking||0;
     r.attackAstralWhenAttacking=prof.attackAstralWhenAttacking||0;
+    r.defendPhysicalWhenDefending=prof.defendPhysicalWhenDefending||0;
     r.tempBonusExpiresTurn=prof.untilNextSupply ? p.turnCount+1 : null;
     r.equipmentCombatInitialized=true;
   }
@@ -295,6 +296,7 @@ function equipmentStrengthBonus(state,playerIndex,bezSlot,type,isAttacking=false
     if(type==='physical'){
       total+=r.tempPhysicalBonus||0;
       if(isAttacking)total+=r.attackPhysicalWhenAttacking||0;
+      if(!isAttacking)total+=r.defendPhysicalWhenDefending||0;
     }else{
       total+=r.tempAstralBonus||0;
       if(isAttacking)total+=r.attackAstralWhenAttacking||0;
@@ -333,6 +335,125 @@ function activateRuth(state,bezSlot,choice){
   log(state,`${c.name}: ${cardData(b)?.name} bezahlt 1 Ehre, erhält +1 ${choice==='physical'?'physischen':'ASTRAL'} Schild und kann in dieser KR nicht mehr angreifen. Ladungen: ${r.effectUsesRemaining}.`);
   return {ok:true,msg:`Ruth: +1 ${choice==='physical'?'physischer':'ASTRAL'} Schild. Noch ${r.effectUsesRemaining} Ladung(en).`};
 }
+
+function isWunderumwandlungsapparatur(r){
+  return !!cardData(r)?.effekte?.some(e=>e.engine_key==='wunderumwandlungsapparatur_honor_convert');
+}
+function ownHonorFieldSources(state){
+  const p=active(state);
+  const out=[];
+  const add=(id,r,label)=>{
+    if(!r || r.faceDown || Number(r.honor||0)<=0)return;
+    out.push({id,name:label||cardData(r)?.name||'Karte',honor:Number(r.honor||0)});
+  };
+
+  add('refuge',p.refuge,cardData(p.refuge)?.name||'Zuflucht');
+  p.bezSlots.forEach((r,i)=>add(`bez:${i}`,r,cardData(r)?.name||`Bezwingerin ${i+1}`));
+  add('secondary',p.secondary,cardData(p.secondary)?.name||'Sekundärkarte');
+
+  if(state.sharedPrimary?.owner===p.index){
+    add('primary',state.sharedPrimary,cardData(state.sharedPrimary)?.name||'Primärkarte');
+  }
+
+  p.azr.forEach((r,i)=>add(`azr:${i}`,r,cardData(r)?.name||`AZR ${i+1}`));
+
+  ensureEquipmentState(p);
+  p.equipment.forEach((eq,bezSlot)=>{
+    ['weapon','shield','armor','helmet'].forEach(kind=>{
+      const r=eq?.[kind];
+      add(`equip:${bezSlot}:${kind}`,r,cardData(r)?.name||'Ausrüstung');
+    });
+  });
+  return out;
+}
+function honorFieldRuntimeById(state,id){
+  const p=active(state);
+  if(id==='refuge')return p.refuge;
+  if(id==='secondary')return p.secondary;
+  if(id==='primary')return state.sharedPrimary?.owner===p.index?state.sharedPrimary:null;
+  if(String(id).startsWith('bez:'))return p.bezSlots[Number(String(id).split(':')[1])]||null;
+  if(String(id).startsWith('azr:'))return p.azr[Number(String(id).split(':')[1])]||null;
+  if(String(id).startsWith('equip:')){
+    const [,slot,kind]=String(id).split(':');
+    return p.equipment?.[Number(slot)]?.[kind]||null;
+  }
+  return null;
+}
+function startWunderumwandlungsapparatur(state){
+  const p=active(state),r=state.sharedPrimary,c=cardData(r);
+  if(!r || r.owner!==p.index || !isWunderumwandlungsapparatur(r))
+    return {ok:false,msg:'Die Wunderumwandlungsapparatur liegt nicht in deinem Primärbereich.'};
+  if(!['supply','resupply'].includes(currentPhase(state).id))
+    return {ok:false,msg:'Dieses Wunder kann nur in VP oder NP gewirkt werden.'};
+  if(r.wonderTurn===p.turnCount)
+    return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+
+  const cost=Number(r.wonderCostCurrent??c?.wunder?.kosten_ehre??1);
+  if(Number(r.honor||0)<cost)
+    return {ok:false,msg:`Die Wunderumwandlungsapparatur benötigt ${cost} Ehre.`};
+  if(!p.bezSlots.some(Boolean))
+    return {ok:false,msg:'Es liegt keine eigene Bezwingerin als Ziel auf dem Spielfeld.'};
+
+  // Nach Bezahlung der Wunderkosten müssen noch 2 entfernbare Ehrenpunkte
+  // auf der eigenen Spielfeldseite vorhanden sein.
+  const totalBefore=ownHonorFieldSources(state).reduce((sum,x)=>sum+x.honor,0);
+  if(totalBefore-cost<2)
+    return {ok:false,msg:'Nach Bezahlung der Wunderkosten müssen noch mindestens 2 Ehre auf deiner Spielfeldseite vorhanden sein.'};
+
+  r.honor-=cost;
+  r.wonderTurn=p.turnCount;
+  state.pendingBezEffect={
+    type:'wunderumwandlungsapparatur_remove_honor',
+    sourcePlayer:p.index,
+    removed:0
+  };
+  log(state,`${c.name}: Wunder für ${cost} Ehre aktiviert. Entferne jetzt 2 Ehre von der eigenen Spielfeldseite.`);
+  return {ok:true,pending:true,msg:'Wunder aktiviert. Entferne 2 Ehre von deiner Spielfeldseite.'};
+}
+function wunderumwandlungsapparaturHonorSources(state){
+  const p=active(state),pend=state.pendingBezEffect;
+  if(pend?.type!=='wunderumwandlungsapparatur_remove_honor'||pend.sourcePlayer!==p.index)return [];
+  return ownHonorFieldSources(state);
+}
+function resolveWunderumwandlungsapparaturHonor(state,id){
+  const p=active(state),pend=state.pendingBezEffect;
+  if(pend?.type!=='wunderumwandlungsapparatur_remove_honor'||pend.sourcePlayer!==p.index)
+    return {ok:false,msg:'Keine Ehrenauswahl aktiv.'};
+
+  const r=honorFieldRuntimeById(state,id);
+  if(!r || r.faceDown || Number(r.honor||0)<1)
+    return {ok:false,msg:'Diese Karte besitzt keine entfernbare Ehre.'};
+
+  r.honor-=1;
+  pend.removed=Number(pend.removed||0)+1;
+  log(state,`Wunderumwandlungsapparatur: 1 Ehre von ${cardData(r)?.name||'Karte'} entfernt (${pend.removed}/2).`);
+
+  if(pend.removed<2){
+    return {ok:true,pending:true,msg:`1 Ehre entfernt. Noch ${2-pend.removed} Ehre entfernen.`};
+  }
+
+  state.pendingBezEffect={
+    type:'wunderumwandlungsapparatur_target',
+    sourcePlayer:p.index
+  };
+  return {ok:true,pending:true,msg:'2 Ehre entfernt. Wähle jetzt eine eigene Bezwingerin für +1 Ehre.'};
+}
+function wunderumwandlungsapparaturTargets(state){
+  const p=active(state),pend=state.pendingBezEffect;
+  if(pend?.type!=='wunderumwandlungsapparatur_target'||pend.sourcePlayer!==p.index)return [];
+  return p.bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||`Bezwingerin ${i+1}`,honor:Number(r.honor||0)}:null).filter(Boolean);
+}
+function resolveWunderumwandlungsapparaturTarget(state,id){
+  const p=active(state),pend=state.pendingBezEffect,b=p.bezSlots[Number(id)];
+  if(pend?.type!=='wunderumwandlungsapparatur_target'||pend.sourcePlayer!==p.index||!b)
+    return {ok:false,msg:'Ungültige Bezwingerin.'};
+
+  b.honor=Number(b.honor||0)+1;
+  state.pendingBezEffect=null;
+  log(state,`Wunderumwandlungsapparatur: ${cardData(b)?.name||'Bezwingerin'} erhält +1 Ehre.`);
+  return {ok:true,msg:`${cardData(b)?.name||'Bezwingerin'} erhält +1 Ehre.`};
+}
+
 function selectEhrisTarget(state,bezSlot){
   const p=active(state),ear=allRuntimeCards(state).find(x=>x.playerIndex===p.index&&cardHasEngineKey(x.r,'ehris_ohrringe'));
   if(!ear)return {ok:false,msg:'Ehris Ohrringe liegen nicht offen auf deinem Feld.'};
@@ -362,7 +483,7 @@ function combatStrength(state,playerIndex,bezSlot,type,isAttacking=false){
   const c=cardData(r);
   const base=type==='physical'
     ? ((r.physical ?? c?.physische_staerke ?? 0) + Number(r.effectState?.psiloPhysicalBonus||0) + Number(r.effectState?.trankStaerkePhysicalBonus||0))
-    : (r.astral ?? c?.astrale_staerke ?? 0);
+    : ((r.astral ?? c?.astrale_staerke ?? 0) + Number(r.effectState?.trankAstralMachtBonus||0));
   const equipment=equipmentStrengthBonus(state,playerIndex,bezSlot,type,isAttacking);
   return {base,equipment,total:Math.max(0,base+equipment)};
 }
@@ -1385,6 +1506,7 @@ function tickFieldDurations(state){
     x.r?.effectRoundsRemaining!==null &&
     x.r?.effectRoundsRemaining!==undefined &&
     !x.r.effectDisabled &&
+    !x.r.faceDown &&
     runtimeControllerIndex(x)===state.activePlayer
   );
   for(const x of targets){
@@ -1600,7 +1722,7 @@ function resolveEhrisSelection(state,id){const q=state.pendingBezEffect,p=state.
 function maintainEhris(state){for(const p of state.players)for(let i=0;i<(p.azr||[]).length;i++){const r=p.azr[i],c=cardData(r);if(!r||r.faceDown||r.effectDisabled||!c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'))continue;const t=ehrisTargets(state,p.index),sel=(p.bezSlots||[]).find(b=>b&&b.bild===r.effectState?.selectedBezBild);if(t.length<2)r.effectState.selectedBezBild=null;else if(!sel&&p.index===state.activePlayer&&['supply','resupply'].includes(currentPhase(state).id)&&!state.pendingBezEffect)state.pendingBezEffect={type:'ehris_select',sourcePlayer:p.index,sourceAzrSlot:i};}}
 function isInstantRuestkammerItem(c){
   return c?.deck_bereich==='ruestkammer' && c?.kartentyp==='Gegenstand' &&
-    c?.effekte?.some(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke'].includes(e.engine_key));
+    c?.effekte?.some(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke','erlass_umverteilung','ueberladung','trank_der_astral_macht','die_kanone'].includes(e.engine_key));
 }
 function discardAzrInstantItem(state,playerIndex,azrSlot){
   const p=state.players[playerIndex],r=p?.azr?.[azrSlot];
@@ -1608,10 +1730,116 @@ function discardAzrInstantItem(state,playerIndex,azrSlot){
   p.azr[azrSlot]=null;
   discardRuntime(p,r);
 }
+
+function ownHonorFieldRefs(state,playerIndex){
+  const p=state.players[playerIndex],refs=[];
+  if(p.refuge && Number(p.refuge.honor||0)>0)refs.push({kind:'refuge',slot:null,r:p.refuge});
+  (p.bezSlots||[]).forEach((r,i)=>{if(r && Number(r.honor||0)>0)refs.push({kind:'bez',slot:i,r});});
+  (p.azr||[]).forEach((r,i)=>{if(r && !r.faceDown && Number(r.honor||0)>0)refs.push({kind:'azr',slot:i,r});});
+  if(p.secondary && Number(p.secondary.honor||0)>0)refs.push({kind:'secondary',slot:null,r:p.secondary});
+  if(state.sharedPrimary && state.sharedPrimary.owner===playerIndex && Number(state.sharedPrimary.honor||0)>0)
+    refs.push({kind:'primary',slot:null,r:state.sharedPrimary});
+  return refs;
+}
+function erlassHonorSources(state){
+  const pend=state.pendingBezEffect;
+  if(pend?.type!=='erlass_umverteilung')return [];
+  return ownHonorFieldRefs(state,pend.sourcePlayer).map((x,i)=>({
+    id:String(i),
+    name:cardData(x.r)?.name||x.kind,
+    honor:Number(x.r.honor||0)
+  }));
+}
+function erlassBegin(state,x){
+  const pend=state.pendingBezEffect;
+  if(pend?.type!=='erlass_umverteilung')return {ok:false,msg:'Keine Umverteilung aktiv.'};
+  x=Number(x);
+  if(![1,2].includes(x))return {ok:false,msg:'X muss 1 oder 2 sein.'};
+  const total=ownHonorFieldRefs(state,pend.sourcePlayer).reduce((s,a)=>s+Number(a.r.honor||0),0);
+  if(total<x)return {ok:false,msg:`Für X=${x} sind nicht genügend Ehrenpunkte auf deiner Spielfeldseite vorhanden.`};
+  pend.x=x;pend.remaining=x;pend.removals=[];
+  return {ok:true,msg:`Entferne jetzt insgesamt ${x} Ehre von deinen eigenen Karten.`};
+}
+function erlassRemoveHonor(state,id){
+  const pend=state.pendingBezEffect;
+  if(pend?.type!=='erlass_umverteilung' || !pend.x)return {ok:false,msg:'Keine Ehrenentfernung aktiv.'};
+  if(pend.remaining<=0)return {ok:false,msg:'Es wurde bereits genug Ehre entfernt.'};
+  const refs=ownHonorFieldRefs(state,pend.sourcePlayer);
+  const ref=refs[Number(id)];
+  if(!ref || Number(ref.r.honor||0)<=0)return {ok:false,msg:'Von dieser Karte kann keine Ehre entfernt werden.'};
+  ref.r.honor=Number(ref.r.honor||0)-1;
+  pend.removals.push({kind:ref.kind,slot:ref.slot});
+  pend.remaining-=1;
+  if(pend.remaining>0)return {ok:true,pending:true,msg:`Noch ${pend.remaining} Ehre entfernen.`};
+  return {ok:true,pending:true,msg:'Wähle nun eine eigene Bezwingerin, die die umverteilte Ehre erhält.'};
+}
+function erlassTargets(state){
+  const pend=state.pendingBezEffect;
+  if(pend?.type!=='erlass_umverteilung' || pend.remaining!==0)return [];
+  return state.players[pend.sourcePlayer].bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
+}
+function resolveErlassTarget(state,id){
+  const pend=state.pendingBezEffect;
+  if(pend?.type!=='erlass_umverteilung' || pend.remaining!==0)return {ok:false,msg:'Keine passende Umverteilungsauswahl aktiv.'};
+  const p=state.players[pend.sourcePlayer],t=p.bezSlots[Number(id)];
+  if(!t)return {ok:false,msg:'Ungültige eigene Bezwingerin.'};
+  t.honor=Number(t.honor||0)+Number(pend.x||0);
+  const x=Number(pend.x||0),slot=pend.sourceAzrSlot;
+  state.pendingBezEffect=null;
+  discardAzrInstantItem(state,p.index,slot);
+  log(state,`Erlass Umverteilung: ${x} Ehre wurden umverteilt; ${cardData(t)?.name||'Bezwingerin'} erhält +${x} Ehre.`);
+  return {ok:true,msg:`${cardData(t)?.name||'Bezwingerin'} erhält +${x} Ehre.`};
+}
+
+function hasInstinct(c){
+  return !!c?.effekte?.some(e=>e.instinkt===true) || (c?.tags||[]).includes('instinkt');
+}
+function instinctWindowKey(state){
+  const ph=currentPhase(state)?.id||'';
+  return `${state.roundSerial}|${state.activePlayer}|${ph}`;
+}
+function instinctCandidates(state){
+  const ph=currentPhase(state)?.id;
+  if(!['supply','resupply'].includes(ph))return [];
+  const owner=1-state.activePlayer;
+  const p=state.players[owner];
+  return (p?.azr||[]).map((r,slot)=>{
+    const c=cardData(r);
+    if(!r?.faceDown || !hasInstinct(c) || !isInstantRuestkammerItem(c))return null;
+    return {playerIndex:owner,slot,id:String(slot),name:c?.name||'Instinkt-Karte'};
+  }).filter(Boolean);
+}
+function instinctWindowNeeded(state){
+  if(!['supply','resupply'].includes(currentPhase(state)?.id))return false;
+  if(state.instinctWindowPassed===instinctWindowKey(state))return false;
+  return instinctCandidates(state).length>0;
+}
+function passInstinctWindow(state){
+  state.instinctWindowPassed=instinctWindowKey(state);
+  return {ok:true};
+}
+function activateInstinctCard(state,slot){
+  const owner=1-state.activePlayer,p=state.players[owner],r=p?.azr?.[Number(slot)],c=cardData(r);
+  if(!r?.faceDown || !hasInstinct(c))return {ok:false,msg:'Keine aktivierbare Instinkt-Karte in diesem Bereich.'};
+  if(!['supply','resupply'].includes(currentPhase(state)?.id))return {ok:false,msg:'Instinkt ist hier derzeit nicht aktivierbar.'};
+  r.faceDown=false;
+  state.instinctWindowPassed=instinctWindowKey(state);
+  log(state,`${p.name} aktiviert ${c.name} per Instinkt in der gegnerischen ${currentPhase(state).name}.`);
+  return startInstantRuestkammerItem(state,owner,Number(slot));
+}
+function ueberladungTargets(state,playerIndex){
+  const p=state.players[playerIndex];
+  return (p?.bezSlots||[]).map((r,i)=>{
+    if(!r)return null;
+    const phys=Number(r.physicalShield||0),astr=Number(r.astralShield||0);
+    if(phys<1 || astr<1)return null;
+    return {id:String(i),name:cardData(r)?.name||'Bezwingerin',physicalShield:phys,astralShield:astr,honor:Number(r.honor||0)};
+  }).filter(Boolean);
+}
 function startInstantRuestkammerItem(state,playerIndex,azrSlot){
   const p=state.players[playerIndex],r=p?.azr?.[azrSlot],c=cardData(r);
   if(!r||!isInstantRuestkammerItem(c))return {ok:false,msg:'Kein unterstützter Rüstkammer-Gegenstand.'};
-  const key=c.effekte.find(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke'].includes(e.engine_key))?.engine_key;
+  const key=c.effekte.find(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke','erlass_umverteilung','ueberladung','trank_der_astral_macht','die_kanone'].includes(e.engine_key))?.engine_key;
 
   if(key==='bastion_erleuchtung'){
     p.refuge.honor=Number(p.refuge.honor||0)+1;
@@ -1632,6 +1860,55 @@ function startInstantRuestkammerItem(state,playerIndex,azrSlot){
     return {ok:true,pending:true,msg:'Wähle eine gegnerische Bezwingerin für Sekundärangriff in dieser Kampfrunde.'};
   }
 
+  if(key==='ueberladung'){
+    const targets=ueberladungTargets(state,playerIndex);
+    if(!targets.length){
+      discardAzrInstantItem(state,playerIndex,azrSlot);
+      log(state,`${c.name}: keine eigene Bezwingerin mit mindestens 1 physischem und 1 ASTRAL-Schild; Gegenstand wird abgelegt.`);
+      return {ok:true,msg:'Keine gültige eigene Bezwingerin für Überladung vorhanden.'};
+    }
+    state.pendingBezEffect={type:'ueberladung',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
+    return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin: −1 physischer Schild, −1 ASTRAL-Schild, +3 Ehre.'};
+  }
+
+  if(key==='erlass_umverteilung'){
+    const targets=(p.bezSlots||[]).filter(Boolean);
+    if(!targets.length){
+      discardAzrInstantItem(state,playerIndex,azrSlot);
+      return {ok:true,msg:'Keine eigene Bezwingerin als Ziel vorhanden.'};
+    }
+    const total=ownHonorFieldRefs(state,playerIndex).reduce((s,a)=>s+Number(a.r.honor||0),0);
+    if(total<1){
+      discardAzrInstantItem(state,playerIndex,azrSlot);
+      return {ok:true,msg:'Keine Ehre zum Umverteilen vorhanden.'};
+    }
+    state.pendingBezEffect={type:'erlass_umverteilung',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot,x:null,remaining:null,removals:[]};
+    return {ok:true,pending:true,msg:`Wähle X für Erlass Umverteilung (${total>=2?'1 oder 2':'nur 1'}).`};
+  }
+
+  if(key==='trank_der_astral_macht'){
+    const targets=(p.bezSlots||[]).map((x,i)=>x?i:null).filter(i=>i!==null);
+    if(!targets.length){
+      discardAzrInstantItem(state,playerIndex,azrSlot);
+      log(state,`${c.name}: keine eigene Bezwingerin als Ziel; Gegenstand wird abgelegt.`);
+      return {ok:true,msg:'Keine eigene Bezwingerin als Ziel vorhanden.'};
+    }
+    state.pendingBezEffect={type:'trank_der_astral_macht',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
+    return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin für +1 ASTRAL-Stärke für einen Kampf in dieser KR.'};
+  }
+
+  if(key==='die_kanone'){
+    const enemy=state.players[1-playerIndex];
+    const targets=(enemy.bezSlots||[]).map((x,i)=>x?i:null).filter(i=>i!==null);
+    if(!targets.length){
+      discardAzrInstantItem(state,playerIndex,azrSlot);
+      log(state,`${c.name}: keine gegnerische Bezwingerin als Ziel; Gegenstand wird abgelegt.`);
+      return {ok:true,msg:'Keine gegnerische Bezwingerin als Ziel vorhanden.'};
+    }
+    state.pendingBezEffect={type:'die_kanone',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
+    return {ok:true,pending:true,msg:'Wähle eine gegnerische Bezwingerin für 1 physischen Schaden.'};
+  }
+
   if(key==='trank_der_staerke'){
     const targets=(p.bezSlots||[]).map((x,i)=>x?i:null).filter(i=>i!==null);
     if(!targets.length){
@@ -1646,16 +1923,19 @@ function startInstantRuestkammerItem(state,playerIndex,azrSlot){
 }
 function instantRuestkammerTargets(state){
   const pend=state.pendingBezEffect;if(!pend)return [];
-  if(pend.type==='laehmendes_nervengift'){
+  if(pend.type==='laehmendes_nervengift' || pend.type==='die_kanone'){
     return state.players[1-pend.sourcePlayer].bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
   }
-  if(pend.type==='trank_der_staerke'){
+  if(pend.type==='trank_der_staerke' || pend.type==='trank_der_astral_macht'){
     return state.players[pend.sourcePlayer].bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
+  }
+  if(pend.type==='ueberladung'){
+    return ueberladungTargets(state,pend.sourcePlayer);
   }
   return [];
 }
 function resolveInstantRuestkammerTarget(state,id){
-  const pend=state.pendingBezEffect;if(!pend||!['laehmendes_nervengift','trank_der_staerke'].includes(pend.type))
+  const pend=state.pendingBezEffect;if(!pend||!['laehmendes_nervengift','trank_der_staerke','trank_der_astral_macht','die_kanone','ueberladung'].includes(pend.type))
     return {ok:false,msg:'Keine passende Gegenstandsauswahl aktiv.'};
   const sourcePlayer=pend.sourcePlayer,sourceAzrSlot=pend.sourceAzrSlot;
   const p=state.players[sourcePlayer];
@@ -1670,6 +1950,58 @@ function resolveInstantRuestkammerTarget(state,id){
     discardAzrInstantItem(state,sourcePlayer,sourceAzrSlot);
     log(state,`${cardData(t)?.name}: erhält durch Lähmendes Nervengift Sekundärangriff für diese Kampfrunde.`);
     return {ok:true,msg:'Sekundärangriff für diese Kampfrunde vergeben.'};
+  }
+
+  if(pend.type==='die_kanone'){
+    const enemy=state.players[1-sourcePlayer],targetSlot=Number(id),t=enemy.bezSlots[targetSlot];
+    if(!t)return {ok:false,msg:'Ungültige gegnerische Bezwingerin.'};
+    discardAzrInstantItem(state,sourcePlayer,sourceAzrSlot);
+    state.pendingBezEffect=null;
+    state.pendingDamage={
+      attackerIndex:sourcePlayer,
+      attackerKind:'item',
+      attackerSlot:null,
+      defenderIndex:enemy.index,
+      defKind:'bez',
+      defSlot:targetSlot,
+      packetIndex:0,
+      packets:[{
+        role:'direct_item',playerIndex:enemy.index,bezSlot:targetSlot,
+        type:'physical',remaining:1,shieldLoss:0,heartLoss:0
+      }],
+      combatTiming:'simultaneous',
+      directDamageTarget:{playerIndex:enemy.index,kind:'bez',slot:targetSlot,source:'Die Kanone'}
+    };
+    log(state,`Die Kanone fügt ${cardData(t)?.name||'einer gegnerischen Bezwingerin'} 1 physischen Schaden zu.`);
+    const choice=currentShieldChoice(state);
+    if(choice)return {ok:true,needsShieldChoice:true,pendingDamage:true,msg:'Die Kanone: Wähle die Schildquelle für 1 physischen Schaden.',choice};
+    return finalizePendingCombat(state);
+  }
+
+  if(pend.type==='trank_der_astral_macht'){
+    const t=p.bezSlots[Number(id)];
+    if(!t)return {ok:false,msg:'Ungültige eigene Bezwingerin.'};
+    t.effectState=t.effectState||{};
+    t.effectState.trankAstralMachtBonus=Number(t.effectState.trankAstralMachtBonus||0)+1;
+    t.effectState.trankAstralMachtExpiresRoundSerial=state.roundSerial;
+    state.pendingBezEffect=null;
+    discardAzrInstantItem(state,sourcePlayer,sourceAzrSlot);
+    log(state,`${cardData(t)?.name}: +1 ASTRAL-Stärke durch Trank der ASTRAL-Macht für den nächsten Kampf dieser Kampfrunde.`);
+    return {ok:true,msg:'+1 ASTRAL-Stärke für einen Kampf in dieser Kampfrunde vergeben.'};
+  }
+
+  if(pend.type==='ueberladung'){
+    const t=p.bezSlots[Number(id)];
+    if(!t)return {ok:false,msg:'Ungültige eigene Bezwingerin.'};
+    if(Number(t.physicalShield||0)<1 || Number(t.astralShield||0)<1)
+      return {ok:false,msg:'Diese Bezwingerin benötigt mindestens 1 physischen und 1 ASTRAL-Schild.'};
+    t.physicalShield=Number(t.physicalShield||0)-1;
+    t.astralShield=Number(t.astralShield||0)-1;
+    t.honor=Number(t.honor||0)+3;
+    state.pendingBezEffect=null;
+    discardAzrInstantItem(state,sourcePlayer,sourceAzrSlot);
+    log(state,`${cardData(t)?.name||'Bezwingerin'}: Überladung entfernt 1 physischen und 1 ASTRAL-Schild und gibt +3 Ehre.`);
+    return {ok:true,msg:'−1 physischer Schild, −1 ASTRAL-Schild, +3 Ehre.'};
   }
 
   const t=p.bezSlots[Number(id)];
@@ -1695,6 +2027,11 @@ function expireRoundLimitedItemEffects(state){
         delete r.effectState.trankStaerkeExpiresRoundSerial;
         log(state,`${cardData(r)?.name}: ungenutzter Bonus des Tranks der Stärke verfällt am Ende der Kampfrunde.`);
       }
+      if(r.effectState.trankAstralMachtBonus && r.effectState.trankAstralMachtExpiresRoundSerial===state.roundSerial){
+        delete r.effectState.trankAstralMachtBonus;
+        delete r.effectState.trankAstralMachtExpiresRoundSerial;
+        log(state,`${cardData(r)?.name}: ungenutzter Bonus des Tranks der ASTRAL-Macht verfällt am Ende der Kampfrunde.`);
+      }
     }
   }
 }
@@ -1703,6 +2040,13 @@ function consumeTrankStaerkeBonus(r){
   const n=Number(r.effectState.trankStaerkePhysicalBonus||0);
   delete r.effectState.trankStaerkePhysicalBonus;
   delete r.effectState.trankStaerkeExpiresRoundSerial;
+  return n;
+}
+function consumeTrankAstralMachtBonus(r){
+  if(!r?.effectState?.trankAstralMachtBonus)return 0;
+  const n=Number(r.effectState.trankAstralMachtBonus||0);
+  delete r.effectState.trankAstralMachtBonus;
+  delete r.effectState.trankAstralMachtExpiresRoundSerial;
   return n;
 }
 function setFaceDown(state,handIndex,slot){
@@ -1734,6 +2078,12 @@ function playOpenAzr(state,handIndex,slot){
   p.hand.splice(handIndex,1);
   const r=makeRuntimeCard(bild,p.index,p.turnCount);
   r.faceDown=false;
+  if(isAstralFragment(c)){
+    r.effectRoundsRemaining=Number(c.effekt_dauer_kr ?? c.effekte?.find(e=>e.engine_key==='astralfragment')?.duration_rounds ?? 2);
+    r.effectDisabled=false;
+    r.effectState=r.effectState||{};
+    r.effectState.durationOwnRounds=true;
+  }
   if(c?.effekte?.some(e=>e.engine_key==='fluestern_brut')){
     r.effectRoundsRemaining=2;r.effectState=r.effectState||{};r.effectState.durationOwnRounds=true;
   }
@@ -1742,7 +2092,7 @@ function playOpenAzr(state,handIndex,slot){
   }
   if(c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe')){r.effectRoundsRemaining=3;r.effectState=r.effectState||{};}
   p.azr[slot]=r;
-  log(state,`${p.name} spielt ${c.name} offen in die ASTRAL-/Rüstkammer-Zone.${c?.effekte?.some(e=>e.engine_key==='fluestern_brut')?' Kampfrundendauer: 2 eigene KR.':''}`);
+  log(state,`${p.name} spielt ${c.name} offen in die ASTRAL-/Rüstkammer-Zone.${isAstralFragment(c)?` Kampfrundendauer: ${r.effectRoundsRemaining} eigene KR.`:c?.effekte?.some(e=>e.engine_key==='fluestern_brut')?' Kampfrundendauer: 2 eigene KR.':''}`);
   if(c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'))return startEhrisSelection(state,slot);
   if(isInstantRuestkammerItem(c))return startInstantRuestkammerItem(state,p.index,slot);
   return {ok:true};
@@ -1874,6 +2224,12 @@ function equipRuntimeToBez(state,p,r,bezSlot,kind){
     log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält durch den Blitz-Effekt +1 Ehre.`);
   }
 
+  if(c?.effekte?.some(e=>e.engine_key==='energieschild_honor')){
+    const bez=p.bezSlots[bezSlot];
+    bez.honor=Number(bez.honor||0)+1;
+    log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält durch den Blitz-Effekt +1 Ehre.`);
+  }
+
   if(c?.effekte?.some(e=>e.engine_key==='hut_der_weisheit_honor')){
     const bez=p.bezSlots[bezSlot];
     bez.honor=Number(bez.honor||0)+1;
@@ -2000,6 +2356,18 @@ function reveal(state,slot){
 
   if(!['honor','supply','rush','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'In dieser Phase kann die gesetzte Karte in der Grundversion nicht aktiviert werden.'};
   r.faceDown=false;
+
+  if(isAstralFragment(c)){
+    // Die Kampfrundendauer zählt ausschließlich, solange das Fragment offen liegt.
+    // Beim erstmaligen Aufdecken startet es daher sicher mit den gedruckten 2 eigenen KR.
+    r.effectRoundsRemaining=Number(c.effekt_dauer_kr ?? c.effekte?.find(e=>e.engine_key==='astralfragment')?.duration_rounds ?? 2);
+    r.effectDisabled=false;
+    r.effectState=r.effectState||{};
+    r.effectState.durationOwnRounds=true;
+    log(state,`${p.name} deckt ${c.name} auf. Kampfrundendauer: ${r.effectRoundsRemaining} eigene Kampfrunden.`);
+    return {ok:true,msg:`${c.name} liegt offen. Kampfrundendauer: ${r.effectRoundsRemaining}.`};
+  }
+
   if(isInstantRuestkammerItem(c)){
     log(state,`${p.name} deckt ${c.name} auf; der Gegenstandseffekt wird sofort aktiviert.`);
     return startInstantRuestkammerItem(state,p.index,slot);
@@ -2147,13 +2515,32 @@ function attackerKindAndSlot(attackerSource){
   const slot=typeof attackerSource==='number' ? attackerSource : attackerSource?.slot;
   return {kind:'bez',slot};
 }
+
+function destroyedQueenProtectionActive(state,defenderPlayerIndex){
+  const p=state.players[defenderPlayerIndex];
+  if(!p)return false;
+  const relic=(p.azr||[]).find(r=>
+    r && !r.faceDown && !r.effectDisabled &&
+    Number(r.effectRoundsRemaining||0)>0 &&
+    cardHasEngineKey(r,'zerstoerte_queen_protection')
+  );
+  if(!relic)return false;
+  return (p.bezSlots||[]).some(r=>{
+    const name=cardData(r)?.name;
+    return !!r && !r.faceDown && (name==='Z.E.R.O. ATK' || name==='Z.E.R.O. ASTRAL');
+  });
+}
+function queenProtectedFromAttack(state,defenderPlayerIndex,r){
+  return cardData(r)?.name==='Q.U.E.E.N.' && destroyedQueenProtectionActive(state,defenderPlayerIndex);
+}
 function attackTargets(state,attackerSource){
   const opp=opponent(state);
   const targets=[];
   const src=attackerKindAndSlot(attackerSource);
 
   opp.bezSlots.forEach((r,i)=>{
-    if(r && hasHeartAttribute(r))targets.push({type:'bez',slot:i,label:cardData(r)?.name||`Bezwingerin ${i+1}`});
+    if(r && hasHeartAttribute(r) && !queenProtectedFromAttack(state,opp.index,r))
+      targets.push({type:'bez',slot:i,label:cardData(r)?.name||`Bezwingerin ${i+1}`});
   });
   if(opp.secondary && hasHeartAttribute(opp.secondary))targets.push({type:'secondary',label:cardData(opp.secondary)?.name||'Sekundärbereich'});
   if(state.sharedPrimary && state.sharedPrimary.owner===opp.index && hasHeartAttribute(state.sharedPrimary)){
@@ -2432,6 +2819,9 @@ function finalizePendingCombat(state){
   if(!pd)return {ok:false,msg:'Keine offene Schadensverteilung.'};
 
   const attack=state.attack;
+  if(pd.directDamageTarget){
+    killIfNeeded(state,pd.directDamageTarget.playerIndex,pd.directDamageTarget.kind,pd.directDamageTarget.slot);
+  }
   if(attack){
     awardBerserkerMarksAfterCombat(state,{
       attackerPlayer:pd.attackerIndex,attackerKind:pd.attackerKind||'bez',attackerSlot:pd.attackerSlot,
@@ -2584,10 +2974,14 @@ function resolveCombat(state){
   consumePsiloBonus(a);
   const trankAtk=consumeTrankStaerkeBonus(a);
   if(trankAtk)log(state,`${cardData(a)?.name}: Bonus des Tranks der Stärke (+${trankAtk}) nach diesem Kampf verbraucht.`);
+  const astralTrankAtk=consumeTrankAstralMachtBonus(a);
+  if(astralTrankAtk)log(state,`${cardData(a)?.name}: Bonus des Tranks der ASTRAL-Macht (+${astralTrankAtk}) nach diesem Kampf verbraucht.`);
   if(target.type==='bez'){
     consumePsiloBonus(d);
     const trankDef=consumeTrankStaerkeBonus(d);
     if(trankDef)log(state,`${cardData(d)?.name}: Bonus des Tranks der Stärke (+${trankDef}) nach diesem Kampf verbraucht.`);
+    const astralTrankDef=consumeTrankAstralMachtBonus(d);
+    if(astralTrankDef)log(state,`${cardData(d)?.name}: Bonus des Tranks der ASTRAL-Macht (+${astralTrankDef}) nach diesem Kampf verbraucht.`);
   }
   if(a?.effectState?.primaryAttackActive)a.effectState.primaryAttackActive=false;
   if(target.type==='bez' && d?.effectState?.primaryAttackActive)d.effectState.primaryAttackActive=false;
@@ -2766,6 +3160,7 @@ function migrateLoadedState(state){
   if(state.pendingWonderDraw===undefined)state.pendingWonderDraw=null;
   if(state.pendingRefugeStage2Choice===undefined)state.pendingRefugeStage2Choice=null;
   if(state.pendingBezEffect===undefined)state.pendingBezEffect=null;
+  if(state.instinctWindowPassed===undefined)state.instinctWindowPassed=null;
   if(!Array.isArray(state.fragmentRewardQueue))state.fragmentRewardQueue=[];
 
   state.players.forEach((p,index)=>{
@@ -2834,7 +3229,7 @@ window.G5Engine={
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,playOpenAzr,reveal,
   equipmentKind,isEquipmentCard,fieldArea,mornakAllowedAreas,playFieldFromHand,moveRevealedFieldCard,moveMornakFromAzr,equipFromHand,equipFromAzr,discardEquipment,
   chooseEquipmentShieldBonus,equipmentCombatProfile,combatStrength,effectiveWonderCost,ruthTargets,activateRuth,selectEhrisTarget,
-  availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,prepareAttack,
+  availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,destroyedQueenProtectionActive,prepareAttack,
   refugeWonderAvailable,activateRefugeWonder,resolveWonderDraw,chooseRefugeStage2Bonus,
   bezEffectInfo,activateBezEffect,thalZirisTargets,resolveThalZiris,thalZirisStage1Targets,resolveThalZirisStage1,
   mornakTokenTargets,resolveMornakTokenPlacement,startNemesisWonder,cancelPendingBezEffect,
@@ -2843,8 +3238,8 @@ window.G5Engine={
   startPsiloWonder,psiloTargets,resolvePsiloTarget,keylaSearchTargets,resolveKeylaSearch,
   startQueen2Wonder,queenStackTargets,resolveQueenSearch,queenDiscardTargets,resolveQueen2Discard,
   fragmentfresserSchlundTargets,startFragmentfresserSchlundEffect,resolveFragmentfresserSchlund,
-  startInstantRuestkammerItem,instantRuestkammerTargets,resolveInstantRuestkammerTarget,
-  ruthTargets,startRuthEffect,resolveRuthTarget,resolveRuthChoice,ehrisTargets,startEhrisSelection,resolveEhrisSelection,effectiveWonderCost,
+  startInstantRuestkammerItem,instantRuestkammerTargets,resolveInstantRuestkammerTarget,instinctCandidates,instinctWindowNeeded,passInstinctWindow,activateInstinctCard,ueberladungTargets,erlassHonorSources,erlassBegin,erlassRemoveHonor,erlassTargets,resolveErlassTarget,
+  ruthTargets,startRuthEffect,resolveRuthTarget,resolveRuthChoice,startWunderumwandlungsapparatur,wunderumwandlungsapparaturHonorSources,resolveWunderumwandlungsapparaturHonor,wunderumwandlungsapparaturTargets,resolveWunderumwandlungsapparaturTarget,ehrisTargets,startEhrisSelection,resolveEhrisSelection,effectiveWonderCost,
   startKristallharnischEffect,resolveKristallharnischEffect,
   triggerLebensfresserschildHunger,resolveLebensfresserschildHungerAtSupplyStart,
   activateDeathPrimaryAttack,hasPrimaryAttack,hasSecondaryAttack,

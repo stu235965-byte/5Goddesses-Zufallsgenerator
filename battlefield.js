@@ -567,14 +567,57 @@ function renderActions(){
     });
     return;
   }
+
+  if(state.pendingBezEffect?.type==='wunderumwandlungsapparatur_remove_honor'){
+    const title=document.createElement('strong');
+    const removed=Number(state.pendingBezEffect.removed||0);
+    title.textContent=`Wunderumwandlungsapparatur – Ehre entfernen (${removed}/2)`;
+    root.appendChild(title);
+    const info=document.createElement('span');
+    info.textContent='Wähle, von welcher eigenen offenen Karte 1 Ehre entfernt wird. Dieselbe Karte kann mehrfach gewählt werden, solange sie genug Ehre besitzt.';
+    root.appendChild(info);
+    E().wunderumwandlungsapparaturHonorSources(state).forEach(t=>{
+      const b=document.createElement('button');
+      b.type='button';
+      b.textContent=`${t.name} (${t.honor} Ehre)`;
+      b.addEventListener('click',()=>{
+        const rr=E().resolveWunderumwandlungsapparaturHonor(state,t.id);
+        saveRender(rr.msg);
+      });
+      root.appendChild(b);
+    });
+    return;
+  }
+  if(state.pendingBezEffect?.type==='wunderumwandlungsapparatur_target'){
+    const title=document.createElement('strong');
+    title.textContent='Wunderumwandlungsapparatur – Bezwingerin für +1 Ehre wählen';
+    root.appendChild(title);
+    E().wunderumwandlungsapparaturTargets(state).forEach(t=>{
+      const b=document.createElement('button');
+      b.type='button';
+      b.textContent=`${t.name} (${t.honor} Ehre)`;
+      b.addEventListener('click',()=>{
+        const rr=E().resolveWunderumwandlungsapparaturTarget(state,t.id);
+        saveRender(rr.msg);
+      });
+      root.appendChild(b);
+    });
+    return;
+  }
   if(state.pendingBezEffect?.type==='ruth_target'){const title=document.createElement('strong');title.textContent='Dorfschmiedin Ruth – Bezwingerin wählen';root.appendChild(title);E().ruthTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.onclick=()=>{const rr=E().resolveRuthTarget(state,t.id);saveRender(rr.msg)};root.appendChild(b)});return;}
   if(state.pendingBezEffect?.type==='ruth_choice'){const title=document.createElement('strong');title.textContent='Dorfschmiedin Ruth – Schild wählen';root.appendChild(title);[['physical','+1 physischer Schild'],['astral','+1 ASTRAL-Schild']].forEach(([id,label])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>{const rr=E().resolveRuthChoice(state,id);saveRender(rr.msg)};root.appendChild(b)});return;}
   if(state.pendingBezEffect?.type==='ehris_select'){const title=document.createElement('strong');title.textContent='Ehris Ohrringe – Oberwelt-Bezwingerin wählen';root.appendChild(title);E().ehrisTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.onclick=()=>{const rr=E().resolveEhrisSelection(state,t.id);saveRender(rr.msg)};root.appendChild(b)});return;}
-  if(state.pendingBezEffect && ['laehmendes_nervengift','trank_der_staerke'].includes(state.pendingBezEffect.type)){
+  if(state.pendingBezEffect && ['laehmendes_nervengift','trank_der_staerke','trank_der_astral_macht','die_kanone','ueberladung'].includes(state.pendingBezEffect.type)){
     const title=document.createElement('strong');
     title.textContent=state.pendingBezEffect.type==='laehmendes_nervengift'
       ? 'Lähmendes Nervengift – gegnerische Bezwingerin wählen'
-      : 'Trank der Stärke – eigene Bezwingerin wählen';
+      : state.pendingBezEffect.type==='die_kanone'
+        ? 'Die Kanone – gegnerische Bezwingerin wählen'
+        : state.pendingBezEffect.type==='ueberladung'
+          ? 'Überladung – eigene Bezwingerin wählen'
+          : state.pendingBezEffect.type==='trank_der_astral_macht'
+            ? 'Trank der ASTRAL-Macht – eigene Bezwingerin wählen'
+            : 'Trank der Stärke – eigene Bezwingerin wählen';
     root.appendChild(title);
     E().instantRuestkammerTargets(state).forEach(t=>{
       const b=document.createElement('button');b.type='button';b.textContent=t.name;
@@ -1265,6 +1308,11 @@ function handleEquipmentSlot(kind,bezSlot){
 function handleOwnPrimary(){
   const r=state.sharedPrimary,p=E().active(state),c=E().cardData(r);
   if(!r || r.owner!==p.index)return;
+  if(c?.effekte?.some(e=>e.engine_key==='wunderumwandlungsapparatur_honor_convert')){
+    if(!['supply','resupply'].includes(phase()?.id||''))return message('Das Wunder der Wunderumwandlungsapparatur kann nur in VP oder NP gewirkt werden.','warn');
+    const rr=E().startWunderumwandlungsapparatur(state);
+    return saveRender(rr.msg);
+  }
   if(c?.effekte?.some(e=>e.engine_key==='ruth_kaufladen')){
     if(!['supply','resupply'].includes(phase()?.id||''))return message('Ruths Kaufladen kann nur in VP oder NP benutzt werden.','warn');
     const targets=E().ruthTargets(state);
@@ -1453,11 +1501,48 @@ function render(msg=''){
   requestAnimationFrame(updateStickyGameOffsets);
 }
 
+
+function handleInstinctBeforePhaseEnd(){
+  if(!state || !E().instinctWindowNeeded?.(state))return false;
+
+  const candidates=E().instinctCandidates(state);
+  if(!candidates.length)return false;
+
+  const owner=state.players[1-state.activePlayer]?.name||'Gegenspieler';
+  const phaseName=phase()?.id==='resupply'?'Nachschubphase':'Versorgungsphase';
+  const use=confirm(`${owner}: Möchtest du vor dem Ende der gegnerischen ${phaseName} eine verdeckt gesetzte Instinkt-Karte aktivieren?`);
+
+  if(!use){
+    E().passInstinctWindow(state);
+    E().save(state);
+    return false;
+  }
+
+  let chosen=candidates[0];
+  if(candidates.length>1){
+    const raw=prompt('Welche Instinkt-Karte aktivieren?\n'+candidates.map((x,i)=>`${i+1}: verdeckte Karte in AZR ${x.slot+1}`).join('\n'));
+    if(raw===null){
+      // Abbrechen bedeutet nicht "passen": Die Phase bleibt stehen und kann erneut beendet werden.
+      return true;
+    }
+    chosen=candidates[Number(raw)-1];
+    if(!chosen){
+      message('Ungültige Instinkt-Auswahl.','warn');
+      return true;
+    }
+  }
+
+  const rr=E().activateInstinctCard(state,chosen.slot);
+  saveRender(rr.msg||'Instinkt-Karte aktiviert.');
+  return true;
+}
+
 document.getElementById('gameStart')?.addEventListener('click',startGame);
 document.getElementById('gameResume')?.addEventListener('click',resumeGame);
 document.getElementById('gameNew')?.addEventListener('click',newGame);
 document.getElementById('gameNextPhase')?.addEventListener('click',async()=>{
   if(!state)return;
+  if(['supply','resupply'].includes(phase()?.id||'') && handleInstinctBeforePhaseEnd())return;
   if(phase()?.id==='end')return animateRoundHandoff();
   const r=E().advancePhase(state);
   selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;selectedAttackType=null;refugeActionSelected=false;
