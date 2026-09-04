@@ -214,19 +214,34 @@ function cardHasDeploymentDelay(c){
   return !isRefuge && !isDevelopment && hasHearts;
 }
 
-function statLine(r){
+function statLine(r,{playerIndex=null,bezSlot=null}={}){
   if(!r)return '';
   const c=E().cardData(r);
   const isEq=E().isEquipmentCard?.(c);
-  const phys=isEq ? ((r.tempPhysicalBonus||0)+(r.attackPhysicalWhenAttacking||0)) : (r.physical ?? c?.physische_staerke ?? 0);
+  const phys=isEq ? ((r.tempPhysicalBonus||0)+(r.attackPhysicalWhenAttacking||0)+(r.defendPhysicalWhenDefending||0)) : (r.physical ?? c?.physische_staerke ?? 0);
   const astr=isEq ? ((r.tempAstralBonus||0)+(r.attackAstralWhenAttacking||0)) : (r.astral ?? c?.astrale_staerke ?? 0);
   const physText=isEq && phys>0?`+${phys}`:phys;
   const astrText=isEq && astr>0?`+${astr}`:astr;
+
+  let pShield=Number(r.physicalShield||0),aShield=Number(r.astralShield||0);
+  // Bei Bezwingerinnen zeigen wir den aktuell verfügbaren Gesamtschild
+  // (Basisschild + ausgerüstete Schildquellen), während die Engine die Quellen
+  // intern weiterhin getrennt hält.
+  if(!isEq && playerIndex!==null && bezSlot!==null && state?.players?.[playerIndex]){
+    const eq=state.players[playerIndex].equipment?.[bezSlot]||{};
+    for(const kind of ['weapon','shield','armor','helmet']){
+      const er=eq[kind];
+      if(!er)continue;
+      pShield+=Number(er.physicalShield||0);
+      aShield+=Number(er.astralShield||0);
+    }
+  }
+
   return `<span class="stat heart">♥ ${r.hearts}</span>
     <span class="stat physical">⚔ ${physText}</span>
     <span class="stat astral">✦ ${astrText}</span>
-    <span class="stat pshield">◆ ${r.physicalShield}</span>
-    <span class="stat ashield">◆ ${r.astralShield}</span>
+    <span class="stat pshield">◆ ${pShield}</span>
+    <span class="stat ashield">◆ ${aShield}</span>
     <span class="stat honor">● ${r.honor}</span>`;
 }
 function runtimeCountersHtml(r){
@@ -238,7 +253,7 @@ function runtimeCountersHtml(r){
   return parts.length?`<div class="runtime-counters">${parts.join('')}</div>`:'';
 }
 
-function runtimeCardHtml(r,{hidden=false,small=false}={}){
+function runtimeCardHtml(r,{hidden=false,small=false,playerIndex=null,bezSlot=null}={}){
   if(!r)return '<div class="board-empty">Frei</div>';
   const c=E().cardData(r);
   if(hidden || r.faceDown){
@@ -251,7 +266,7 @@ function runtimeCardHtml(r,{hidden=false,small=false}={}){
   return `<div class="board-card ${small?'small':''}${delayed}">
     <img src="${esc(c?.bild||r.bild)}" alt="${esc(c?.name||'Karte')}">
     ${runtimeCountersHtml(r)}
-    <div class="board-card-meta"><strong>${esc(c?.name||'Karte')}</strong><div class="stat-row">${statLine(r)}</div>${readiness}</div>
+    <div class="board-card-meta"><strong>${esc(c?.name||'Karte')}</strong><div class="stat-row">${statLine(r,{playerIndex,bezSlot})}</div>${readiness}</div>
   </div>`;
 }
 function stackHtml(p,key,label){
@@ -290,11 +305,11 @@ function bezEffectBadge(r){
   return ` <span class="bez-effect-badge" title="${esc(c.effekt_text||'Karteneffekt')}">${icon}</span>`;
 }
 
-function bezCore(r,i,isActive){
+function bezCore(r,i,isActive,playerIndex){
   // Gegnerische Bezwingerinnen dürfen nicht als HTML-"disabled" gerendert
   // werden: In der Ansturmphase müssen sie als Angriffsziel anklickbar sein.
   // Eigene Grundaktionen werden ohnehin nur über #playerBoard verdrahtet.
-  return `<button type="button" class="board-slot bez-slot${isActive?'':' opponent-slot'}" data-bez="${i}" aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(r)}<span class="slot-label">BEZWINGERIN${bezEffectBadge(r)}</span></button>`;
+  return `<button type="button" class="board-slot bez-slot${isActive?'':' opponent-slot'}" data-bez="${i}" aria-disabled="${isActive?'false':'true'}">${runtimeCardHtml(r,{playerIndex,bezSlot:i})}<span class="slot-label">BEZWINGERIN${bezEffectBadge(r)}</span></button>`;
 }
 function playerBoardHtml(p,isActive,isOpponent){
   // Defensive migration/rendering: older gespeicherte Gefechte können einzelne
@@ -338,7 +353,7 @@ function playerBoardHtml(p,isActive,isOpponent){
           <div class="cg r-helmet">${equipmentSlot('HELM','helmet',1,eq[1]?.helmet,isActive)}</div>
 
           <div class="cg l-weapon">${equipmentSlot('WAFFE','weapon',0,eq[0]?.weapon,isActive)}</div>
-          <div class="cg l-bez">${bezCore(bezSlots[0],0,isActive)}</div>
+          <div class="cg l-bez">${bezCore(bezSlots[0],0,isActive,safePlayer.index)}</div>
           <div class="cg l-shield">${equipmentSlot('SCHILD','shield',0,eq[0]?.shield,isActive)}</div>
 
           <div class="cg refuge">
@@ -346,7 +361,7 @@ function playerBoardHtml(p,isActive,isOpponent){
           </div>
 
           <div class="cg r-weapon">${equipmentSlot('WAFFE','weapon',1,eq[1]?.weapon,isActive)}</div>
-          <div class="cg r-bez">${bezCore(bezSlots[1],1,isActive)}</div>
+          <div class="cg r-bez">${bezCore(bezSlots[1],1,isActive,safePlayer.index)}</div>
           <div class="cg r-shield">${equipmentSlot('SCHILD','shield',1,eq[1]?.shield,isActive)}</div>
 
           <div class="cg l-armor">${equipmentSlot('RÜSTUNG','armor',0,eq[0]?.armor,isActive)}</div>
@@ -521,6 +536,31 @@ function handSelected(){
 function renderActions(){
   const root=document.getElementById('gameActions');
   root.innerHTML='';
+  // Direkter Kartenschaden (z.B. Die Kanone) kann in VP/NP/Instinkt-Fenstern
+  // entstehen und darf deshalb nicht nur in der Kampfphase bedienbar sein.
+  if(state.pendingDamage?.directDamageTarget){
+    const choice=E().currentShieldChoice(state);
+    if(choice){
+      const affected=state.players[choice.playerIndex];
+      const bez=affected?.bezSlots?.[choice.bezSlot];
+      const info=document.createElement('span');
+      info.className='shield-choice-info';
+      info.innerHTML=`<strong>${esc(affected?.name||'Spieler')}</strong>: ${esc(cardName(bez))} erhält noch <strong>${choice.remaining}</strong> ${choice.type==='physical'?'physischen':'ASTRAL'} Schaden durch ${esc(state.pendingDamage.directDamageTarget.source||'Karteneffekt')}. Wähle die Schildquelle.`;
+      root.appendChild(info);
+      choice.sources.forEach(src=>{
+        const b=document.createElement('button');
+        b.className='primary shield-source-button';
+        b.textContent=src.label;
+        b.addEventListener('click',()=>{
+          const rr=E().chooseShieldSource(state,src.source,src.kind);
+          saveRender(rr.msg||'Schaden abgewickelt.');
+        });
+        root.appendChild(b);
+      });
+      return;
+    }
+  }
+
   if(state.pendingBezEffect?.type==='lilou2_discard'){
     const title=document.createElement('strong');title.textContent='Lilou Guerir Stufe 2 – Stufe-1-Bezwingerin aus Ablage wählen';root.appendChild(title);
     E().lilou2Targets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.addEventListener('click',()=>{const rr=E().resolveLilou2Discard(state,t.id);saveRender(rr.msg);});root.appendChild(b);});

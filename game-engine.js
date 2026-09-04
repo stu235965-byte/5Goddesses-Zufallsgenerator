@@ -2212,33 +2212,18 @@ function equipRuntimeToBez(state,p,r,bezSlot,kind){
     log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} wird auf 1 Herz reduziert und erhält +3 physische Schilde. Kampfrundendauer: 2.`);
   }
 
-  if(c?.effekte?.some(e=>e.engine_key==='legionsbrustpanzer_honor')){
+  // Generischer Blitz-/Anlegeeffekt für Ehre:
+  // Jede Ausrüstung mit on_equip + honor_delta vergibt den Wert genau beim Anlegen
+  // an die ausgerüstete Bezwingerin. Dadurch hängen Karten wie Legionsschild,
+  // Legionsbrustpanzer, Energieschild, Hut der Weisheit und Victores nicht mehr
+  // von einzelnen Namens-Sonderfällen ab.
+  const equipHonor=Number((c?.effekte||[])
+    .filter(e=>e.trigger==='on_equip' && Number(e.honor_delta||0)!==0)
+    .reduce((sum,e)=>sum+Number(e.honor_delta||0),0));
+  if(equipHonor){
     const bez=p.bezSlots[bezSlot];
-    bez.honor=Number(bez.honor||0)+1;
-    log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält durch den Blitz-Effekt +1 Ehre.`);
-  }
-
-  if(c?.effekte?.some(e=>e.engine_key==='legionsschild_honor')){
-    const bez=p.bezSlots[bezSlot];
-    bez.honor=Number(bez.honor||0)+1;
-    log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält durch den Blitz-Effekt +1 Ehre.`);
-  }
-
-  if(c?.effekte?.some(e=>e.engine_key==='energieschild_honor')){
-    const bez=p.bezSlots[bezSlot];
-    bez.honor=Number(bez.honor||0)+1;
-    log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält durch den Blitz-Effekt +1 Ehre.`);
-  }
-
-  if(c?.effekte?.some(e=>e.engine_key==='hut_der_weisheit_honor')){
-    const bez=p.bezSlots[bezSlot];
-    bez.honor=Number(bez.honor||0)+1;
-    log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält durch den Blitz-Effekt +1 Ehre.`);
-  }
-
-  if(c?.effekte?.some(e=>e.engine_key==='victores_honor')){
-    const bez=p.bezSlots[bezSlot];bez.honor=Number(bez.honor||0)+1;
-    log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält durch den Blitz-Effekt +1 Ehre.`);
+    bez.honor=Number(bez.honor||0)+equipHonor;
+    log(state,`${c.name}: ${cardData(bez)?.name||'Bezwingerin'} erhält beim Anlegen +${equipHonor} Ehre.`);
   }
 
   if(c?.effekte?.some(e=>e.engine_key==='urlaub_on_equip')){
