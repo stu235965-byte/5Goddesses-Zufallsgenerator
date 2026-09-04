@@ -218,26 +218,35 @@ function statLine(r,{playerIndex=null,bezSlot=null}={}){
   if(!r)return '';
   const c=E().cardData(r);
   const isEq=E().isEquipmentCard?.(c);
-  const phys=isEq ? ((r.tempPhysicalBonus||0)+(r.attackPhysicalWhenAttacking||0)+(r.defendPhysicalWhenDefending||0)) : (r.physical ?? c?.physische_staerke ?? 0);
-  const astr=isEq ? ((r.tempAstralBonus||0)+(r.attackAstralWhenAttacking||0)) : (r.astral ?? c?.astrale_staerke ?? 0);
-  const physText=isEq && phys>0?`+${phys}`:phys;
-  const astrText=isEq && astr>0?`+${astr}`:astr;
 
-  let pShield=Number(r.physicalShield||0),aShield=Number(r.astralShield||0);
-  // Bei Bezwingerinnen zeigen wir den aktuell verfügbaren Gesamtschild
-  // (Basisschild + ausgerüstete Schildquellen), während die Engine die Quellen
-  // intern weiterhin getrennt hält.
-  if(!isEq && playerIndex!==null && bezSlot!==null && state?.players?.[playerIndex]){
-    const eq=state.players[playerIndex].equipment?.[bezSlot]||{};
-    for(const kind of ['weapon','shield','armor','helmet']){
-      const er=eq[kind];
-      if(!er)continue;
-      pShield+=Number(er.physicalShield||0);
-      aShield+=Number(er.astralShield||0);
+  let hearts=Number(r.hearts||0);
+  let phys=Number(r.physical ?? c?.physische_staerke ?? 0);
+  let astr=Number(r.astral ?? c?.astrale_staerke ?? 0);
+  let pShield=Number(r.physicalShield||0);
+  let aShield=Number(r.astralShield||0);
+
+  if(isEq){
+    // Auf der Ausrüstung selbst stehen nur die Werte, die genau diese Quelle
+    // aktuell beiträgt. So ist sofort sichtbar, woher der Gesamtwert kommt.
+    hearts=Number(r.heartBonus||0);
+    phys=Number(r.tempPhysicalBonus||0)+Number(r.attackPhysicalWhenAttacking||0)+Number(r.defendPhysicalWhenDefending||0);
+    astr=Number(r.tempAstralBonus||0)+Number(r.attackAstralWhenAttacking||0);
+  }else if(playerIndex!==null && bezSlot!==null){
+    const total=E().effectiveBezStats?.(state,playerIndex,bezSlot);
+    if(total){
+      hearts=total.hearts;
+      phys=total.physical;
+      astr=total.astral;
+      pShield=total.physicalShield;
+      aShield=total.astralShield;
     }
   }
 
-  return `<span class="stat heart">♥ ${r.hearts}</span>
+  const physText=isEq && phys>0?`+${phys}`:phys;
+  const astrText=isEq && astr>0?`+${astr}`:astr;
+  const heartText=isEq && hearts>0?`+${hearts}`:hearts;
+
+  return `<span class="stat heart">♥ ${heartText}</span>
     <span class="stat physical">⚔ ${physText}</span>
     <span class="stat astral">✦ ${astrText}</span>
     <span class="stat pshield">◆ ${pShield}</span>

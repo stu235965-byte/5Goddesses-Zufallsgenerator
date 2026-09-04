@@ -304,6 +304,77 @@ function equipmentStrengthBonus(state,playerIndex,bezSlot,type,isAttacking=false
   }
   return total;
 }
+
+function effectiveBezStats(state,playerIndex,bezSlot){
+  const p=state.players?.[playerIndex];
+  const bez=p?.bezSlots?.[bezSlot];
+  if(!bez)return null;
+  ensureEquipmentState(p);
+
+  const out={
+    hearts:Number(bez.hearts||0),
+    physical:Number(bez.physical ?? cardData(bez)?.physische_staerke ?? 0),
+    astral:Number(bez.astral ?? cardData(bez)?.astrale_staerke ?? 0),
+    physicalShield:Number(bez.physicalShield||0),
+    astralShield:Number(bez.astralShield||0),
+    base:{
+      hearts:Number(bez.hearts||0),
+      physical:Number(bez.physical ?? cardData(bez)?.physische_staerke ?? 0),
+      astral:Number(bez.astral ?? cardData(bez)?.astrale_staerke ?? 0),
+      physicalShield:Number(bez.physicalShield||0),
+      astralShield:Number(bez.astralShield||0)
+    },
+    equipment:[]
+  };
+
+  const attack=state.attack;
+  const isAttacker=!!attack && attack.attackerKind==='bez' &&
+    attack.attackerPlayer===playerIndex && Number(attack.attackerSlot)===Number(bezSlot);
+  const defenderIndex=attack ? 1-Number(attack.attackerPlayer) : null;
+  const isDefender=!!attack && attack.target?.type==='bez' &&
+    defenderIndex===playerIndex && Number(attack.target?.slot)===Number(bezSlot);
+
+  for(const kind of ['weapon','shield','armor','helmet']){
+    const r=p.equipment?.[bezSlot]?.[kind];
+    if(!r)continue;
+    initializeEquipmentCombatState(r,p);
+    const c=cardData(r);
+    const heartBonus=Number(r.heartBonus||0);
+    let physicalBonus=Number(r.tempPhysicalBonus||0);
+    let astralBonus=Number(r.tempAstralBonus||0);
+
+    // Bedingte Kampfboni werden nur dann in der Bezwingerinnen-Gesamtanzeige
+    // eingerechnet, wenn die entsprechende Kampfsituation tatsächlich aktiv ist.
+    if(isAttacker){
+      physicalBonus+=Number(r.attackPhysicalWhenAttacking||0);
+      astralBonus+=Number(r.attackAstralWhenAttacking||0);
+    }
+    if(isDefender){
+      physicalBonus+=Number(r.defendPhysicalWhenDefending||0);
+    }
+
+    const physicalShield=Number(r.physicalShield||0);
+    const astralShield=Number(r.astralShield||0);
+
+    out.hearts+=heartBonus;
+    out.physical+=physicalBonus;
+    out.astral+=astralBonus;
+    out.physicalShield+=physicalShield;
+    out.astralShield+=astralShield;
+
+    out.equipment.push({
+      kind,
+      name:c?.name||equipmentLabel(kind),
+      hearts:heartBonus,
+      physical:physicalBonus,
+      astral:astralBonus,
+      physicalShield,
+      astralShield
+    });
+  }
+  return out;
+}
+
 function cardHasEngineKey(r,key){return !!cardData(r)?.effekte?.some(e=>e.engine_key===key)}
 function isOberweltBez(r){const c=cardData(r);return !!r&&c?.deck_bereich==='bezwingerinnen'&&c?.fraktion==='Oberwelt'}
 function ehrisDiscountFor(state,playerIndex,bezSlot){
@@ -2751,6 +2822,30 @@ function applyChosenShieldSource(state,packet,choice){
   packet.remaining-=loss;
   packet.shieldLoss=(packet.shieldLoss||0)+loss;
   log(state,`${label} fängt ${loss} ${packet.type==='physical'?'physischen':'ASTRAL'} Schaden ab.`);
+
+  // Ausrüstungsschilde sind echte, getrennte Schildquellen. Sobald eine
+  // Ausrüstung, die Schildpunkte bereitstellt, keinen ihrer Schildpunkte mehr
+  // besitzt, wird sie abgelegt. Die Bezwingerinnen-Gesamtwerte werden nicht
+  // separat "mitbeschädigt", sondern ergeben sich live aus Basis + Quellen.
+  if(choice.source==='equipment' && sourceRuntime){
+    const prof=equipmentCombatProfile(sourceRuntime);
+    const hadShieldPool=!!(
+      Number(prof.physicalShield||0)>0 ||
+      Number(prof.astralShield||0)>0 ||
+      prof.shieldChoice
+    );
+    if(hadShieldPool &&
+       Number(sourceRuntime.physicalShield||0)<=0 &&
+       Number(sourceRuntime.astralShield||0)<=0){
+      const eq=p.equipment?.[packet.bezSlot];
+      if(eq?.[choice.kind]===sourceRuntime){
+        eq[choice.kind]=null;
+        discardRuntime(p,sourceRuntime);
+        normalizeTwilightPairAfterRemoval(state,p,packet.bezSlot,sourceRuntime);
+        log(state,`${label} hat keine Schildpunkte mehr und wird auf den Ablagestapel gelegt.`);
+      }
+    }
+  }
   return {ok:true,loss};
 }
 function finishDamagePacketWithoutShields(state,packet){
@@ -3234,7 +3329,7 @@ window.G5Engine={
   PHASES,decks,validDeck,normalizeDeckForBattle,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,autoReadyEligibleBez,recruit,setFaceDown,playOpenAzr,reveal,
   equipmentKind,isEquipmentCard,fieldArea,mornakAllowedAreas,playFieldFromHand,moveRevealedFieldCard,moveMornakFromAzr,equipFromHand,equipFromAzr,discardEquipment,
-  chooseEquipmentShieldBonus,equipmentCombatProfile,combatStrength,effectiveWonderCost,ruthTargets,activateRuth,selectEhrisTarget,
+  chooseEquipmentShieldBonus,equipmentCombatProfile,effectiveBezStats,combatStrength,effectiveWonderCost,ruthTargets,activateRuth,selectEhrisTarget,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,destroyedQueenProtectionActive,prepareAttack,
   refugeWonderAvailable,activateRefugeWonder,resolveWonderDraw,chooseRefugeStage2Bonus,
   bezEffectInfo,activateBezEffect,thalZirisTargets,resolveThalZiris,thalZirisStage1Targets,resolveThalZirisStage1,
