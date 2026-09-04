@@ -609,6 +609,20 @@ function readyBez(state,slot){
   log(state,`${p.name} macht ${cardData(p.bezSlots[slot])?.name||'eine Bezwingerin'} einsatzbereit.`);
   return {ok:true};
 }
+function autoReadyEligibleBez(state){
+  const p=active(state);
+  const madeReady=[];
+  for(let slot=0;slot<(p.bezSlots||[]).length;slot++){
+    if(!readyEligibleBez(state,slot))continue;
+    const r=p.bezSlots[slot];
+    r.ready=true;
+    madeReady.push(cardData(r)?.name||`Bezwingerin ${slot+1}`);
+  }
+  if(madeReady.length){
+    log(state,`${p.name}: Einsatzverzögerung automatisch aufgehoben – ${madeReady.join(', ')} ${madeReady.length===1?'ist':'sind'} jetzt einsatzbereit.`);
+  }
+  return madeReady;
+}
 function recruit(state,handIndex,slot){
   const p=active(state);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Rekrutieren ist nur in Versorgungs- oder Nachschubphase möglich.'};
@@ -3053,6 +3067,13 @@ function beginPhase(state){
     resolveLebensfresserschildHungerAtSupplyStart(state,p);
     log(state,`Anfang der Versorgungsphase von ${p.name}: unterstützte zeitlich begrenzte Ausrüstungsboni wurden geprüft.`);
   }
+  if(phase.id==='supply'){
+    // Regelkomfort: Einsatzverzögerung wird automatisch aufgehoben, sobald die
+    // Bezwingerin nach der normalen Wartezeit einsatzbereit gemacht werden darf.
+    // Damit kollidiert das Freischalten nicht mehr mit anklickbaren Karten-
+    // effekten/Wundern in VP oder NP.
+    autoReadyEligibleBez(state);
+  }
   return phase;
 }
 function advancePhase(state){
@@ -3211,7 +3232,7 @@ function clear(){localStorage.removeItem('5goddesses_active_game_v1')}
 
 window.G5Engine={
   PHASES,decks,validDeck,normalizeDeckForBattle,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
-  advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,recruit,setFaceDown,playOpenAzr,reveal,
+  advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,autoReadyEligibleBez,recruit,setFaceDown,playOpenAzr,reveal,
   equipmentKind,isEquipmentCard,fieldArea,mornakAllowedAreas,playFieldFromHand,moveRevealedFieldCard,moveMornakFromAzr,equipFromHand,equipFromAzr,discardEquipment,
   chooseEquipmentShieldBonus,equipmentCombatProfile,combatStrength,effectiveWonderCost,ruthTargets,activateRuth,selectEhrisTarget,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,destroyedQueenProtectionActive,prepareAttack,

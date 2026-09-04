@@ -1243,10 +1243,6 @@ function handleOwnBez(slot){
   }
 
   if(['supply','resupply'].includes(ph.id)){
-    if(E().readyEligibleBez(state,slot)){
-      const rr=E().readyBez(state,slot);
-      return saveRender(rr.msg||'Einsatzbereit.');
-    }
     const fx=E().bezEffectInfo?.(state,slot);
     if(fx?.symbol==='wonder' && !fx.wonderUsed){
       const c=E().cardData(r);
