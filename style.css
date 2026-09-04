@@ -1401,3 +1401,55 @@ h1{font-size:30px;margin:0 0 16px}
     height:145px;
   }
 }
+
+
+/* v1.59 – Gefecht-Kartenvorschau */
+.game-preview-toggle,.game-preview-close{
+  min-width:44px;font-size:20px;line-height:1;
+}
+.game-preview-toggle.active{
+  outline:2px solid #d7b455;box-shadow:0 0 14px rgba(215,180,85,.45);
+}
+.card-preview-mode #gameNextPhase,
+.card-preview-mode #gameNew{
+  pointer-events:none;opacity:.45;
+}
+.preview-mode-notice{
+  width:100%;padding:10px 12px;border:1px solid #b79a50;border-radius:8px;
+  background:rgba(183,154,80,.12);font-weight:800;text-align:center;
+}
+.preview-selectable{cursor:zoom-in !important;outline-offset:2px;}
+.preview-selectable:hover{outline:2px solid #d7b455;}
+.game-card-preview-overlay{
+  position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.82);
+  display:flex;align-items:center;justify-content:center;padding:14px;
+}
+.game-card-preview-overlay[hidden]{display:none !important;}
+.game-card-preview-panel{
+  width:min(520px,96vw);height:min(90vh,820px);display:flex;flex-direction:column;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 18px 60px rgba(0,0,0,.7);padding:12px;
+}
+.game-card-preview-head{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;
+}
+.game-card-preview-head strong{font-size:16px;}
+.game-card-preview-body{
+  min-height:0;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.game-card-preview-empty{
+  padding:30px;text-align:center;color:var(--muted);border:1px dashed #555;border-radius:10px;
+}
+.game-card-preview-image{
+  display:block;max-width:100%;max-height:calc(90vh - 130px);width:auto;height:auto;
+  object-fit:contain;border-radius:9px;background:#0d0d0d;
+}
+.game-card-preview-meta{
+  margin-top:7px;min-height:18px;color:var(--muted);font-size:13px;text-align:center;
+}
+/* Overlay lässt ausschließlich die Vorschau selbst interaktiv; das Spiel darunter bleibt unangetastet. */
+.card-preview-mode .game-toolbar,
+.card-preview-mode #battlefieldFit,
+.card-preview-mode .hand-panel{
+  user-select:none;
+}

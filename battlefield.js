@@ -8,6 +8,10 @@ let selectedAttacker=null;
 let selectedTarget=null;
 let selectedAttackType=null;
 let refugeActionSelected=false;
+let cardPreviewMode=false;
+let previewRuntime=null;
+let previewOwnerIndex=null;
+let previewHidden=false;
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function cardName(r){return r?E().cardData(r)?.name||'Karte':''}
@@ -481,6 +485,97 @@ function renderSharedSecondary(){
     : `<div class="shared-secondary-empty" data-field-area="secondary"><span>SEKUNDÄR</span><small>Frei</small></div>`;
 }
 
+
+function ensureGameCardPreview(){
+  let overlay=document.getElementById('gameCardPreviewOverlay');
+  if(overlay)return overlay;
+  overlay=document.createElement('div');
+  overlay.id='gameCardPreviewOverlay';
+  overlay.className='game-card-preview-overlay';
+  overlay.hidden=true;
+  overlay.innerHTML=`
+    <div class="game-card-preview-panel" role="dialog" aria-modal="true" aria-label="Kartenvorschau">
+      <div class="game-card-preview-head">
+        <div><div class="eyebrow">KARTENVORSCHAU</div><strong id="gameCardPreviewName">Karte auswählen</strong></div>
+        <button type="button" id="gamePreviewClose" class="game-preview-close" title="Vorschaumodus beenden" aria-label="Vorschaumodus beenden">🔍</button>
+      </div>
+      <div class="game-card-preview-body">
+        <div id="gameCardPreviewEmpty" class="game-card-preview-empty">Tippe auf eine Karte im Spielfeld oder auf deiner Hand.</div>
+        <img id="gameCardPreviewImage" class="game-card-preview-image" alt="" hidden>
+        <div id="gameCardPreviewMeta" class="game-card-preview-meta"></div>
+      </div>
+    </div>`;
+  document.getElementById('gameShell')?.appendChild(overlay);
+  overlay.querySelector('#gamePreviewClose')?.addEventListener('click',toggleCardPreviewMode);
+  return overlay;
+}
+function previewCard(runtime,ownerIndex,{forceBack=false}={}){
+  if(!cardPreviewMode||!runtime)return;
+  const overlay=ensureGameCardPreview();
+  const activeIndex=state.activePlayer;
+  const hiddenFromViewer=forceBack || (!!runtime.faceDown && ownerIndex!==activeIndex);
+  const c=E().cardData(runtime);
+  const img=overlay.querySelector('#gameCardPreviewImage');
+  const empty=overlay.querySelector('#gameCardPreviewEmpty');
+  const name=overlay.querySelector('#gameCardPreviewName');
+  const meta=overlay.querySelector('#gameCardPreviewMeta');
+  previewRuntime=runtime;previewOwnerIndex=ownerIndex;previewHidden=hiddenFromViewer;
+  empty.hidden=true;img.hidden=false;
+  if(hiddenFromViewer){
+    img.src='icons/kartenrueckseite.png';img.alt='Verdeckte gegnerische Karte';
+    name.textContent='Verdeckte gegnerische Karte';
+    meta.textContent='Diese Karte bleibt für dich verdeckt.';
+  }else{
+    img.src=c?.bild||runtime.bild;img.alt=c?.name||'Karte';
+    name.textContent=c?.name||'Karte';
+    const details=[c?.kartengruppe,c?.kartentyp,c?.klasse,c?.bereich,c?.stufe?`Stufe ${c.stufe}`:null].filter(Boolean);
+    meta.textContent=details.join(' · ');
+  }
+}
+function clearGamePreview(){
+  previewRuntime=null;previewOwnerIndex=null;previewHidden=false;
+  const overlay=ensureGameCardPreview(),img=overlay.querySelector('#gameCardPreviewImage');
+  overlay.querySelector('#gameCardPreviewEmpty').hidden=false;
+  img.hidden=true;img.removeAttribute('src');img.alt='';
+  overlay.querySelector('#gameCardPreviewName').textContent='Karte auswählen';
+  overlay.querySelector('#gameCardPreviewMeta').textContent='';
+}
+function toggleCardPreviewMode(){
+  cardPreviewMode=!cardPreviewMode;
+  const overlay=ensureGameCardPreview();
+  document.getElementById('gameShell')?.classList.toggle('card-preview-mode',cardPreviewMode);
+  document.getElementById('gamePreviewToggle')?.classList.toggle('active',cardPreviewMode);
+  document.getElementById('gamePreviewToggle')?.setAttribute('aria-pressed',String(cardPreviewMode));
+  if(cardPreviewMode){
+    overlay.hidden=false;
+    clearGamePreview();
+  }else{
+    overlay.hidden=true;
+    previewRuntime=null;previewOwnerIndex=null;previewHidden=false;
+  }
+}
+function wirePreviewTargets(){
+  if(!cardPreviewMode)return;
+  const own=E().active(state),opp=E().opponent(state);
+  const bind=(sel,runtime,ownerIndex,opts={})=>{
+    const el=document.querySelector(sel);
+    if(!el||!runtime)return;
+    el.classList.add('preview-selectable');
+    el.addEventListener('click',ev=>{ev.preventDefault();ev.stopImmediatePropagation();previewCard(runtime,ownerIndex,opts);},true);
+  };
+  own.bezSlots.forEach((r,i)=>bind(`#playerBoard [data-bez="${i}"]`,r,own.index));
+  opp.bezSlots.forEach((r,i)=>bind(`#opponentBoard [data-bez="${i}"]`,r,opp.index));
+  bind('#playerBoard [data-refuge]',own.refuge,own.index);
+  bind('#opponentBoard [data-refuge]',opp.refuge,opp.index);
+  bind('#playerBoard [data-primary-target]',own.primary,own.index);
+  bind('#opponentBoard [data-primary-target]',opp.primary,opp.index);
+  bind('#sharedSecondaryZone [data-secondary-target]',state.sharedSecondary,state.sharedSecondary?.owner);
+  own.azr.forEach((r,i)=>bind(`#playerBoard [data-azr="${i}"]`,r,own.index));
+  opp.azr.forEach((r,i)=>bind(`#opponentBoard [data-azr="${i}"]`,r,opp.index,{forceBack:!!r?.faceDown}));
+  (own.equipment||[]).forEach((eq,bi)=>Object.entries(eq||{}).forEach(([kind,r])=>bind(`#playerBoard [data-equip="${kind}"][data-equip-bez="${bi}"]`,r,own.index)));
+  (opp.equipment||[]).forEach((eq,bi)=>Object.entries(eq||{}).forEach(([kind,r])=>bind(`#opponentBoard [data-equip="${kind}"][data-equip-bez="${bi}"]`,r,opp.index)));
+}
+
 function renderBoards(){
   const a=state.activePlayer,opp=1-a;
   const opponentRoot=document.getElementById('opponentBoard');
@@ -504,6 +599,11 @@ function renderBoards(){
     renderSharedSecondary();
   }catch(err){
     console.error('Sekundärzone konnte nicht gerendert werden:',err);
+  }
+
+  if(cardPreviewMode){
+    wirePreviewTargets();
+    return;
   }
 
   // Stack draw in draw phase.
@@ -602,10 +702,11 @@ function renderHand(){
     const c=E().dbCard(bild);
     const el=document.createElement('button');
     el.className='hand-card'+(selectedHandIndex===i?' selected':'');
-    el.draggable=true;
+    el.draggable=!cardPreviewMode;
     el.dataset.handIndex=String(i);
     el.innerHTML=`<img src="${esc(bild)}" alt="${esc(c?.name||'Karte')}"><span>${esc(c?.name||'Karte')}</span>`;
     el.addEventListener('dragstart',(ev)=>{
+      if(cardPreviewMode){ev.preventDefault();return;}
       ev.dataTransfer.setData('text/plain',String(i));
       ev.dataTransfer.effectAllowed='move';
       selectedHandIndex=i;
@@ -613,6 +714,11 @@ function renderHand(){
     });
     el.addEventListener('dragend',clearDropTargets);
     el.addEventListener('click',()=>{
+      if(cardPreviewMode){
+        const runtime={bild,owner:p.index,faceDown:false};
+        previewCard(runtime,p.index);
+        return;
+      }
       selectedHandIndex=selectedHandIndex===i?null:i;
       renderHand();renderActions();
     });
@@ -628,6 +734,10 @@ function handSelected(){
 function renderActions(){
   const root=document.getElementById('gameActions');
   root.innerHTML='';
+  if(cardPreviewMode){
+    root.innerHTML='<div class="preview-mode-notice">🔍 Kartenvorschau aktiv · Spielinteraktionen sind eingefroren. Tippe eine Karte zum Vergrößern an.</div>';
+    return;
+  }
   // Direkter Kartenschaden (z.B. Die Kanone) kann in VP/NP/Instinkt-Fenstern
   // entstehen und darf deshalb nicht nur in der Kampfphase bedienbar sein.
   if(state.pendingDamage?.directDamageTarget){
@@ -1665,12 +1775,16 @@ function render(msg=''){
   renderBoards();
   renderHand();
   renderActions();
+  ensureGameCardPreview();
+  document.getElementById('gameShell')?.classList.toggle('card-preview-mode',cardPreviewMode);
+  document.getElementById('gamePreviewToggle')?.classList.toggle('active',cardPreviewMode);
   renderLog();
   requestAnimationFrame(updateStickyGameOffsets);
 }
 
 
 function handleInstinctBeforePhaseEnd(){
+  if(cardPreviewMode)return true;
   if(!state || !E().instinctWindowNeeded?.(state))return false;
 
   const candidates=E().instinctCandidates(state);
@@ -1729,4 +1843,6 @@ document.addEventListener('visibilitychange',()=>{
   fillDeckSelectors();
 const saved=E().load();
 document.getElementById('gameResume').hidden=!saved;
+document.getElementById('gamePreviewToggle')?.addEventListener('click',toggleCardPreviewMode);
+
 })();
