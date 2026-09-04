@@ -879,7 +879,9 @@ window.GODDESSES_DB = {
       "bereich": null,
       "untertyp": null,
       "material": null,
-      "nebenattribute": [],
+      "nebenattribute": [
+        "Chikara-Clan"
+      ],
       "herzen": 3,
       "physische_staerke": 1,
       "astrale_staerke": 0,
@@ -896,7 +898,8 @@ window.GODDESSES_DB = {
       ],
       "tags": [
         "ausspieleffekt",
-        "einsatzverzögerung"
+        "einsatzverzögerung",
+        "chikara-clan"
       ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
@@ -1386,7 +1389,9 @@ window.GODDESSES_DB = {
       "bereich": null,
       "untertyp": null,
       "material": null,
-      "nebenattribute": [],
+      "nebenattribute": [
+        "Chikara-Clan"
+      ],
       "herzen": 2,
       "physische_staerke": 1,
       "astrale_staerke": 0,
@@ -1403,7 +1408,9 @@ window.GODDESSES_DB = {
           "allow_negative_honor": true
         }
       ],
-      "tags": [],
+      "tags": [
+        "chikara-clan"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
@@ -1469,7 +1476,9 @@ window.GODDESSES_DB = {
       "bereich": null,
       "untertyp": null,
       "material": null,
-      "nebenattribute": [],
+      "nebenattribute": [
+        "Chikara-Clan"
+      ],
       "herzen": 2,
       "physische_staerke": 1,
       "astrale_staerke": 0,
@@ -1484,7 +1493,9 @@ window.GODDESSES_DB = {
           "azr_count_choice": true
         }
       ],
-      "tags": [],
+      "tags": [
+        "chikara-clan"
+      ],
       "effekt_symbol": "on_play",
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
@@ -4869,8 +4880,20 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "voidpiercer_lifebreaker_convert",
+          "trigger": "activate",
+          "charges": 2,
+          "once_per_round": true,
+          "target": "equipped_bez",
+          "conversion": "physical_astral_bidirectional"
+        }
+      ],
+      "tags": [
+        "zählermarken"
+      ],
+      "effekt_zaehler_max": 2
     },
     {
       "id": "1.05-13-32-0b7bc128",
@@ -4896,8 +4919,23 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "skyflux_swap",
+          "trigger": "on_play",
+          "target": "own_bez",
+          "requires_free_other_slot": true,
+          "honor_delta": 1
+        },
+        {
+          "engine_key": "instinkt",
+          "trigger": "instinkt",
+          "instinkt": true
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.05-14-32-2262c852",
@@ -4950,7 +4988,32 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
+      "effekte": [
+        {
+          "engine_key": "chikaras_stahlherz_shield_choice",
+          "trigger": "permanent",
+          "shield_choice": [
+            "physical",
+            "astral"
+          ],
+          "value": 1
+        },
+        {
+          "engine_key": "chikaras_stahlherz_honor",
+          "trigger": "on_equip",
+          "honor_delta": 1,
+          "condition": {
+            "any": [
+              {
+                "klasse": "Beschützerin"
+              },
+              {
+                "tag": "chikara-clan"
+              }
+            ]
+          }
+        }
+      ],
       "tags": []
     },
     {
@@ -4976,9 +5039,23 @@ window.GODDESSES_DB = {
       "physischer_schild": 0,
       "astraler_schild": 0,
       "ehre": 0,
-      "wunder": null,
-      "effekte": [],
-      "tags": []
+      "wunder": {
+        "kosten_ehre": 3,
+        "text": "+1 physische Stärke für einen Kampf"
+      },
+      "effekte": [
+        {
+          "engine_key": "manta_wonder_physical",
+          "trigger": "wunder",
+          "kosten_ehre": 3,
+          "physical_delta": 1,
+          "duration": "one_combat"
+        }
+      ],
+      "tags": [
+        "MASCHINE"
+      ],
+      "maschine": true
     },
     {
       "id": "1.05-28-32-cef446a1",
@@ -5004,7 +5081,14 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
+      "effekte": [
+        {
+          "engine_key": "chronarion_extend_equipment",
+          "trigger": "on_equip",
+          "duration_delta": 1,
+          "target": "open_equipment_same_bez_with_duration"
+        }
+      ],
       "tags": []
     },
     {
@@ -5096,8 +5180,23 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "astrana_suit_survival",
+          "trigger": "permanent",
+          "duration_rounds": 1,
+          "protect_at_zero_hearts": true,
+          "discard_at_zero_duration": true
+        },
+        {
+          "engine_key": "astrana_suit_honor",
+          "trigger": "on_equip",
+          "honor_delta": 1
+        }
+      ],
+      "tags": [
+        "KAMPFRUNDENDAUER"
+      ]
     },
     {
       "id": "1.05-32-32-2fb887aa",

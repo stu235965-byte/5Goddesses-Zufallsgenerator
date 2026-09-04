@@ -1332,9 +1332,24 @@ function handleEquipmentSlot(kind,bezSlot){
 
   const r=p.equipment?.[bezSlot]?.[kind];
 
-  if(r && kind==='weapon' && phase().id==='supply'){
+  if(r && kind==='weapon' && ['supply','resupply'].includes(phase().id)){
     const c=E().cardData(r);
-    if(c?.effekte?.some(e=>e.engine_key==='parierdolch_dodge') &&
+    if(c?.effekte?.some(e=>e.engine_key==='voidpiercer_lifebreaker_convert') && Number(r.effectUsesRemaining||0)>0){
+      const bez=p.bezSlots?.[bezSlot];
+      const phys=Number(bez?.physical||0),astr=Number(bez?.astral||0);
+      if(r.effectUsedTurn===p.turnCount)return message('Voidpiercer & Lifebreaker wurde in dieser Kampfrunde bereits benutzt.','warn');
+      if(phys<=0 && astr<=0)return message('Es ist keine Stärke vorhanden, die umgewandelt werden kann.','warn');
+      let direction;
+      if(phys>0 && astr>0){
+        direction=confirm(`Voidpiercer & Lifebreaker – ${r.effectUsesRemaining} Zählermarke(n)
+
+OK = 1 physische → 1 ASTRAL
+Abbrechen = 1 ASTRAL → 1 physische`) ? 'physical_to_astral' : 'astral_to_physical';
+      }else direction=phys>0?'physical_to_astral':'astral_to_physical';
+      const rr=E().activateVoidpiercerLifebreaker(state,bezSlot,direction);
+      return saveRender(rr.msg);
+    }
+    if(phase().id==='supply' && c?.effekte?.some(e=>e.engine_key==='parierdolch_dodge') &&
        (r.effectState?.counterDodgeUses||0)>0 && !r.effectState?.counterDodgeActive){
       if(confirm('Parierdolch: Einmaliges Ausweichen gegen einen Gegenangriff für diese Kampfrunde aktivieren?')){
         const rr=E().activateParierdolchDodge(state,bezSlot);
@@ -1353,6 +1368,11 @@ function handleEquipmentSlot(kind,bezSlot){
 function handleOwnPrimary(){
   const r=state.sharedPrimary,p=E().active(state),c=E().cardData(r);
   if(!r || r.owner!==p.index)return;
+  if(c?.effekte?.some(e=>e.engine_key==='manta_wonder_physical')){
+    if(!['supply','resupply'].includes(phase()?.id||''))return message('MANTAs Wunder kann nur in VP oder NP gewirkt werden.','warn');
+    const rr=E().startMantaWonder(state);
+    return saveRender(rr.msg);
+  }
   if(c?.effekte?.some(e=>e.engine_key==='wunderumwandlungsapparatur_honor_convert')){
     if(!['supply','resupply'].includes(phase()?.id||''))return message('Das Wunder der Wunderumwandlungsapparatur kann nur in VP oder NP gewirkt werden.','warn');
     const rr=E().startWunderumwandlungsapparatur(state);
@@ -1554,7 +1574,7 @@ function handleInstinctBeforePhaseEnd(){
   if(!candidates.length)return false;
 
   const owner=state.players[1-state.activePlayer]?.name||'Gegenspieler';
-  const phaseName=phase()?.id==='resupply'?'Nachschubphase':'Versorgungsphase';
+  const phaseName=phase()?.id==='resupply'?'Nachschubphase':phase()?.id==='rush'?'Ansturmphase':'Versorgungsphase';
   const use=confirm(`${owner}: Möchtest du vor dem Ende der gegnerischen ${phaseName} eine verdeckt gesetzte Instinkt-Karte aktivieren?`);
 
   if(!use){
@@ -1587,7 +1607,7 @@ document.getElementById('gameResume')?.addEventListener('click',resumeGame);
 document.getElementById('gameNew')?.addEventListener('click',newGame);
 document.getElementById('gameNextPhase')?.addEventListener('click',async()=>{
   if(!state)return;
-  if(['supply','resupply'].includes(phase()?.id||'') && handleInstinctBeforePhaseEnd())return;
+  if(['supply','rush','resupply'].includes(phase()?.id||'') && handleInstinctBeforePhaseEnd())return;
   if(phase()?.id==='end')return animateRoundHandoff();
   const r=E().advancePhase(state);
   selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;selectedAttackType=null;refugeActionSelected=false;
