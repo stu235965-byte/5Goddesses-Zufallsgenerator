@@ -144,9 +144,11 @@ function fitBattlefieldToMobileViewport(){
   const shell=document.getElementById('gameShell');
   if(!wrap||!board||!shell||shell.hidden)return;
 
-  const vv=window.visualViewport;
-  const viewportWidth=Math.round(vv?.width||document.documentElement.clientWidth||window.innerWidth);
-  const viewportHeight=Math.round(vv?.height||document.documentElement.clientHeight||window.innerHeight);
+  // Für die Grundskalierung ausschließlich den Layout-Viewport verwenden.
+  // visualViewport verändert sich beim Pinch-Zoom und darf die einmal
+  // berechnete Spielfeldgröße nicht beeinflussen.
+  const viewportWidth=Math.round(document.documentElement.clientWidth||window.innerWidth);
+  const viewportHeight=Math.round(document.documentElement.clientHeight||window.innerHeight);
 
   if(viewportWidth>MOBILE_BATTLEFIELD_MAX_WIDTH){
     resetMobileBattlefieldFit();
@@ -185,9 +187,26 @@ function scheduleMobileBattlefieldFit(){
   });
 }
 
-window.addEventListener('resize',scheduleMobileBattlefieldFit);
-window.addEventListener('orientationchange',scheduleMobileBattlefieldFit);
-window.visualViewport?.addEventListener('resize',scheduleMobileBattlefieldFit);
+let lastBattlefieldLayoutWidth=document.documentElement.clientWidth;
+window.addEventListener('resize',()=>{
+  const w=document.documentElement.clientWidth;
+  // Nur echte Layout-Breitenänderungen neu einpassen; Pinch-Zoom verändert
+  // visualViewport, nicht zuverlässig die Layout-Viewport-Breite.
+  if(Math.abs(w-lastBattlefieldLayoutWidth)>2){
+    lastBattlefieldLayoutWidth=w;
+    scheduleMobileBattlefieldFit();
+  }
+});
+window.addEventListener('orientationchange',()=>{
+  // Nach einer echten Drehung darf einmal neu berechnet werden.
+  setTimeout(()=>{
+    lastBattlefieldLayoutWidth=document.documentElement.clientWidth;
+    scheduleMobileBattlefieldFit();
+  },120);
+});
+// Kein Re-Fit bei visualViewport.resize:
+ // Dieses Event feuert auf Android/iOS auch beim Pinch-Zoom und würde
+ // das Spielfeld gegen den Zoom sofort wieder verkleinern.
 
 function fillDeckSelectors(){
   const all=E().decks();
