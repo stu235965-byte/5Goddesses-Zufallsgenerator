@@ -1,5 +1,6 @@
 (() => {
 'use strict';
+window.G5_BATTLEFIELD_BUILD='1.61';
 
 const E=()=>window.G5Engine;
 let state=null;
