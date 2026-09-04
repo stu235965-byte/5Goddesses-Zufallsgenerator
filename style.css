@@ -1220,3 +1220,38 @@ h1{font-size:30px;margin:0 0 16px}
     min-width:1260px !important;
   }
 }
+
+
+/* v1.54 Mobile Gefecht: keine horizontal scrollbaren Teilbereiche */
+@media(max-width:900px){
+  .battlefield-fit.mobile-fit-active{
+    width:100% !important;
+    max-width:100% !important;
+    overflow:hidden !important;
+    margin:0 auto !important;
+  }
+
+  .battlefield-fit.mobile-fit-active #battlefield{
+    max-width:none !important;
+    overflow:visible !important;
+  }
+
+  .battlefield-fit.mobile-fit-active .player-board,
+  .battlefield-fit.mobile-fit-active .opponent-board,
+  .battlefield-fit.mobile-fit-active .own-board{
+    overflow:visible !important;
+    width:100% !important;
+    max-width:none !important;
+  }
+
+  .battlefield-fit.mobile-fit-active .board-inner{
+    width:1260px !important;
+    min-width:1260px !important;
+    max-width:1260px !important;
+    overflow:visible !important;
+  }
+
+  .battlefield-fit.mobile-fit-active .rule-board{
+    overflow:visible !important;
+  }
+}

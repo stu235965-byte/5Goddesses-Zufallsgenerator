@@ -131,6 +131,8 @@ function resetMobileBattlefieldFit(){
 
   wrap.classList.remove('mobile-fit-active');
   wrap.style.height='';
+  wrap.style.width='';
+  wrap.style.maxWidth='';
   board.style.transform='';
   board.style.width='';
 }
@@ -168,7 +170,11 @@ function fitBattlefieldToMobileViewport(){
 
   board.style.transform=`scale(${scale})`;
   wrap.style.height=`${Math.ceil(naturalHeight*scale)}px`;
-  wrap.style.width=`${Math.ceil(naturalWidth*scale)}px`;
+  // Der Wrapper bleibt exakt in der verfügbaren Bildschirmbreite.
+  // Dadurch erzeugen weder die Spielerhälften noch Ziehstapel/Ausrüstungszonen
+  // einen eigenen horizontalen Scrollbereich.
+  wrap.style.width='100%';
+  wrap.style.maxWidth='100%';
 }
 
 function scheduleMobileBattlefieldFit(){
