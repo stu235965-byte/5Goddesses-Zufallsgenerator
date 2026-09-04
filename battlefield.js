@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.61';
+window.G5_BATTLEFIELD_BUILD='1.62';
 
 const E=()=>window.G5Engine;
 let state=null;
@@ -550,14 +550,31 @@ function clearGamePreview(){
 function toggleCardPreviewMode(){
   cardPreviewMode=!cardPreviewMode;
   const overlay=ensureGameCardPreview();
-  document.getElementById('gameShell')?.classList.toggle('card-preview-mode',cardPreviewMode);
-  document.getElementById('gamePreviewToggle')?.classList.toggle('active',cardPreviewMode);
-  document.getElementById('gamePreviewToggle')?.setAttribute('aria-pressed',String(cardPreviewMode));
+
   if(cardPreviewMode){
     clearGamePreview();
     overlay.hidden=true;
+    selectedHandIndex=null;
+    selectedAttacker=null;
+    selectedTarget=null;
+    selectedAttackType=null;
+    refugeActionSelected=false;
   }else{
     closeGameCardPreview();
+  }
+
+  // v1.62: Das Spielfeld MUSS beim Umschalten neu aufgebaut werden.
+  // Die Karten-Listener werden beim Rendern erzeugt. Ohne Re-Render blieben
+  // nach Aktivieren der Lupe die alten Spiel-Listener (Entwickeln, Wunder,
+  // Angreifen usw.) an den Karten hängen und die Vorschau-Listener fehlten.
+  // Im Vorschaumodus baut renderBoards() ausschließlich Preview-Listener auf;
+  // beim Verlassen werden wieder die normalen Spiel-Listener erzeugt.
+  if(state){
+    render();
+  }else{
+    document.getElementById('gameShell')?.classList.toggle('card-preview-mode',cardPreviewMode);
+    document.getElementById('gamePreviewToggle')?.classList.toggle('active',cardPreviewMode);
+    document.getElementById('gamePreviewToggle')?.setAttribute('aria-pressed',String(cardPreviewMode));
   }
 }
 function wirePreviewTargets(){
@@ -1784,6 +1801,7 @@ function render(msg=''){
   ensureGameCardPreview();
   document.getElementById('gameShell')?.classList.toggle('card-preview-mode',cardPreviewMode);
   document.getElementById('gamePreviewToggle')?.classList.toggle('active',cardPreviewMode);
+  document.getElementById('gamePreviewToggle')?.setAttribute('aria-pressed',String(cardPreviewMode));
   renderLog();
   requestAnimationFrame(updateStickyGameOffsets);
 }
