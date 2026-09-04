@@ -1453,3 +1453,18 @@ h1{font-size:30px;margin:0 0 16px}
 .card-preview-mode .hand-panel{
   user-select:none;
 }
+
+
+/* v1.60 – Vorschauauswahl bleibt auf dem Spielfeld sichtbar */
+.card-preview-mode #battlefieldFit,
+.card-preview-mode .hand-panel{
+  pointer-events:auto;
+}
+.card-preview-mode .preview-selectable{
+  pointer-events:auto;
+  cursor:zoom-in !important;
+}
+.game-card-preview-overlay{
+  /* Nur sichtbar, solange tatsächlich eine einzelne Karte groß geöffnet ist. */
+  backdrop-filter:blur(2px);
+}

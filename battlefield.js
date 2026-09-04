@@ -497,7 +497,7 @@ function ensureGameCardPreview(){
     <div class="game-card-preview-panel" role="dialog" aria-modal="true" aria-label="Kartenvorschau">
       <div class="game-card-preview-head">
         <div><div class="eyebrow">KARTENVORSCHAU</div><strong id="gameCardPreviewName">Karte auswählen</strong></div>
-        <button type="button" id="gamePreviewClose" class="game-preview-close" title="Vorschaumodus beenden" aria-label="Vorschaumodus beenden">🔍</button>
+        <button type="button" id="gamePreviewClose" class="game-preview-close" title="Kartenansicht schließen" aria-label="Kartenansicht schließen">✕</button>
       </div>
       <div class="game-card-preview-body">
         <div id="gameCardPreviewEmpty" class="game-card-preview-empty">Tippe auf eine Karte im Spielfeld oder auf deiner Hand.</div>
@@ -506,12 +506,18 @@ function ensureGameCardPreview(){
       </div>
     </div>`;
   document.getElementById('gameShell')?.appendChild(overlay);
-  overlay.querySelector('#gamePreviewClose')?.addEventListener('click',toggleCardPreviewMode);
+  overlay.querySelector('#gamePreviewClose')?.addEventListener('click',closeGameCardPreview);
   return overlay;
+}
+function closeGameCardPreview(){
+  const overlay=ensureGameCardPreview();
+  overlay.hidden=true;
+  previewRuntime=null;previewOwnerIndex=null;previewHidden=false;
 }
 function previewCard(runtime,ownerIndex,{forceBack=false}={}){
   if(!cardPreviewMode||!runtime)return;
   const overlay=ensureGameCardPreview();
+  overlay.hidden=false;
   const activeIndex=state.activePlayer;
   const hiddenFromViewer=forceBack || (!!runtime.faceDown && ownerIndex!==activeIndex);
   const c=E().cardData(runtime);
@@ -547,11 +553,10 @@ function toggleCardPreviewMode(){
   document.getElementById('gamePreviewToggle')?.classList.toggle('active',cardPreviewMode);
   document.getElementById('gamePreviewToggle')?.setAttribute('aria-pressed',String(cardPreviewMode));
   if(cardPreviewMode){
-    overlay.hidden=false;
     clearGamePreview();
-  }else{
     overlay.hidden=true;
-    previewRuntime=null;previewOwnerIndex=null;previewHidden=false;
+  }else{
+    closeGameCardPreview();
   }
 }
 function wirePreviewTargets(){
