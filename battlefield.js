@@ -109,6 +109,7 @@ async function animateRoundHandoff(){
   nextButton.disabled=false;
   message(`${nextPlayer} beginnt die Kampfrunde.`);
   requestAnimationFrame(updateStickyGameOffsets);
+  scheduleMobileBattlefieldFit();
 }
 function gamePageOpened(){
   window.addEventListener('resize',updateStickyGameOffsets);
@@ -119,6 +120,67 @@ function gamePageOpened(){
   if(state)render();
 }
 window.gamePageOpened=gamePageOpened;
+
+const MOBILE_BATTLEFIELD_MAX_WIDTH=900;
+let battlefieldFitRaf=0;
+
+function resetMobileBattlefieldFit(){
+  const wrap=document.getElementById('battlefieldFit');
+  const board=document.getElementById('battlefield');
+  if(!wrap||!board)return;
+
+  wrap.classList.remove('mobile-fit-active');
+  wrap.style.height='';
+  board.style.transform='';
+  board.style.width='';
+}
+
+function fitBattlefieldToMobileViewport(){
+  const wrap=document.getElementById('battlefieldFit');
+  const board=document.getElementById('battlefield');
+  const shell=document.getElementById('gameShell');
+  if(!wrap||!board||!shell||shell.hidden)return;
+
+  const viewport=window.visualViewport;
+  const viewportWidth=viewport?.width||window.innerWidth;
+  const viewportHeight=viewport?.height||window.innerHeight;
+
+  if(viewportWidth>MOBILE_BATTLEFIELD_MAX_WIDTH){
+    resetMobileBattlefieldFit();
+    return;
+  }
+
+  // Erst in die feste Desktop-Geometrie wechseln, damit Android und iOS
+  // dieselbe Ausgangsgröße vermessen und keine horizontalen Scrollcontainer entstehen.
+  wrap.classList.add('mobile-fit-active');
+  board.style.transform='none';
+  board.style.width='1260px';
+  wrap.style.height='auto';
+
+  const naturalWidth=Math.max(board.scrollWidth,board.offsetWidth,1260);
+  const naturalHeight=Math.max(board.scrollHeight,board.offsetHeight,1);
+
+  // Etwas Rand lassen und das komplette Spielfeld auch in der Höhe sichtbar halten.
+  // Der Nutzer kann anschließend weiterhin per Browser-Pinch-Zoom hineinzoomen.
+  const availableWidth=Math.max(240,viewportWidth-12);
+  const availableHeight=Math.max(220,viewportHeight*0.72);
+  const scale=Math.min(1,availableWidth/naturalWidth,availableHeight/naturalHeight);
+
+  board.style.transform=`scale(${scale})`;
+  wrap.style.height=`${Math.ceil(naturalHeight*scale)}px`;
+  wrap.style.width=`${Math.ceil(naturalWidth*scale)}px`;
+}
+
+function scheduleMobileBattlefieldFit(){
+  cancelAnimationFrame(battlefieldFitRaf);
+  battlefieldFitRaf=requestAnimationFrame(()=>{
+    battlefieldFitRaf=requestAnimationFrame(fitBattlefieldToMobileViewport);
+  });
+}
+
+window.addEventListener('resize',scheduleMobileBattlefieldFit);
+window.addEventListener('orientationchange',scheduleMobileBattlefieldFit);
+window.visualViewport?.addEventListener('resize',scheduleMobileBattlefieldFit);
 
 function fillDeckSelectors(){
   const all=E().decks();

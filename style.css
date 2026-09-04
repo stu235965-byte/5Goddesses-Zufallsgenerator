@@ -1186,3 +1186,37 @@ h1{font-size:30px;margin:0 0 16px}
   background:rgba(0,0,0,.82);
   border-color:rgba(255,255,255,.35);
 }
+
+
+/* Mobile Gefecht: gesamtes Spielfeld automatisch einpassen */
+.battlefield-fit{
+  width:100%;
+  margin:0 auto;
+}
+
+@media(max-width:900px){
+  .battlefield-fit{
+    position:relative;
+    overflow:visible;
+  }
+
+  .battlefield-fit.mobile-fit-active{
+    overflow:hidden;
+  }
+
+  .battlefield-fit.mobile-fit-active #battlefield{
+    width:1260px;
+    max-width:none;
+    margin:0;
+    transform-origin:top left;
+    will-change:transform;
+  }
+
+  .battlefield-fit.mobile-fit-active .player-board{
+    overflow:visible !important;
+  }
+
+  .battlefield-fit.mobile-fit-active .board-inner{
+    min-width:1260px !important;
+  }
+}
