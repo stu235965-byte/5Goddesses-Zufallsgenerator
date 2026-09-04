@@ -433,10 +433,10 @@ function playerBoardHtml(p,isActive,isOpponent){
       <div class="development-column">${developmentHtml(safePlayer)}</div>
 
       <div class="playmat-center">
-        <div class="secondary-row">
-          <div class="secondary-zone" data-secondary-target role="button" tabindex="0">
-            <span class="area-title">SEKUNDÄRZONE</span>
-            ${runtimeCardHtml(safePlayer.secondary||null,{small:true})}
+        <div class="primary-row">
+          <div class="primary-zone-field" data-primary-target data-field-area="primary" role="button" tabindex="0">
+            <span class="area-title">PRIMÄRZONE</span>
+            ${runtimeCardHtml(safePlayer.primary||null,{small:true})}
           </div>
         </div>
 
@@ -472,13 +472,13 @@ function playerBoardHtml(p,isActive,isOpponent){
     </div>
   </div>`;
 }
-function renderSharedPrimary(){
-  const root=document.getElementById('sharedPrimaryZone');
+function renderSharedSecondary(){
+  const root=document.getElementById('sharedSecondaryZone');
   if(!root)return;
-  const shared=state.sharedPrimary||null;
+  const shared=state.sharedSecondary||null;
   root.innerHTML=shared
-    ? `<div class="shared-primary-card" data-primary-target role="button" tabindex="0">${runtimeCardHtml(shared)}</div>`
-    : `<div class="shared-primary-empty"><span>PRIMÄR</span><small>Frei</small></div>`;
+    ? `<div class="shared-secondary-card" data-secondary-target data-field-area="secondary" role="button" tabindex="0">${runtimeCardHtml(shared)}</div>`
+    : `<div class="shared-secondary-empty" data-field-area="secondary"><span>SEKUNDÄR</span><small>Frei</small></div>`;
 }
 
 function renderBoards(){
@@ -501,9 +501,9 @@ function renderBoards(){
   }
 
   try{
-    renderSharedPrimary();
+    renderSharedSecondary();
   }catch(err){
-    console.error('Primärzone konnte nicht gerendert werden:',err);
+    console.error('Sekundärzone konnte nicht gerendert werden:',err);
   }
 
   // Stack draw in draw phase.
@@ -525,8 +525,8 @@ function renderBoards(){
     btn.addEventListener('click',()=>handleEquipmentSlot(btn.dataset.equip,Number(btn.dataset.equipBez)));
   });
   document.querySelector('#playerBoard [data-refuge]')?.addEventListener('click',()=>handleRefuge());
-  document.querySelector('#sharedPrimaryZone [data-primary-target]')?.addEventListener('click',()=>{const r=state.sharedPrimary,c=E().cardData(r);if(r?.owner===state.activePlayer&&c?.effekte?.some(e=>e.engine_key==='ruth_shop')&&['supply','resupply'].includes(phase().id)){const rr=E().startRuthEffect(state);saveRender(rr.msg);}});
-  document.querySelector('#sharedPrimaryZone [data-primary-target]')?.addEventListener('click',handleOwnPrimary);
+  document.querySelector('#playerBoard [data-primary-target]')?.addEventListener('click',()=>{const r=E().active(state).primary,c=E().cardData(r);if(r?.owner===state.activePlayer&&c?.effekte?.some(e=>e.engine_key==='ruth_shop')&&['supply','resupply'].includes(phase().id)){const rr=E().startRuthEffect(state);saveRender(rr.msg);}});
+  document.querySelector('#playerBoard [data-primary-target]')?.addEventListener('click',handleOwnPrimary);
 
   if(state.pendingEquipment && state.pendingEquipment.owner===state.activePlayer){
     const pending=state.pendingEquipment;
@@ -584,8 +584,8 @@ function renderBoards(){
 
       [0,1].forEach(i=>addTarget(`#opponentBoard [data-bez="${i}"]`,{type:'bez',slot:i}));
       addTarget('#opponentBoard [data-refuge]',{type:'refuge'});
-      addTarget('#opponentBoard [data-secondary-target]',{type:'secondary'});
-      addTarget('#sharedPrimaryZone [data-primary-target]',{type:'primary'});
+      addTarget('#opponentBoard [data-primary-target]',{type:'primary'});
+      addTarget('#sharedSecondaryZone [data-secondary-target]',{type:'secondary'});
     }
   }
 
@@ -875,7 +875,7 @@ function renderActions(){
         root.appendChild(info);
         [['primary','PRIMÄR'],['secondary','SEKUNDÄR'],['azr','In AZR lassen']].forEach(([area,label])=>{
           const b=document.createElement('button');b.className='primary';b.textContent=label;
-          b.disabled=area==='primary'?!!state.sharedPrimary:area==='secondary'?!!p.secondary:false;
+          b.disabled=area==='primary'?!!p.primary:area==='secondary'?!!state.sharedSecondary:false;
           b.addEventListener('click',()=>saveRender(E().moveMornakFromAzr(state,pending.azrSlot,area).msg));
           root.appendChild(b);
         });
@@ -1035,7 +1035,7 @@ function renderActions(){
           const fieldBtn=document.createElement('button');
           fieldBtn.className='primary';
           fieldBtn.textContent=`Offen in ${area==='primary'?'Primär':'Sekundär'}bereich spielen`;
-          fieldBtn.disabled=area==='primary' ? !!state.sharedPrimary : !!p.secondary;
+          fieldBtn.disabled=area==='primary' ? !!p.primary : !!state.sharedSecondary;
           fieldBtn.addEventListener('click',()=>{
             const r=E().playFieldFromHand(state,selectedHandIndex,area);
             if(r.ok)selectedHandIndex=null;
@@ -1094,8 +1094,8 @@ function renderActions(){
       const targetLabel=(()=>{
         const t=state.attack.target;
         if(t.type==='bez')return cardName(opp.bezSlots[t.slot]);
-        if(t.type==='secondary')return cardName(opp.secondary);
-        if(t.type==='primary')return cardName(state.sharedPrimary);
+        if(t.type==='primary')return cardName(opp.primary);
+        if(t.type==='secondary')return cardName(state.sharedSecondary);
         return cardName(opp.refuge);
       })();
 
@@ -1449,7 +1449,7 @@ Abbrechen = 1 ASTRAL → 1 physische`) ? 'physical_to_astral' : 'astral_to_physi
   }
 }
 function handleOwnPrimary(){
-  const r=state.sharedPrimary,p=E().active(state),c=E().cardData(r);
+  const p=E().active(state),r=p.primary,c=E().cardData(r);
   if(!r || r.owner!==p.index)return;
   if(c?.effekte?.some(e=>e.engine_key==='chronokrypta_duration_trade')){
     if(!['supply','resupply'].includes(phase()?.id||''))return message('Chronokrypta kann nur in VP oder NP benutzt werden.','warn');
@@ -1509,15 +1509,15 @@ function handleBattlefieldTargetClick(ev){
     return;
   }
 
-  const secondary=ev.target.closest('#opponentBoard [data-secondary-target]');
-  if(secondary){
-    chooseTarget({type:'secondary'});
+  const primary=ev.target.closest('#opponentBoard [data-primary-target]');
+  if(primary){
+    chooseTarget({type:'primary'});
     return;
   }
 
-  const primary=ev.target.closest('#sharedPrimaryZone [data-primary-target]');
-  if(primary){
-    chooseTarget({type:'primary'});
+  const secondary=ev.target.closest('#sharedSecondaryZone [data-secondary-target]');
+  if(secondary){
+    chooseTarget({type:'secondary'});
   }
 }
 
@@ -1560,8 +1560,8 @@ function legalDropSelectors(handIndex){
       });
     }
     const area=E().fieldArea(c);
-    if(area==='primary' && !state.sharedPrimary)targets.push('#sharedPrimaryZone [data-field-area="primary"]');
-    if(area==='secondary' && !p.secondary)targets.push('#playerBoard [data-field-area="secondary"]');
+    if(area==='primary' && !p.primary)targets.push('#playerBoard [data-field-area="primary"]');
+    if(area==='secondary' && !state.sharedSecondary)targets.push('#sharedSecondaryZone [data-field-area="secondary"]');
     [0,1,2].forEach(i=>{ if(!p.azr[i]) targets.push(`[data-azr="${i}"]`); });
   }
   return targets;
@@ -1573,7 +1573,7 @@ function markLegalDropTargets(handIndex){
   }
 }
 function wireDragAndDrop(){
-  document.querySelectorAll('#playerBoard [data-bez],#playerBoard [data-azr],#playerBoard [data-equip],#playerBoard [data-field-area="secondary"],#sharedPrimaryZone [data-field-area="primary"]').forEach(target=>{
+  document.querySelectorAll('#playerBoard [data-bez],#playerBoard [data-azr],#playerBoard [data-equip],#playerBoard [data-field-area="primary"],#sharedSecondaryZone [data-field-area="secondary"]').forEach(target=>{
     target.addEventListener('dragover',ev=>{
       const raw=ev.dataTransfer.getData('text/plain');
       const idx=raw===''?selectedHandIndex:Number(raw);

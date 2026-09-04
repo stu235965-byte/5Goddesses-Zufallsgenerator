@@ -152,7 +152,6 @@ function playerFromDeck(deck,index){
     ],
     azr:[null,null,null],
     primary:null,
-    secondary:null,
     discard:[],
     recruitedThisTurn:false,
     drawDone:false
@@ -387,13 +386,13 @@ function ehrisDiscountFor(state,playerIndex,bezSlot){
 }
 function effectiveWonderCost(state,playerIndex,bezSlot,r){return Math.max(0,Number(r?.wonderCostCurrent??cardData(r)?.wunder?.kosten_ehre??0)-ehrisDiscountFor(state,playerIndex,bezSlot))}
 function ruthTargets(state){
-  const p=active(state),r=state.sharedPrimary,c=cardData(r);
+  const p=active(state),r=p.primary,c=cardData(r);
   if(!r||r.owner!==p.index||!c?.effekte?.some(e=>e.engine_key==='ruth_kaufladen')||!['supply','resupply'].includes(currentPhase(state).id))return [];
   if(r.effectUsedTurn===p.turnCount||Number(r.effectUsesRemaining||0)<=0)return [];
   return p.bezSlots.map((b,i)=>b&&b.attackedTurn!==p.turnCount&&Number(b.honor||0)>=1?{slot:i,name:cardData(b)?.name||`Bezwingerin ${i+1}`,honor:Number(b.honor||0)}:null).filter(Boolean);
 }
 function activateRuth(state,bezSlot,choice){
-  const p=active(state),r=state.sharedPrimary,c=cardData(r),b=p.bezSlots[bezSlot];
+  const p=active(state),r=p.primary,c=cardData(r),b=p.bezSlots[bezSlot];
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Ruths Kaufladen kann nur in VP oder NP benutzt werden.'};
   if(!r||r.owner!==p.index||!c?.effekte?.some(e=>e.engine_key==='ruth_kaufladen'))return {ok:false,msg:'Ruth liegt nicht in deinem Primärbereich.'};
   if(r.effectUsedTurn===p.turnCount)return {ok:false,msg:'Ruth wurde in dieser Kampfrunde bereits benutzt.'};
@@ -420,10 +419,10 @@ function ownHonorFieldSources(state){
 
   add('refuge',p.refuge,cardData(p.refuge)?.name||'Zuflucht');
   p.bezSlots.forEach((r,i)=>add(`bez:${i}`,r,cardData(r)?.name||`Bezwingerin ${i+1}`));
-  add('secondary',p.secondary,cardData(p.secondary)?.name||'Sekundärkarte');
+  add('primary',p.primary,cardData(p.primary)?.name||'Primärkarte');
 
-  if(state.sharedPrimary?.owner===p.index){
-    add('primary',state.sharedPrimary,cardData(state.sharedPrimary)?.name||'Primärkarte');
+  if(state.sharedSecondary?.owner===p.index){
+    add('secondary',state.sharedSecondary,cardData(state.sharedSecondary)?.name||'Sekundärkarte');
   }
 
   p.azr.forEach((r,i)=>add(`azr:${i}`,r,cardData(r)?.name||`AZR ${i+1}`));
@@ -440,8 +439,8 @@ function ownHonorFieldSources(state){
 function honorFieldRuntimeById(state,id){
   const p=active(state);
   if(id==='refuge')return p.refuge;
-  if(id==='secondary')return p.secondary;
-  if(id==='primary')return state.sharedPrimary?.owner===p.index?state.sharedPrimary:null;
+  if(id==='primary')return p.primary;
+  if(id==='secondary')return state.sharedSecondary?.owner===p.index?state.sharedSecondary:null;
   if(String(id).startsWith('bez:'))return p.bezSlots[Number(String(id).split(':')[1])]||null;
   if(String(id).startsWith('azr:'))return p.azr[Number(String(id).split(':')[1])]||null;
   if(String(id).startsWith('equip:')){
@@ -451,7 +450,7 @@ function honorFieldRuntimeById(state,id){
   return null;
 }
 function startWunderumwandlungsapparatur(state){
-  const p=active(state),r=state.sharedPrimary,c=cardData(r);
+  const p=active(state),r=p.primary,c=cardData(r);
   if(!r || r.owner!==p.index || !isWunderumwandlungsapparatur(r))
     return {ok:false,msg:'Die Wunderumwandlungsapparatur liegt nicht in deinem Primärbereich.'};
   if(!['supply','resupply'].includes(currentPhase(state).id))
@@ -550,7 +549,7 @@ function normalizeJakylHyhdeAfterRemoval(state,p,bezSlot,removed){
 }
 function isManta(r){return cardData(r)?.effekte?.some(e=>e.engine_key==='manta_wonder_physical')}
 function startMantaWonder(state){
-  const p=active(state),r=state.sharedPrimary,c=cardData(r);
+  const p=active(state),r=p.primary,c=cardData(r);
   if(!r || r.owner!==p.index || !isManta(r))return {ok:false,msg:'MANTA liegt nicht in deinem Primärbereich.'};
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'MANTAs Wunder kann nur in VP oder NP gewirkt werden.'};
   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'MANTAs Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
@@ -562,7 +561,7 @@ function startMantaWonder(state){
   return {ok:true,msg:'MANTA erhält +1 physische Stärke für einen Kampf.'};
 }
 function consumeMantaCombatBonus(state){
-  const r=state.sharedPrimary;
+  const r=active(state).primary;
   if(r?.effectState?.mantaPhysicalOneCombat){
     r.effectState.mantaPhysicalOneCombat=0;
     log(state,'MANTAs +1 physische Stärke für einen Kampf wurde verbraucht.');
@@ -621,7 +620,7 @@ function initialDraw(state){
 }
 function startGame(deck1,deck2,startPlayer){
   const state={
-    version:1,
+    version:2,
     activePlayer:startPlayer,
     startingPlayer:startPlayer,
     phaseIndex:0,
@@ -634,7 +633,7 @@ function startGame(deck1,deck2,startPlayer){
     pendingDamage:null,
     pendingWonderDraw:null,
     pendingRefugeStage2Choice:null,
-    sharedPrimary:null,
+    sharedSecondary:null,
     players:[playerFromDeck(deck1,0),playerFromDeck(deck2,1)],
     log:[]
   };
@@ -659,10 +658,10 @@ function honorCardsOfPlayer(state,p){
   const cards=[
     p.refuge,
     ...p.bezSlots,
-    p.secondary,
+    p.primary,
     // Verdeckte AZR-Karten erhalten keine Ehre.
     ...p.azr.filter(r=>r && !r.faceDown),
-    state.sharedPrimary?.owner===p.index ? state.sharedPrimary : null
+    state.sharedSecondary?.owner===p.index ? state.sharedSecondary : null
   ];
   return cards.filter(Boolean);
 }
@@ -901,12 +900,12 @@ function allRuntimeCards(state){
    if(p.refuge)out.push({playerIndex:pi,zone:'refuge',slot:null,r:p.refuge});
    p.bezSlots.forEach((r,i)=>{if(r)out.push({playerIndex:pi,zone:'bez',slot:i,r})});
    p.azr.forEach((r,i)=>{if(r&&!r.faceDown)out.push({playerIndex:pi,zone:'azr',slot:i,r})});
-   if(p.secondary)out.push({playerIndex:pi,zone:'secondary',slot:null,r:p.secondary});
+   if(p.primary)out.push({playerIndex:pi,zone:'primary',slot:null,r:p.primary});
    (p.equipment||[]).forEach((eq,bi)=>['weapon','shield','armor','helmet'].forEach(kind=>{
      if(eq?.[kind])out.push({playerIndex:pi,zone:'equipment',slot:bi,kind,r:eq[kind]});
    }));
  });
- if(state.sharedPrimary)out.push({playerIndex:state.sharedPrimary.owner,zone:'primary',slot:null,r:state.sharedPrimary});
+ if(state.sharedSecondary)out.push({playerIndex:state.sharedSecondary.owner,zone:'secondary',slot:null,r:state.sharedSecondary});
  return out;
 }
 
@@ -1117,16 +1116,16 @@ function isMornakCard(c){return isMornak(c)||c?.effekte?.some?.(e=>e.engine_key=
 function mornakAllowedAreas(c){return isMornakCard(c)?['primary','secondary','azr']:(fieldArea(c)?[fieldArea(c)]:['azr'])}
 function ownMornakLocations(state,playerIndex){
  const p=state.players[playerIndex],out=[];
- if(state.sharedPrimary && (state.sharedPrimary.controllerIndex??state.sharedPrimary.ownerIndex??state.sharedPrimary.owner)===playerIndex && isMornak(cardData(state.sharedPrimary)))out.push({zone:'primary',r:state.sharedPrimary});
- if(p.secondary && isMornak(cardData(p.secondary)))out.push({zone:'secondary',r:p.secondary});
+ if(p.primary && (p.primary.controllerIndex??p.primary.ownerIndex??p.primary.owner)===playerIndex && isMornak(cardData(p.primary)))out.push({zone:'primary',r:p.primary});
+ if(state.sharedSecondary && (state.sharedSecondary.controllerIndex??state.sharedSecondary.ownerIndex??state.sharedSecondary.owner)===playerIndex && isMornak(cardData(state.sharedSecondary)))out.push({zone:'secondary',r:state.sharedSecondary});
  (p.azr||[]).forEach((r,i)=>{if(r&&isMornak(cardData(r))&&(r.controllerIndex??playerIndex)===playerIndex)out.push({zone:'azr',slot:i,r});});
  for(const op of state.players)(op.azr||[]).forEach((r,i)=>{if(r&&isMornak(cardData(r))&&r.controllerIndex===playerIndex&&!out.some(x=>x.r===r))out.push({zone:'enemy_azr',hostPlayer:op.index,slot:i,r});});
  return out;
 }
 function mornakTokenTargets(state,controllerIndex,allowEnemyAzr=false){
  const p=state.players[controllerIndex],out=[];
- if(!state.sharedPrimary)out.push({id:'primary',name:'Eigener PRIMÄR-Bereich'});
- if(!p.secondary)out.push({id:'secondary',name:'Eigener SEKUNDÄR-Bereich'});
+ if(!p.primary)out.push({id:'primary',name:'Eigener PRIMÄR-Bereich'});
+ if(!state.sharedSecondary)out.push({id:'secondary',name:'Gemeinsamer SEKUNDÄR-Bereich'});
  (p.azr||[]).forEach((r,i)=>{if(!r)out.push({id:`azr:${i}`,name:`Eigene ASTRAL-/Rüstkammer-Zone ${i+1}`})});
  if(allowEnemyAzr){
    const e=state.players[1-controllerIndex];
@@ -1144,8 +1143,8 @@ function resolveMornakTokenPlacement(state,id){
  const pend=state.pendingBezEffect;if(!pend||pend.type!=='mornak_token_place')return {ok:false,msg:'Keine Mornak-Brut-Tokenplatzierung aktiv.'};
  const ctrl=pend.sourcePlayer,p=state.players[ctrl],r=createMornakTokenRuntime(state,ctrl);if(!r)return {ok:false,msg:'Mornak-Brut konnte nicht gefunden werden.'};
  const valid=mornakTokenTargets(state,ctrl,!!pend.allowEnemyAzr).some(t=>t.id===id);if(!valid)return {ok:false,msg:'Dieser Bereich ist nicht mehr frei.'};
- if(id==='primary')state.sharedPrimary=r;
- else if(id==='secondary')p.secondary=r;
+ if(id==='primary')p.primary=r;
+ else if(id==='secondary')state.sharedSecondary=r;
  else if(String(id).startsWith('azr:'))p.azr[Number(String(id).split(':')[1])]=r;
  else if(String(id).startsWith('enemyazr:'))state.players[1-ctrl].azr[Number(String(id).split(':')[1])]=r;
  else return {ok:false,msg:'Ungültiger Bereich.'};
@@ -1563,8 +1562,8 @@ function keyla2DiscardTargets(state,playerIndex){
 function removeRuntimeFromZone(state,target){
   const p=state.players[target.playerIndex];
   if(target.zone==='azr')p.azr[target.slot]=null;
-  else if(target.zone==='secondary')p.secondary=null;
-  else if(target.zone==='primary')state.sharedPrimary=null;
+  else if(target.zone==='primary')p.primary=null;
+  else if(target.zone==='secondary')state.sharedSecondary=null;
   else if(target.zone==='equipment' && p.equipment?.[target.slot])p.equipment[target.slot][target.kind]=null;
   else return false;
   return true;
@@ -1885,9 +1884,9 @@ function ownHonorFieldRefs(state,playerIndex){
   if(p.refuge && Number(p.refuge.honor||0)>0)refs.push({kind:'refuge',slot:null,r:p.refuge});
   (p.bezSlots||[]).forEach((r,i)=>{if(r && Number(r.honor||0)>0)refs.push({kind:'bez',slot:i,r});});
   (p.azr||[]).forEach((r,i)=>{if(r && !r.faceDown && Number(r.honor||0)>0)refs.push({kind:'azr',slot:i,r});});
-  if(p.secondary && Number(p.secondary.honor||0)>0)refs.push({kind:'secondary',slot:null,r:p.secondary});
-  if(state.sharedPrimary && state.sharedPrimary.owner===playerIndex && Number(state.sharedPrimary.honor||0)>0)
-    refs.push({kind:'primary',slot:null,r:state.sharedPrimary});
+  if(p.primary && Number(p.primary.honor||0)>0)refs.push({kind:'primary',slot:null,r:p.primary});
+  if(state.sharedSecondary && state.sharedSecondary.owner===playerIndex && Number(state.sharedSecondary.honor||0)>0)
+    refs.push({kind:'secondary',slot:null,r:state.sharedSecondary});
   return refs;
 }
 function erlassHonorSources(state){
@@ -2007,8 +2006,8 @@ function startInstantRuestkammerItem(state,playerIndex,azrSlot){
     if(Number(p.refuge?.honor||0)<2)return {ok:false,msg:'Portalbazooka SMASHR benötigt 2 Ehre auf der eigenen Zuflucht.'};
     const enemy=state.players[1-playerIndex];
     let target=enemy.refuge,targetKind='refuge',targetName=cardData(enemy.refuge)?.name||'gegnerische Zuflucht';
-    if(state.sharedPrimary && state.sharedPrimary.owner===enemy.index && !state.sharedPrimary.faceDown){
-      target=state.sharedPrimary;
+    if(enemy.primary && !enemy.primary.faceDown){
+      target=enemy.primary;
       targetKind='primary';
       targetName=cardData(target)?.name||'gegnerische Primär-Karte';
     }
@@ -2304,11 +2303,11 @@ function playOpenAzr(state,handIndex,slot){
   return {ok:true};
 }
 function isRuth(r){return cardData(r)?.effekte?.some(e=>e.engine_key==='ruth_shop')}
-function ruthTargets(state){const p=active(state),r=state.sharedPrimary;if(!r||r.owner!==p.index||!isRuth(r)||!['supply','resupply'].includes(currentPhase(state).id)||(r.effectUsesRemaining??0)<=0||r.effectUsedTurn===p.turnCount)return [];return p.bezSlots.map((b,i)=>b&&b.attackedTurn!==p.turnCount&&Number(b.honor||0)>=1?{id:String(i),name:cardData(b)?.name||'Bezwingerin'}:null).filter(Boolean)}
+function ruthTargets(state){const p=active(state),r=p.primary;if(!r||r.owner!==p.index||!isRuth(r)||!['supply','resupply'].includes(currentPhase(state).id)||(r.effectUsesRemaining??0)<=0||r.effectUsedTurn===p.turnCount)return [];return p.bezSlots.map((b,i)=>b&&b.attackedTurn!==p.turnCount&&Number(b.honor||0)>=1?{id:String(i),name:cardData(b)?.name||'Bezwingerin'}:null).filter(Boolean)}
 
 function isChronokrypta(r){return cardData(r)?.effekte?.some(e=>e.engine_key==='chronokrypta_duration_trade')}
 function chronokryptaBezTargets(state){
-  const p=active(state),r=state.sharedPrimary;
+  const p=active(state),r=p.primary;
   if(!r||r.owner!==p.index||!isChronokrypta(r)||r.effectDisabled||Number(r.effectRoundsRemaining||0)<=0)return [];
   return (p.bezSlots||[]).map((b,i)=>{
     if(!b)return null;
@@ -2333,7 +2332,7 @@ function chronokryptaEquipmentTargets(state){
   return out;
 }
 function startChronokrypta(state){
-  const p=active(state),r=state.sharedPrimary;
+  const p=active(state),r=p.primary;
   if(!r||r.owner!==p.index||!isChronokrypta(r))return {ok:false,msg:'Chronokrypta liegt nicht offen in deinem Primärbereich.'};
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Chronokrypta kann nur in VP oder NP genutzt werden.'};
   if(r.effectDisabled||Number(r.effectRoundsRemaining||0)<=0)return {ok:false,msg:'Chronokryptas Kampfrundendauer ist abgelaufen.'};
@@ -2344,7 +2343,7 @@ function startChronokrypta(state){
   return {ok:true,pending:true,msg:'Wähle die eigene Bezwingerin, die 2 Ehre bezahlt.'};
 }
 function selectChronokryptaPayer(state,id){
-  const p=active(state),pend=state.pendingBezEffect,r=state.sharedPrimary,b=p.bezSlots[Number(id)];
+  const p=active(state),pend=state.pendingBezEffect,r=p.primary,b=p.bezSlots[Number(id)];
   if(pend?.type!=='chronokrypta_payer'||pend.sourcePlayer!==p.index||!r||!isChronokrypta(r)||!b)return {ok:false,msg:'Ungültige Chronokrypta-Auswahl.'};
   if(Number(b.honor||0)<2)return {ok:false,msg:'Diese Bezwingerin besitzt nicht genug Ehre.'};
   if(b.effectState?.foughtRoundSerial===state.roundSerial)return {ok:false,msg:'Diese Bezwingerin hat in dieser Kampfrunde bereits gekämpft.'};
@@ -2352,7 +2351,7 @@ function selectChronokryptaPayer(state,id){
   return {ok:true,pending:true,msg:'Wähle nun eine eigene oder gegnerische Nicht-Waffen-Ausrüstung mit Kampfrundendauer.'};
 }
 function resolveChronokrypta(state,targetId,delta){
-  const p=active(state),pend=state.pendingBezEffect,r=state.sharedPrimary;
+  const p=active(state),pend=state.pendingBezEffect,r=p.primary;
   if(pend?.type!=='chronokrypta_equipment'||pend.sourcePlayer!==p.index||!r||!isChronokrypta(r))return {ok:false,msg:'Keine Chronokrypta-Auswahl aktiv.'};
   if(delta!==1&&delta!==-1)return {ok:false,msg:'Die Kampfrundendauer kann nur um 1 erhöht oder verringert werden.'};
   const b=p.bezSlots[pend.payerSlot];
@@ -2379,9 +2378,9 @@ function resolveChronokrypta(state,targetId,delta){
   }
   return {ok:true,msg:`Chronokrypta ausgeführt: Kampfrundendauer ${delta>0?'um 1 erhöht':'um 1 verringert'}.`};
 }
-function startRuthEffect(state){const p=active(state),r=state.sharedPrimary;if(!r||r.owner!==p.index||!isRuth(r))return {ok:false,msg:'Ruth liegt nicht in deinem Primärbereich.'};if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Ruth kann nur in VP oder NP genutzt werden.'};if(r.effectUsedTurn===p.turnCount)return {ok:false,msg:'Ruth wurde in dieser KR bereits genutzt.'};if((r.effectUsesRemaining??0)<=0)return {ok:false,msg:'Ruth besitzt keine Ladungen mehr.'};if(!ruthTargets(state).length)return {ok:false,msg:'Keine Bezwingerin erfüllt Ruths Bedingungen.'};state.pendingBezEffect={type:'ruth_target',sourcePlayer:p.index};return {ok:true,pending:true,msg:'Wähle eine Bezwingerin.'}}
-function resolveRuthTarget(state,id){const p=active(state),r=state.sharedPrimary,b=p.bezSlots[Number(id)];if(state.pendingBezEffect?.type!=='ruth_target'||!r||!isRuth(r)||!b)return {ok:false,msg:'Ungültige Auswahl.'};if(b.attackedTurn===p.turnCount||Number(b.honor||0)<1)return {ok:false,msg:'Diese Bezwingerin kann Ruth nicht nutzen.'};state.pendingBezEffect={type:'ruth_choice',sourcePlayer:p.index,targetSlot:Number(id)};return {ok:true,pending:true,msg:'Wähle einen Schild.'}}
-function resolveRuthChoice(state,choice){const p=active(state),pend=state.pendingBezEffect,r=state.sharedPrimary,b=p.bezSlots[pend?.targetSlot];if(pend?.type!=='ruth_choice'||!r||!isRuth(r)||!b||!['physical','astral'].includes(choice))return {ok:false,msg:'Ungültige Auswahl.'};if(Number(b.honor||0)<1)return {ok:false,msg:'Nicht genug Ehre.'};b.honor--;if(choice==='physical')b.physicalShield=Number(b.physicalShield||0)+1;else b.astralShield=Number(b.astralShield||0)+1;b.effectState=b.effectState||{};b.effectState.ruthCannotAttackTurn=p.turnCount;r.effectUsesRemaining=Math.max(0,Number(r.effectUsesRemaining||0)-1);r.effectUsedTurn=p.turnCount;state.pendingBezEffect=null;return {ok:true,msg:'Ruths Effekt ausgeführt.'}}
+function startRuthEffect(state){const p=active(state),r=p.primary;if(!r||r.owner!==p.index||!isRuth(r))return {ok:false,msg:'Ruth liegt nicht in deinem Primärbereich.'};if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Ruth kann nur in VP oder NP genutzt werden.'};if(r.effectUsedTurn===p.turnCount)return {ok:false,msg:'Ruth wurde in dieser KR bereits genutzt.'};if((r.effectUsesRemaining??0)<=0)return {ok:false,msg:'Ruth besitzt keine Ladungen mehr.'};if(!ruthTargets(state).length)return {ok:false,msg:'Keine Bezwingerin erfüllt Ruths Bedingungen.'};state.pendingBezEffect={type:'ruth_target',sourcePlayer:p.index};return {ok:true,pending:true,msg:'Wähle eine Bezwingerin.'}}
+function resolveRuthTarget(state,id){const p=active(state),r=p.primary,b=p.bezSlots[Number(id)];if(state.pendingBezEffect?.type!=='ruth_target'||!r||!isRuth(r)||!b)return {ok:false,msg:'Ungültige Auswahl.'};if(b.attackedTurn===p.turnCount||Number(b.honor||0)<1)return {ok:false,msg:'Diese Bezwingerin kann Ruth nicht nutzen.'};state.pendingBezEffect={type:'ruth_choice',sourcePlayer:p.index,targetSlot:Number(id)};return {ok:true,pending:true,msg:'Wähle einen Schild.'}}
+function resolveRuthChoice(state,choice){const p=active(state),pend=state.pendingBezEffect,r=p.primary,b=p.bezSlots[pend?.targetSlot];if(pend?.type!=='ruth_choice'||!r||!isRuth(r)||!b||!['physical','astral'].includes(choice))return {ok:false,msg:'Ungültige Auswahl.'};if(Number(b.honor||0)<1)return {ok:false,msg:'Nicht genug Ehre.'};b.honor--;if(choice==='physical')b.physicalShield=Number(b.physicalShield||0)+1;else b.astralShield=Number(b.astralShield||0)+1;b.effectState=b.effectState||{};b.effectState.ruthCannotAttackTurn=p.turnCount;r.effectUsesRemaining=Math.max(0,Number(r.effectUsesRemaining||0)-1);r.effectUsedTurn=p.turnCount;state.pendingBezEffect=null;return {ok:true,msg:'Ruths Effekt ausgeführt.'}}
 function playFieldFromHand(state,handIndex,area){
   const p=active(state);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Primär- und Sekundärkarten können nur in Versorgungs- oder Nachschubphase ausgespielt werden.'};
@@ -2390,9 +2389,9 @@ function playFieldFromHand(state,handIndex,area){
   if(!c || !allowed.includes(area) || !['primary','secondary'].includes(area))return {ok:false,msg:'Diese Karte gehört nicht in diesen Bereich.'};
 
   if(area==='primary'){
-    if(state.sharedPrimary)return {ok:false,msg:'Der gemeinsame Primärbereich ist bereits belegt.'};
+    if(p.primary)return {ok:false,msg:'Dein Primärbereich ist bereits belegt.'};
   }else{
-    if(p.secondary)return {ok:false,msg:'Dein Sekundärbereich ist bereits belegt.'};
+    if(state.sharedSecondary)return {ok:false,msg:'Der gemeinsame Sekundärbereich ist bereits belegt.'};
   }
 
   p.hand.splice(handIndex,1);
@@ -2401,8 +2400,8 @@ function playFieldFromHand(state,handIndex,area){
   if(c?.effekte?.some(e=>e.engine_key==='ruth_kaufladen')){r.effectUsesRemaining=3;r.effectUsedTurn=null;}
 
   if(c?.effekte?.some(e=>e.engine_key==='ruth_shop'))r.effectUsesRemaining=3;
-  if(area==='primary')state.sharedPrimary=r;
-  else p.secondary=r;
+  if(area==='primary')p.primary=r;
+  else state.sharedSecondary=r;
 
   log(state,`${p.name} spielt ${c.name} offen in den ${area==='primary'?'Primär':'Sekundär'}bereich.`);
   return {ok:true};
@@ -2417,11 +2416,11 @@ function moveMornakFromAzr(state,azrSlot,area){
     return {ok:true,msg:'Mornak-Brut bleibt offen in der ASTRAL-/Rüstkammer-Zone.'};
   }
   if(area==='primary'){
-    if(state.sharedPrimary)return {ok:false,msg:'Der gemeinsame Primärbereich ist bereits belegt.'};
-    state.sharedPrimary=r;
+    if(p.primary)return {ok:false,msg:'Dein Primärbereich ist bereits belegt.'};
+    p.primary=r;
   }else{
-    if(p.secondary)return {ok:false,msg:'Dein Sekundärbereich ist bereits belegt.'};
-    p.secondary=r;
+    if(state.sharedSecondary)return {ok:false,msg:'Der gemeinsame Sekundärbereich ist bereits belegt.'};
+    state.sharedSecondary=r;
   }
   p.azr[azrSlot]=null;state.pendingFieldCard=null;
   log(state,`${p.name} verschiebt ${c.name} in den ${area==='primary'?'Primär':'Sekundär'}bereich.`);
@@ -2434,11 +2433,11 @@ function moveRevealedFieldCard(state,azrSlot){
   if(!area)return {ok:false,msg:'Diese Karte gehört nicht in Primär- oder Sekundärbereich.'};
 
   if(area==='primary'){
-    if(state.sharedPrimary)return {ok:false,msg:'Der gemeinsame Primärbereich ist bereits belegt. Die aufgedeckte Karte kann noch nicht verschoben werden.'};
-    state.sharedPrimary=r;
+    if(p.primary)return {ok:false,msg:'Dein Primärbereich ist bereits belegt. Die aufgedeckte Karte kann noch nicht verschoben werden.'};
+    p.primary=r;
   }else{
-    if(p.secondary)return {ok:false,msg:'Dein Sekundärbereich ist bereits belegt. Die aufgedeckte Karte kann noch nicht verschoben werden.'};
-    p.secondary=r;
+    if(state.sharedSecondary)return {ok:false,msg:'Der gemeinsame Sekundärbereich ist bereits belegt. Die aufgedeckte Karte kann noch nicht verschoben werden.'};
+    state.sharedSecondary=r;
   }
   p.azr[azrSlot]=null;
   state.pendingFieldCard=null;
@@ -2852,9 +2851,9 @@ function attackTargets(state,attackerSource){
       if(!blockedByKraken)targets.push({type:'bez',slot:i,label:cardData(r)?.name||`Bezwingerin ${i+1}`});
     }
   });
-  if(opp.secondary && hasHeartAttribute(opp.secondary))targets.push({type:'secondary',label:cardData(opp.secondary)?.name||'Sekundärbereich'});
-  if(state.sharedPrimary && state.sharedPrimary.owner===opp.index && hasHeartAttribute(state.sharedPrimary)){
-    targets.push({type:'primary',label:cardData(state.sharedPrimary)?.name||'Primärbereich'});
+  if(opp.primary && hasHeartAttribute(opp.primary))targets.push({type:'primary',label:cardData(opp.primary)?.name||'Primärbereich'});
+  if(state.sharedSecondary && state.sharedSecondary.owner===opp.index && hasHeartAttribute(state.sharedSecondary)){
+    targets.push({type:'secondary',label:cardData(state.sharedSecondary)?.name||'Sekundärbereich'});
   }
 
   const forcedJeanne=jeanneForcedTarget(state,attackerSource);
@@ -3194,8 +3193,8 @@ function killIfNeeded(state,playerIndex,kind,slot=null){
   const p=state.players[playerIndex];
   let r=null;
   if(kind==='bez')r=p.bezSlots[slot];
-  else if(kind==='primary')r=state.sharedPrimary;
-  else if(kind==='secondary')r=p.secondary;
+  else if(kind==='primary')r=p.primary;
+  else if(kind==='secondary')r=state.sharedSecondary;
   else r=p.refuge;
 
   if(!r || r.hearts>0)return false;
@@ -3229,20 +3228,20 @@ function killIfNeeded(state,playerIndex,kind,slot=null){
     }
     p.bezSlots[slot]=null;
   }
-  if(kind==='primary')state.sharedPrimary=null;
-  if(kind==='secondary')p.secondary=null;
+  if(kind==='primary')p.primary=null;
+  if(kind==='secondary')state.sharedSecondary=null;
 
   log(state,`${cardData(r)?.name||'Eine Karte'} fällt auf 0 Herzen und wird auf den Ablagestapel gelegt.`);
   return true;
 }
 function titanCanRedirectRefuge(state){
   if(!state.attack||state.attack.target?.type!=='refuge')return false;
-  const defender=opponent(state),t=state.sharedPrimary,c=cardData(t);
+  const defender=opponent(state),t=defender.primary,c=cardData(t);
   return !!t && t.owner===defender.index && c?.effekte?.some(e=>e.engine_key==='titan_refuge_redirect') && Number(t.hearts||0)>0;
 }
 function setTitanRedirectChoice(state,use){if(!titanCanRedirectRefuge(state))return {ok:false,msg:'T.I.T.A.N. kann diesen Schaden nicht umleiten.'};state.attack.titanRedirect=!!use;return {ok:true};}
 function applyDamageWithTitanOverflow(state,targetRuntime,amount,type,defenderPlayer){
-  const titan=state.sharedPrimary;
+  const titan=opponent(state).primary;
   if(!state.attack?.titanRedirect||!titanCanRedirectRefuge(state))return applyDamage(targetRuntime,amount,type);
   let remaining=amount,shieldLoss=0,heartLoss=0;
   const sk=type==='physical'?'physicalShield':'astralShield';
@@ -3272,8 +3271,8 @@ function resolveCombat(state){
   const target=state.attack.target;
   let d=null,defKind=target.type,defSlot=target.slot??null;
   if(target.type==='bez')d=opp.bezSlots[target.slot];
-  else if(target.type==='primary')d=state.sharedPrimary;
-  else if(target.type==='secondary')d=opp.secondary;
+  else if(target.type==='primary')d=opp.primary;
+  else if(target.type==='secondary')d=state.sharedSecondary;
   else d=opp.refuge;
   if(!d)return {ok:false,msg:'Das Ziel ist nicht mehr vorhanden.'};
 
@@ -3512,7 +3511,37 @@ function save(state){localStorage.setItem('5goddesses_active_game_v1',JSON.strin
 function migrateLoadedState(state){
   if(!state || !Array.isArray(state.players))return state;
 
-  if(state.sharedPrimary===undefined)state.sharedPrimary=null;
+  // v2 Feldlayout: jeder Spieler besitzt einen eigenen Primärbereich,
+  // beide Spieler teilen sich genau einen Sekundärbereich.
+  if(Number(state.version||1)<2){
+    const oldSharedPrimary=state.sharedPrimary||null;
+    const oldSecondaries=state.players.map(p=>p.secondary||null);
+
+    state.players.forEach(p=>{
+      if(p.primary===undefined)p.primary=null;
+      delete p.secondary;
+    });
+
+    if(oldSharedPrimary){
+      const owner=Number(oldSharedPrimary.owner??oldSharedPrimary.ownerIndex??0);
+      if(state.players[owner] && !state.players[owner].primary)state.players[owner].primary=oldSharedPrimary;
+    }
+
+    const occupied=oldSecondaries.map((r,i)=>r?{r,i}:null).filter(Boolean);
+    if(occupied.length){
+      const preferred=occupied.find(x=>x.i===state.activePlayer)||occupied[0];
+      state.sharedSecondary=preferred.r;
+      occupied.filter(x=>x!==preferred).forEach(x=>{
+        // Bei alten Spielständen konnten fälschlich zwei Sekundärkarten gleichzeitig liegen.
+        // Die zweite wird verlustfrei auf die Hand ihres Besitzers zurückgegeben.
+        state.players[x.i].hand.push(x.r.bild);
+      });
+    }else state.sharedSecondary=null;
+
+    delete state.sharedPrimary;
+    state.version=2;
+  }
+  if(state.sharedSecondary===undefined)state.sharedSecondary=null;
   if(state.attack===undefined)state.attack=null;
   if(state.pendingEquipment===undefined)state.pendingEquipment=null;
   if(state.pendingFieldCard===undefined)state.pendingFieldCard=null;
@@ -3527,7 +3556,7 @@ function migrateLoadedState(state){
     if(p.index===undefined)p.index=index;
     if(p.honorGrantedTurn===undefined)p.honorGrantedTurn=null;
     if(p.policeTaxTurn===undefined)p.policeTaxTurn=null;
-    if(p.secondary===undefined)p.secondary=null;
+    if(p.primary===undefined)p.primary=null;
     ensureEquipmentState(p);
     if(!Array.isArray(p.azr))p.azr=[null,null,null];
     while(p.azr.length<3)p.azr.push(null);
@@ -3563,12 +3592,12 @@ function migrateLoadedState(state){
       }
     });
     p.azr.forEach(r=>normalizeRuntime(r,false));
-    normalizeRuntime(p.secondary,false);
+    normalizeRuntime(p.primary,false);
   });
 
-  if(state.sharedPrimary){
-    const c=cardData(state.sharedPrimary);
-    if(!hasDeploymentDelay(c))state.sharedPrimary.ready=true;
+  if(state.sharedSecondary){
+    const c=cardData(state.sharedSecondary);
+    if(!hasDeploymentDelay(c))state.sharedSecondary.ready=true;
   }
 
   return state;
