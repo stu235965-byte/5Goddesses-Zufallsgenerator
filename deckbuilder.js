@@ -15,7 +15,19 @@ let editorPreviewBild=null;
 
 function deckDb(){return window.GODDESSES_DB?.karten||[]}
 function deckKarte(bild){return deckDb().find(k=>k.bild===bild)||null}
-function istGesperrteDeckkarte(k){return k?.name==='Genova Toshi'}
+const GESPERRTE_DECKKARTEN=new Set([
+  'Genova Toshi',
+  'Strikelyn',
+  'Mantel der Stille Dunkelglanz'
+]);
+function istGesperrteDeckkarte(k){return !!k && GESPERRTE_DECKKARTEN.has(k.name)}
+function sperrgrundDeckkarte(k){
+  if(k?.name==='Genova Toshi')return 'keine offizielle Stufe-2-Entwicklung verfügbar';
+  if(k?.name==='Strikelyn' || k?.name==='Mantel der Stille Dunkelglanz'){
+    return 'ASTRAL-Spruch-/Gegenstands-Zielmechanik noch nicht vollständig implementiert';
+  }
+  return 'vorübergehend gesperrt';
+}
 function deckPoolSet(){
   try{
     const raw=localStorage.getItem('5goddesses_kartenpool_v2');
@@ -80,8 +92,11 @@ function deckValidierung(karten){
     }
   }
 
-  if((karten.zuflucht||[]).some(b=>istGesperrteDeckkarte(deckKarte(b)))){
-    fehler.push('Genova Toshi ist gesperrt, bis eine offizielle Stufe-2-Entwicklung verfügbar ist.');
+  const gesperrtImDeck=DECK_ORDER
+    .flatMap(b=>(karten[b]||[]).map(deckKarte))
+    .filter(k=>k && istGesperrteDeckkarte(k));
+  if(gesperrtImDeck.length){
+    fehler.push(`Gesperrte Karten im Deck: ${[...new Set(gesperrtImDeck.map(k=>k.name))].join(', ')}.`);
   }
 
   if((karten.zuflucht||[]).length===1){
@@ -488,7 +503,7 @@ function renderDeckEditor(){
       el.type='button';
       const locked=istGesperrteDeckkarte(karte);
       el.className='builder-card'+(selected?' selected':'')+(locked?' locked':'');
-      el.title=locked ? `${karte.name} – gesperrt: keine offizielle Stufe-2-Entwicklung` : (karte.name||'');
+      el.title=locked ? `${karte.name} – gesperrt: ${sperrgrundDeckkarte(karte)}` : (karte.name||'');
       if(locked)el.disabled=true;
 
       if(bereich==='entwicklung' && editorDeck.zuflucht.length===1){

@@ -18,6 +18,13 @@ const PROFILE_KEY='5goddesses_profilname_v1';
 function datenbank(){return window.GODDESSES_DB?.karten||[]}
 function kartenInBereich(b){return datenbank().filter(k=>k.deck_bereich===b)}
 function istImPool(k){return ausgewaehlt.has(k.bild)}
+const GESPERRTE_GENERATORKARTEN=new Set([
+  'Genova Toshi',
+  'Strikelyn',
+  'Mantel der Stille Dunkelglanz'
+]);
+function istGeneratorFreigegeben(k){return !!k && !GESPERRTE_GENERATORKARTEN.has(k.name)}
+function istImAktivenGeneratorPool(k){return istImPool(k) && istGeneratorFreigegeben(k)}
 function mischen(a){
   const b=[...a];
   for(let i=b.length-1;i>0;i--){
@@ -98,7 +105,7 @@ function zieheBezwingerinnen(pool,anzahl){
 }
 
 function waehleEntwicklungskarten(grundkarten, zuflucht){
-  const entwicklungen=kartenInBereich('entwicklung').filter(istImPool);
+  const entwicklungen=kartenInBereich('entwicklung').filter(istImAktivenGeneratorPool);
 
   // Pflicht: passende Stufe-2-Zuflucht zur gezogenen Stufe-1-Zuflucht.
   const passendeZuflucht=mischen(entwicklungFuerGrundkarte(zuflucht))[0];
@@ -175,7 +182,7 @@ function ziehen(){
     fehler.push('<strong>Zuflucht</strong>: Es muss mindestens eine ausgewählte Stufe-1-Zuflucht zusammen mit ihrer passenden Stufe-2-Entwicklungskarte im Kartenpool vorhanden sein.');
   }
 
-  const bezPool=kartenInBereich('bezwingerinnen').filter(istImPool);
+  const bezPool=kartenInBereich('bezwingerinnen').filter(istImAktivenGeneratorPool);
   const klassen=new Set(bezPool.map(k=>k.klasse).filter(Boolean));
   if(klassen.size<3){
     fehler.push(`<strong>Bezwingerinnen</strong>: ${klassen.size} unterschiedliche Klassen verfügbar, benötigt werden 3.`);
@@ -183,13 +190,13 @@ function ziehen(){
 
   for(const [bereich,anzahl,label] of GENERATOR_CONFIG){
     if(bereich==='zuflucht'||bereich==='bezwingerinnen')continue;
-    const pool=kartenInBereich(bereich).filter(istImPool);
+    const pool=kartenInBereich(bereich).filter(istImAktivenGeneratorPool);
     if(pool.length<anzahl){
       fehler.push(`<strong>${label}</strong>: ${pool.length} ausgewählt, benötigt werden ${anzahl}.`);
     }
   }
 
-  const entwicklungsPool=kartenInBereich('entwicklung').filter(istImPool);
+  const entwicklungsPool=kartenInBereich('entwicklung').filter(istImAktivenGeneratorPool);
   if(entwicklungsPool.length<5){
     fehler.push(`<strong>Entwicklungskarten</strong>: ${entwicklungsPool.length} ausgewählt, benötigt werden 5.`);
   }
@@ -203,8 +210,8 @@ function ziehen(){
   // Zuflucht nur aus Kandidaten ziehen, für die die Pflicht-Entwicklung verfügbar ist.
   const zuflucht=mischen(zufluchtKandidaten)[0];
   const bezwingerinnen=zieheBezwingerinnen(bezPool,3);
-  const astral=mischen(kartenInBereich('astral').filter(istImPool)).slice(0,5);
-  const ruestkammer=mischen(kartenInBereich('ruestkammer').filter(istImPool)).slice(0,5);
+  const astral=mischen(kartenInBereich('astral').filter(istImAktivenGeneratorPool)).slice(0,5);
+  const ruestkammer=mischen(kartenInBereich('ruestkammer').filter(istImAktivenGeneratorPool)).slice(0,5);
 
   const grundkarten=[zuflucht,...bezwingerinnen,...astral,...ruestkammer];
   const entwicklung=waehleEntwicklungskarten(grundkarten,zuflucht);
