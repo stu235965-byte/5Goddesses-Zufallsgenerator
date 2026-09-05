@@ -1999,7 +1999,7 @@ function startInstantRuestkammerItem(state,playerIndex,azrSlot){
       return {ok:false,msg:'Skyflux benötigt eine eigene Bezwingerin, deren andere Feldposition frei ist.'};
     }
     state.pendingBezEffect={type:'skyflux',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
-    return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin. Sie wechselt auf die freie Feldposition und erhält +1 Ehre.'};
+    return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin. Sie wechselt auf die freie Feldposition und erhält +1 ASTRAL-Schild.'};
   }
 
   if(key==='portalbazooka_smashr'){
@@ -2108,6 +2108,14 @@ function instantRuestkammerTargets(state){
   if(pend.type==='trank_der_staerke' || pend.type==='trank_der_astral_macht'){
     return state.players[pend.sourcePlayer].bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
   }
+  if(pend.type==='skyflux'){
+    const p=state.players[pend.sourcePlayer];
+    return (p?.bezSlots||[]).map((r,i)=>{
+      if(!r)return null;
+      const to=i===0?1:0;
+      return !p.bezSlots[to]?{id:String(i),name:cardData(r)?.name||'Bezwingerin',from:i,to}:null;
+    }).filter(Boolean);
+  }
   if(pend.type==='ueberladung'){
     return ueberladungTargets(state,pend.sourcePlayer);
   }
@@ -2127,7 +2135,7 @@ function resolveInstantRuestkammerTarget(state,id){
     ensureEquipmentState(p);
     p.equipment[to]=p.equipment[from];
     p.equipment[from]={weapon:null,shield:null,armor:null,helmet:null};
-    t.honor=Number(t.honor||0)+1;
+    t.astralShield=Number(t.astralShield||0)+1;
 
     // Wenn Skyflux am Ende der gegnerischen Ansturmphase das bereits erklärte
     // Bezwingerinnen-Ziel verschiebt, weicht dieses dem Angriff aus.
@@ -2141,8 +2149,8 @@ function resolveInstantRuestkammerTarget(state,id){
 
     state.pendingBezEffect=null;
     discardAzrInstantItem(state,sourcePlayer,sourceAzrSlot);
-    log(state,`Skyflux: ${cardData(t)?.name||'Bezwingerin'} wechselt Feldposition ${from+1} → ${to+1} und erhält +1 Ehre.`);
-    return {ok:true,msg:'Feldposition gewechselt, +1 Ehre. Ein ggf. auf diese Position angekündigter Angriff verfällt.'};
+    log(state,`Skyflux: ${cardData(t)?.name||'Bezwingerin'} wechselt Feldposition ${from+1} → ${to+1} und erhält +1 ASTRAL-Schild.`);
+    return {ok:true,msg:'Feldposition gewechselt, +1 ASTRAL-Schild. Ein ggf. auf diese Position angekündigter Angriff verfällt.'};
   }
 
   if(pend.type==='laehmendes_nervengift'){
