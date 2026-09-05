@@ -1,6 +1,25 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.64';
+window.G5_BATTLEFIELD_BUILD='1.66';
+
+const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
+function battleProfileName(){
+  const name=(localStorage.getItem(G5_PROFILE_NAME_KEY)||'').trim();
+  return name || 'Spieler 1';
+}
+function applyBattlePlayerNames(){
+  if(!state?.players?.length)return;
+  state.players[0].name=battleProfileName();
+  if(!state.players[1].name || state.players[1].name==='Spieler 1')state.players[1].name='Spieler 2';
+}
+function updateBattleSetupPlayerNames(){
+  const name=battleProfileName();
+  const p1Label=document.querySelector('label[for="gameDeckP1"] .setup-player-name');
+  if(p1Label)p1Label.textContent=name;
+  const start=document.getElementById('gameStartPlayer');
+  if(start?.options?.[0])start.options[0].textContent=name;
+}
+
 
 const E=()=>window.G5Engine;
 let state=null;
@@ -209,6 +228,7 @@ window.addEventListener('orientationchange',()=>{
  // das Spielfeld gegen den Zoom sofort wieder verkleinern.
 
 function fillDeckSelectors(){
+  updateBattleSetupPlayerNames();
   const all=E().decks();
   const normalized=all.map(d=>E().normalizeDeckForBattle?.(d)||d);
   const ds=normalized.filter(E().validDeck);
@@ -262,6 +282,7 @@ function startGame(){
   let sp=document.getElementById('gameStartPlayer').value;
   sp=sp==='random'?Math.floor(Math.random()*2):Number(sp);
   state=E().startGame(d1,d2,sp);
+  applyBattlePlayerNames();
   E().save(state);
   document.getElementById('gameSetup').hidden=true;
   document.getElementById('gameShell').hidden=false;
@@ -280,6 +301,8 @@ function resumeGame(){
   const saved=E().load();
   if(!saved)return;
   state=saved;
+  applyBattlePlayerNames();
+  E().save(state);
   document.getElementById('gameSetup').hidden=true;
   document.getElementById('gameShell').hidden=false;
 
