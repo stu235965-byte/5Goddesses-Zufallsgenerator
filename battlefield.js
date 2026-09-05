@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.70';
+window.G5_BATTLEFIELD_BUILD='1.71';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -965,6 +965,50 @@ function renderActions(){
   if(state.pendingBezEffect?.type==='ruth_target'){const title=document.createElement('strong');title.textContent='Dorfschmiedin Ruth – Bezwingerin wählen';root.appendChild(title);E().ruthTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.onclick=()=>{const rr=E().resolveRuthTarget(state,t.id);saveRender(rr.msg)};root.appendChild(b)});return;}
   if(state.pendingBezEffect?.type==='ruth_choice'){const title=document.createElement('strong');title.textContent='Dorfschmiedin Ruth – Schild wählen';root.appendChild(title);[['physical','+1 physischer Schild'],['astral','+1 ASTRAL-Schild']].forEach(([id,label])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>{const rr=E().resolveRuthChoice(state,id);saveRender(rr.msg)};root.appendChild(b)});return;}
   if(state.pendingBezEffect?.type==='ehris_select'){const title=document.createElement('strong');title.textContent='Ehris Ohrringe – Oberwelt-Bezwingerin wählen';root.appendChild(title);E().ehrisTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.onclick=()=>{const rr=E().resolveEhrisSelection(state,t.id);saveRender(rr.msg)};root.appendChild(b)});return;}
+  if(state.pendingBezEffect?.type==='erlass_umverteilung'){
+    const pend=state.pendingBezEffect;
+    const title=document.createElement('strong');
+    title.textContent='Erlass Umverteilung';
+    root.appendChild(title);
+
+    if(pend.x===null || pend.x===undefined){
+      const info=document.createElement('span');
+      info.textContent='Wähle X. Entferne anschließend insgesamt X Ehre von deinen eigenen offenen Karten und gib einer eigenen Bezwingerin +X Ehre.';
+      root.appendChild(info);
+      const sources=E().erlassHonorSources(state);
+      const total=sources.reduce((sum,t)=>sum+Number(t.honor||0),0);
+      [1,2].filter(x=>x<=total).forEach(x=>{
+        const b=document.createElement('button');b.type='button';b.textContent=`X = ${x}`;
+        b.addEventListener('click',()=>{const rr=E().erlassBegin(state,x);saveRender(rr.msg);});
+        root.appendChild(b);
+      });
+      return;
+    }
+
+    if(Number(pend.remaining)>0){
+      const info=document.createElement('span');
+      info.textContent=`Noch ${pend.remaining} Ehre entfernen. Wähle eine eigene offene Karte mit Ehre.`;
+      root.appendChild(info);
+      E().erlassHonorSources(state).forEach(t=>{
+        const b=document.createElement('button');b.type='button';b.textContent=`${t.name} (${t.honor} Ehre)`;
+        b.addEventListener('click',()=>{const rr=E().erlassRemoveHonor(state,t.id);saveRender(rr.msg);});
+        root.appendChild(b);
+      });
+      return;
+    }
+
+    if(Number(pend.remaining)===0){
+      const info=document.createElement('span');
+      info.textContent=`Wähle eine eigene Bezwingerin. Sie erhält +${pend.x} Ehre.`;
+      root.appendChild(info);
+      E().erlassTargets(state).forEach(t=>{
+        const b=document.createElement('button');b.type='button';b.textContent=t.name;
+        b.addEventListener('click',()=>{const rr=E().resolveErlassTarget(state,t.id);saveRender(rr.msg);});
+        root.appendChild(b);
+      });
+      return;
+    }
+  }
   if(state.pendingBezEffect && ['laehmendes_nervengift','trank_der_staerke','trank_der_astral_macht','die_kanone','ueberladung','skyflux'].includes(state.pendingBezEffect.type)){
     const title=document.createElement('strong');
     title.textContent=state.pendingBezEffect.type==='laehmendes_nervengift'
