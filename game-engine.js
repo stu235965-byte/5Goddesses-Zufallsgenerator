@@ -2001,7 +2001,7 @@ function startInstantRuestkammerItem(state,playerIndex,azrSlot){
       return {ok:false,msg:'Skyflux benötigt eine eigene Bezwingerin, deren andere Feldposition frei ist.'};
     }
     state.pendingBezEffect={type:'skyflux',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
-    return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin. Sie wechselt auf die freie Feldposition und erhält +1 ASTRAL-Schild.'};
+    return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin. Sie wechselt auf die freie Feldposition und erhält +1 Ehre.'};
   }
 
   if(key==='portalbazooka_smashr'){
@@ -2137,7 +2137,6 @@ function resolveInstantRuestkammerTarget(state,id){
     ensureEquipmentState(p);
     p.equipment[to]=p.equipment[from];
     p.equipment[from]={weapon:null,shield:null,armor:null,helmet:null};
-    t.astralShield=Number(t.astralShield||0)+1;
     t.honor=Number(t.honor||0)+1;
 
     // Wenn Skyflux am Ende der gegnerischen Ansturmphase das bereits erklärte
@@ -2152,8 +2151,8 @@ function resolveInstantRuestkammerTarget(state,id){
 
     state.pendingBezEffect=null;
     discardAzrInstantItem(state,sourcePlayer,sourceAzrSlot);
-    log(state,`Skyflux: ${cardData(t)?.name||'Bezwingerin'} wechselt Feldposition ${from+1} → ${to+1} und erhält +1 ASTRAL-Schild sowie +1 Ehre.`);
-    return {ok:true,msg:'Feldposition gewechselt, +1 ASTRAL-Schild und +1 Ehre. Ein ggf. auf diese Position angekündigter Angriff verfällt.'};
+    log(state,`Skyflux: ${cardData(t)?.name||'Bezwingerin'} wechselt Feldposition ${from+1} → ${to+1} und erhält +1 Ehre.`);
+    return {ok:true,msg:'Feldposition gewechselt, +1 Ehre. Ein ggf. auf diese Position angekündigter Angriff verfällt.'};
   }
 
   if(pend.type==='laehmendes_nervengift'){
