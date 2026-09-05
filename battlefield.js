@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.63';
+window.G5_BATTLEFIELD_BUILD='1.64';
 
 const E=()=>window.G5Engine;
 let state=null;
@@ -266,7 +266,15 @@ function startGame(){
   document.getElementById('gameSetup').hidden=true;
   document.getElementById('gameShell').hidden=false;
   selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;refugeActionSelected=false;
+
+  // v1.64: Beim Gefechtsstart denselben Auto-Fit-Ablauf erzwingen,
+  // der bisher erst nach einem echten orientationchange zuverlässig griff.
+  resetMobileBattlefieldFit();
   render('Gefecht gestartet. Beide Spieler haben 3 Karten auf der Starthand.');
+  setTimeout(()=>{
+    resetMobileBattlefieldFit();
+    scheduleMobileBattlefieldFit();
+  },250);
 }
 function resumeGame(){
   const saved=E().load();
@@ -274,7 +282,14 @@ function resumeGame(){
   state=saved;
   document.getElementById('gameSetup').hidden=true;
   document.getElementById('gameShell').hidden=false;
+
+  // Auch beim Fortsetzen eines Gefechts frisch an das aktuelle Hoch-/Querformat anpassen.
+  resetMobileBattlefieldFit();
   render('Gespeichertes Gefecht fortgesetzt.');
+  setTimeout(()=>{
+    resetMobileBattlefieldFit();
+    scheduleMobileBattlefieldFit();
+  },250);
 }
 function newGame(){
   if(!confirm('Aktuelles Gefecht beenden und zur Deckauswahl zurückkehren?'))return;
