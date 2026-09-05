@@ -380,9 +380,15 @@ function ehrisDiscountFor(state,playerIndex,bezSlot){
   const p=state.players[playerIndex],ear=allRuntimeCards(state).find(x=>x.playerIndex===playerIndex&&cardHasEngineKey(x.r,'ehris_ohrringe'));
   if(!ear||ear.r.faceDown||Number(ear.r.effectRoundsRemaining||0)<=0)return 0;
   const eligible=(p.bezSlots||[]).map((r,i)=>isOberweltBez(r)?i:null).filter(i=>i!==null);
-  if(eligible.length<2){delete ear.r.effectState?.selectedBezSlot;return 0;}
-  const sel=ear.r.effectState?.selectedBezSlot;
-  return sel===bezSlot&&eligible.includes(sel)?1:0;
+  if(eligible.length<2){
+    if(ear.r.effectState){delete ear.r.effectState.selectedBezSlot;delete ear.r.effectState.selectedBezBild;}
+    return 0;
+  }
+  const target=p.bezSlots?.[Number(bezSlot)];
+  const selectedBild=ear.r.effectState?.selectedBezBild;
+  if(selectedBild)return isOberweltBez(target)&&target?.bild===selectedBild?1:0;
+  const sel=Number(ear.r.effectState?.selectedBezSlot);
+  return sel===Number(bezSlot)&&eligible.includes(sel)?1:0;
 }
 function effectiveWonderCost(state,playerIndex,bezSlot,r){return Math.max(0,Number(r?.wonderCostCurrent??cardData(r)?.wunder?.kosten_ehre??0)-ehrisDiscountFor(state,playerIndex,bezSlot))}
 function ruthTargets(state){
@@ -529,7 +535,9 @@ function selectEhrisTarget(state,bezSlot){
   if(!ear)return {ok:false,msg:'Ehris Ohrringe liegen nicht offen auf deinem Feld.'};
   const eligible=p.bezSlots.map((r,i)=>isOberweltBez(r)?i:null).filter(i=>i!==null);
   if(eligible.length<2||!eligible.includes(Number(bezSlot)))return {ok:false,msg:'Es müssen mindestens zwei eigene Oberwelt-Bezwingerinnen liegen; Ziel muss eine davon sein.'};
-  ear.r.effectState=ear.r.effectState||{};ear.r.effectState.selectedBezSlot=Number(bezSlot);
+  ear.r.effectState=ear.r.effectState||{};
+  ear.r.effectState.selectedBezSlot=Number(bezSlot);
+  ear.r.effectState.selectedBezBild=p.bezSlots[bezSlot]?.bild||null;
   return {ok:true,msg:`Ehris Ohrringe: Wunderkosten von ${cardData(p.bezSlots[bezSlot])?.name} sind um 1 Ehre reduziert.`};
 }
 function hasEquipmentNamed(p,slot,name){ensureEquipmentState(p);return ['weapon','shield','armor','helmet'].some(k=>cardData(p.equipment?.[slot]?.[k])?.name===name)}
@@ -1867,9 +1875,9 @@ function tickBezEffectDurations(state){
 }
 
 function ehrisTargets(state,playerIndex=state.activePlayer){const p=state.players[playerIndex];return (p.bezSlots||[]).map((r,i)=>r&&cardData(r)?.fraktion==='Oberwelt'?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean)}
-function startEhrisSelection(state,azrSlot){const p=active(state),r=p.azr[azrSlot],c=cardData(r);if(!r||r.faceDown||!c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'))return {ok:false,msg:'Ehris Ohrringe liegen hier nicht offen.'};const t=ehrisTargets(state,p.index);if(t.length<2){r.effectState.selectedBezBild=null;return {ok:true,msg:'Rabatt wird aktiv, sobald zwei Oberwelt-Bezwingerinnen vorhanden sind.'};}state.pendingBezEffect={type:'ehris_select',sourcePlayer:p.index,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine Oberwelt-Bezwingerin.'}}
-function resolveEhrisSelection(state,id){const q=state.pendingBezEffect,p=state.players[q?.sourcePlayer],r=p?.azr?.[q?.sourceAzrSlot],b=p?.bezSlots?.[Number(id)];if(q?.type!=='ehris_select'||!r||!b||cardData(b)?.fraktion!=='Oberwelt'||ehrisTargets(state,p.index).length<2)return {ok:false,msg:'Ungültige Auswahl.'};r.effectState=r.effectState||{};r.effectState.selectedBezBild=b.bild;state.pendingBezEffect=null;return {ok:true,msg:'Ehris Rabatt gewählt.'}}
-function maintainEhris(state){for(const p of state.players)for(let i=0;i<(p.azr||[]).length;i++){const r=p.azr[i],c=cardData(r);if(!r||r.faceDown||r.effectDisabled||!c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'))continue;const t=ehrisTargets(state,p.index),sel=(p.bezSlots||[]).find(b=>b&&b.bild===r.effectState?.selectedBezBild);if(t.length<2)r.effectState.selectedBezBild=null;else if(!sel&&p.index===state.activePlayer&&['supply','resupply'].includes(currentPhase(state).id)&&!state.pendingBezEffect)state.pendingBezEffect={type:'ehris_select',sourcePlayer:p.index,sourceAzrSlot:i};}}
+function startEhrisSelection(state,azrSlot){const p=active(state),r=p.azr[azrSlot],c=cardData(r);if(!r||r.faceDown||!c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'))return {ok:false,msg:'Ehris Ohrringe liegen hier nicht offen.'};const t=ehrisTargets(state,p.index);if(t.length<2){r.effectState=r.effectState||{};r.effectState.selectedBezBild=null;r.effectState.selectedBezSlot=null;return {ok:true,msg:'Rabatt wird aktiv, sobald zwei Oberwelt-Bezwingerinnen vorhanden sind.'};}state.pendingBezEffect={type:'ehris_select',sourcePlayer:p.index,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine Oberwelt-Bezwingerin.'}}
+function resolveEhrisSelection(state,id){const q=state.pendingBezEffect,p=state.players[q?.sourcePlayer],r=p?.azr?.[q?.sourceAzrSlot],slot=Number(id),b=p?.bezSlots?.[slot];if(q?.type!=='ehris_select'||!r||!b||cardData(b)?.fraktion!=='Oberwelt'||ehrisTargets(state,p.index).length<2)return {ok:false,msg:'Ungültige Auswahl.'};r.effectState=r.effectState||{};r.effectState.selectedBezBild=b.bild;r.effectState.selectedBezSlot=slot;state.pendingBezEffect=null;return {ok:true,msg:'Ehris Rabatt gewählt.'}}
+function maintainEhris(state){for(const p of state.players)for(let i=0;i<(p.azr||[]).length;i++){const r=p.azr[i],c=cardData(r);if(!r||r.faceDown||r.effectDisabled||!c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'))continue;const t=ehrisTargets(state,p.index);r.effectState=r.effectState||{};const selectedBild=r.effectState.selectedBezBild;let selSlot=selectedBild?(p.bezSlots||[]).findIndex(b=>b&&b.bild===selectedBild):-1;if(selSlot<0&&Number.isInteger(Number(r.effectState.selectedBezSlot))){const legacySlot=Number(r.effectState.selectedBezSlot);if(isOberweltBez(p.bezSlots?.[legacySlot])){selSlot=legacySlot;r.effectState.selectedBezBild=p.bezSlots[legacySlot]?.bild||null;}}if(t.length<2){r.effectState.selectedBezBild=null;r.effectState.selectedBezSlot=null;}else if(selSlot>=0){r.effectState.selectedBezSlot=selSlot;}else if(p.index===state.activePlayer&&['supply','resupply'].includes(currentPhase(state).id)&&!state.pendingBezEffect)state.pendingBezEffect={type:'ehris_select',sourcePlayer:p.index,sourceAzrSlot:i};}}
 function isInstantRuestkammerItem(c){
   return c?.deck_bereich==='ruestkammer' && c?.kartentyp==='Gegenstand' &&
     c?.effekte?.some(e=>['bastion_erleuchtung','laehmendes_nervengift','trank_der_staerke','erlass_umverteilung','ueberladung','trank_der_astral_macht','die_kanone','skyflux_swap','portalbazooka_smashr'].includes(e.engine_key));
@@ -2477,13 +2485,14 @@ function equipRuntimeToBez(state,p,r,bezSlot,kind){
   if(!p.bezSlots[bezSlot])return {ok:false,msg:'In diesem Bereich liegt keine Bezwingerin.'};
   const c=cardData(r);
   const opp=state.players[1-p.index];
-  if(kind==='helmet' && activeKrakenAt(state,opp.index,bezSlot)){
+  if(kind==='helmet' && activeKrakenAt(state,opp.index,oppositeBezSlot(bezSlot))){
     return {ok:false,msg:'KRAKEN verhindert, dass die gegenüberliegende Bezwingerin einen Helm ausrüstet.'};
   }
   if(c?.effekte?.some(e=>e.engine_key==='kraken_lock')){
-    if(!opp?.bezSlots?.[bezSlot])return {ok:false,msg:'KRAKEN benötigt eine gegenüberliegende gegnerische Bezwingerin.'};
+    const oppositeSlot=oppositeBezSlot(bezSlot);
+    if(!opp?.bezSlots?.[oppositeSlot])return {ok:false,msg:'KRAKEN benötigt eine gegenüberliegende gegnerische Bezwingerin.'};
     ensureEquipmentState(opp);
-    if(opp.equipment?.[bezSlot]?.helmet)return {ok:false,msg:'KRAKEN darf nur ausgespielt werden, wenn die gegenüberliegende Bezwingerin keinen Helm trägt.'};
+    if(opp.equipment?.[oppositeSlot]?.helmet)return {ok:false,msg:'KRAKEN darf nur ausgespielt werden, wenn die gegenüberliegende Bezwingerin keinen Helm trägt.'};
   }
   if(kind==='weapon' && activeUrlaubArmor(p,bezSlot)){
     return {ok:false,msg:'Solange Urlaub aktiv ist, kann diese Bezwingerin keine Waffe ausrüsten.'};
@@ -2857,7 +2866,7 @@ function attackTargets(state,attackerSource){
 
   opp.bezSlots.forEach((r,i)=>{
     if(r && hasHeartAttribute(r) && !queenProtectedFromAttack(state,opp.index,r)){
-      const blockedByKraken=(src.kind==='bez' && src.slot===i && !!activeKrakenAt(state,opp.index,i));
+      const blockedByKraken=(src.kind==='bez' && oppositeBezSlot(src.slot)===i && !!activeKrakenAt(state,opp.index,i));
       if(!blockedByKraken)targets.push({type:'bez',slot:i,label:cardData(r)?.name||`Bezwingerin ${i+1}`});
     }
   });

@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.69';
+window.G5_BATTLEFIELD_BUILD='1.70';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -1568,7 +1568,7 @@ function handleOwnBez(slot){
       const c=E().cardData(r);
       const base=Number((r.wonderCostCurrent ?? c?.wunder?.kosten_ehre) || 0);
 
-      // v1.69: Trix Sigma Stufe 2 benötigt vor der Wunderauflösung eine
+      // v1.70: Trix Sigma Stufe 2 benötigt vor der Wunderauflösung eine
       // explizite Auswahl der Stärke-Umwandlung. Ohne choice lehnt die Engine
       // den Effekt korrekt ab; deshalb wird die Auswahl hier in der UI angeboten.
       if(c?.effekte?.[0]?.engine_key==='trix2'){
