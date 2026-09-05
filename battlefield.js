@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.67';
+window.G5_BATTLEFIELD_BUILD='1.68';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -1567,6 +1567,37 @@ function handleOwnBez(slot){
     if(fx?.symbol==='wonder' && !fx.wonderUsed){
       const c=E().cardData(r);
       const base=Number((r.wonderCostCurrent ?? c?.wunder?.kosten_ehre) || 0);
+
+      // v1.68: Trix Sigma Stufe 2 benötigt vor der Wunderauflösung eine
+      // explizite Auswahl der Stärke-Umwandlung. Ohne choice lehnt die Engine
+      // den Effekt korrekt ab; deshalb wird die Auswahl hier in der UI angeboten.
+      if(c?.effekte?.[0]?.engine_key==='trix2'){
+        const canA=Number(r.astral||0)>=1;
+        const canP=Number(r.physical||0)>=1;
+        if(!canA&&!canP)return message('Trix Sigma II hat keine Stärke, die umgewandelt werden kann.','warn');
+        let choice=null;
+        if(canA&&canP){
+          const answer=prompt(
+            `Trix Sigma II – Wunder wirken? Kosten: ${base} Ehre.\n`+
+            `1 = 1 ASTRAL-Stärke → 1 physische Stärke\n`+
+            `2 = 1 physische Stärke → 1 ASTRAL-Stärke\n`+
+            `Abbrechen = Wunder nicht wirken`
+          );
+          if(answer===null||answer==='')return;
+          if(answer==='1')choice='astral_to_physical';
+          else if(answer==='2')choice='physical_to_astral';
+          else return message('Bitte 1 oder 2 wählen.','warn');
+        }else if(canA){
+          if(!confirm(`Trix Sigma II: Für ${base} Ehre 1 ASTRAL-Stärke in 1 physische Stärke umwandeln?`))return;
+          choice='astral_to_physical';
+        }else{
+          if(!confirm(`Trix Sigma II: Für ${base} Ehre 1 physische Stärke in 1 ASTRAL-Stärke umwandeln?`))return;
+          choice='physical_to_astral';
+        }
+        const rr=E().activateBezEffect(state,slot,choice);
+        return saveRender(rr.msg||'Wunder aktiviert.');
+      }
+
       if(confirm(`${cardName(r)}: Wunder wirken? Aktuelle Kosten: ${base} Ehre.\n\n${fx.text}`)){
         const rr=E().activateBezEffect(state,slot);
         return saveRender(rr.msg||'Wunder aktiviert.');

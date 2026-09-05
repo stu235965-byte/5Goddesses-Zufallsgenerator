@@ -751,7 +751,10 @@ function resolveBezOnPlay(state,p,slot,r,c){
     if(targets.length)state.pendingBezEffect={type:'queen_search',sourcePlayer:p.index,sourceSlot:slot};
     else log(state,`${c.name}: weder Z.E.R.O. ATK noch Z.E.R.O. ASTRAL im Bezwingerinnen-Stapel gefunden.`);
   }else if(key==='martha'){
-    if(!opp || (opp.hearts??0)<=(r.hearts??0)){r.honor=(r.honor||0)+1;log(state,`${c.name}: Ausspieleffekt → +1 Ehre.`)}
+    // Das gegnerische Brett wird für den aktiven Spieler um 180° dargestellt:
+    // eigener Slot 1 liegt gegnerischem Slot 2 gegenüber und umgekehrt.
+    const oi=oppositeBezSlot(slot),t=state.players[1-p.index].bezSlots?.[oi];
+    if(!t || (t.hearts??0)<=(r.hearts??0)){r.honor=(r.honor||0)+1;log(state,`${c.name}: Ausspieleffekt → +1 Ehre.`)}
   }else if(key==='keyla'){
     const matches=(p.stacks?.ruestkammer||[]).map((bild,i)=>({bild,i,c:dbCard(bild)}))
       .filter(x=>x.c?.kartentyp==='Reliquie' && String(x.c?.untertyp||'').toLowerCase()==='astralfragment');
@@ -792,7 +795,6 @@ function resolveBezOnPlay(state,p,slot,r,c){
     if(targets.length)state.pendingBezEffect={type:'mira',sourcePlayer:p.index,sourceSlot:slot};
     else log(state,`${c.name}: Keine gegnerische Bezwingerin als Ziel vorhanden.`);
   }
-  else if(key==='lilith' && opp){opp.honor=(opp.honor||0)-1;log(state,`${c.name}: Gegenüber verliert 1 Ehre.`)}
   else if(key==='trix'){
     const n=countOwnAzrCards(p); const add=n>=3?2:n>=2?1:0; r.honor=(r.honor||0)+add;if(add)log(state,`${c.name}: ${n} eigene AZR-Karten → +${add} Ehre.`)
   }else if(key==='alice'){
@@ -2136,6 +2138,7 @@ function resolveInstantRuestkammerTarget(state,id){
     p.equipment[to]=p.equipment[from];
     p.equipment[from]={weapon:null,shield:null,armor:null,helmet:null};
     t.astralShield=Number(t.astralShield||0)+1;
+    t.honor=Number(t.honor||0)+1;
 
     // Wenn Skyflux am Ende der gegnerischen Ansturmphase das bereits erklärte
     // Bezwingerinnen-Ziel verschiebt, weicht dieses dem Angriff aus.
@@ -2149,8 +2152,8 @@ function resolveInstantRuestkammerTarget(state,id){
 
     state.pendingBezEffect=null;
     discardAzrInstantItem(state,sourcePlayer,sourceAzrSlot);
-    log(state,`Skyflux: ${cardData(t)?.name||'Bezwingerin'} wechselt Feldposition ${from+1} → ${to+1} und erhält +1 ASTRAL-Schild.`);
-    return {ok:true,msg:'Feldposition gewechselt, +1 ASTRAL-Schild. Ein ggf. auf diese Position angekündigter Angriff verfällt.'};
+    log(state,`Skyflux: ${cardData(t)?.name||'Bezwingerin'} wechselt Feldposition ${from+1} → ${to+1} und erhält +1 ASTRAL-Schild sowie +1 Ehre.`);
+    return {ok:true,msg:'Feldposition gewechselt, +1 ASTRAL-Schild und +1 Ehre. Ein ggf. auf diese Position angekündigter Angriff verfällt.'};
   }
 
   if(pend.type==='laehmendes_nervengift'){
