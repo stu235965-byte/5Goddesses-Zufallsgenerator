@@ -23,7 +23,11 @@ const GESPERRTE_GENERATORKARTEN=new Set([
   'Strikelyn',
   'Mantel der Stille Dunkelglanz'
 ]);
-function istGeneratorFreigegeben(k){return !!k && !GESPERRTE_GENERATORKARTEN.has(k.name)}
+function istGeneratorFreigegeben(k){
+  return !!k &&
+    !GESPERRTE_GENERATORKARTEN.has(k.name) &&
+    !/\bStrikelyn\b/i.test(k.name||'');
+}
 function istImAktivenGeneratorPool(k){return istImPool(k) && istGeneratorFreigegeben(k)}
 function mischen(a){
   const b=[...a];

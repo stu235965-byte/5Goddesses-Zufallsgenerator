@@ -1,4 +1,4 @@
-const CACHE='5goddesses-pwa-v75';
+const CACHE='5goddesses-pwa-v76';
 const CORE=[
   './',
   './index.html',

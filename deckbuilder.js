@@ -20,10 +20,13 @@ const GESPERRTE_DECKKARTEN=new Set([
   'Strikelyn',
   'Mantel der Stille Dunkelglanz'
 ]);
-function istGesperrteDeckkarte(k){return !!k && GESPERRTE_DECKKARTEN.has(k.name)}
+function istGesperrteDeckkarte(k){
+  if(!k)return false;
+  return GESPERRTE_DECKKARTEN.has(k.name) || /\bStrikelyn\b/i.test(k.name||'');
+}
 function sperrgrundDeckkarte(k){
   if(k?.name==='Genova Toshi')return 'keine offizielle Stufe-2-Entwicklung verfügbar';
-  if(k?.name==='Strikelyn' || k?.name==='Mantel der Stille Dunkelglanz'){
+  if(/\bStrikelyn\b/i.test(k?.name||'') || k?.name==='Mantel der Stille Dunkelglanz'){
     return 'ASTRAL-Spruch-/Gegenstands-Zielmechanik noch nicht vollständig implementiert';
   }
   return 'vorübergehend gesperrt';
