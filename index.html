@@ -19,7 +19,7 @@
   <header class="topbar">
     <div class="brand-wrap">
       <button id="homeButton" class="brand brand-button" type="button" aria-label="Zum Startbildschirm">5 GODDESSES</button>
-      <div class="app-version" title="Aktuell geladene PWA-Version">v1.85</div>
+      <div class="app-version" title="Aktuell geladene PWA-Version">v1.86</div>
     </div>
     <nav>
       <button class="navbtn" id="navSpielen" type="button">Spielen</button>
@@ -148,14 +148,14 @@
             <select id="gameDeckP1"></select>
           </label>
           <label for="gameDeckP2">
-            Spieler 2 Deck
+            KI-Gegner Deck
             <select id="gameDeckP2"></select>
           </label>
           <label>
             Startspieler
             <select id="gameStartPlayer">
               <option value="0">Spieler 1</option>
-              <option value="1">Spieler 2</option>
+              <option value="1">KI-Gegner</option>
               <option value="random">Zufällig</option>
             </select>
           </label>
@@ -174,7 +174,7 @@
             <div id="gamePhaseInfo" class="game-phase-info">–</div>
           </div>
           <div class="game-toolbar-actions">
-            <button id="gamePreviewToggle" class="game-preview-toggle" type="button" title="Kartenvorschau · v1.85" aria-label="Kartenvorschau" aria-pressed="false">🔍</button>
+            <button id="gamePreviewToggle" class="game-preview-toggle" type="button" title="Kartenvorschau · v1.86" aria-label="Kartenvorschau" aria-pressed="false">🔍</button>
             <button id="gameNew">Neues Gefecht</button>
             <button id="gameNextPhase" class="primary">Nächste Phase</button>
           </div>
@@ -215,6 +215,7 @@
   <script src="generator.js"></script>
   <script src="deckbuilder.js"></script>
   <script src="game-engine.js"></script>
+  <script src="ai-player.js"></script>
   <script src="battlefield.js"></script>
   <script src="pwa.js"></script>
 </body>

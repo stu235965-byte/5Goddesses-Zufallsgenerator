@@ -1,4 +1,4 @@
-const CACHE='5goddesses-pwa-v96';
+const CACHE='5goddesses-pwa-v97';
 const CORE=[
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const CORE=[
   "./deckbuilder.js",
   "./game-engine.js",
   "./battlefield.js",
+  "./ai-player.js",
   "./pwa.js",
   "./5goddesses-datenbank.js",
   "./manifest.webmanifest",

@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.85';
+window.G5_BATTLEFIELD_BUILD='1.86';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -10,7 +10,8 @@ function battleProfileName(){
 function applyBattlePlayerNames(){
   if(!state?.players?.length)return;
   state.players[0].name=battleProfileName();
-  if(!state.players[1].name || state.players[1].name==='Spieler 1')state.players[1].name='Spieler 2';
+  state.players[1].name='KI-Gegner';
+  state.aiPlayer=1;
 }
 function updateBattleSetupPlayerNames(){
   const name=battleProfileName();
@@ -44,6 +45,13 @@ function finishEquipmentChoice(result,bezSlot,kind){
 }
 function cardImg(r){return r?E().cardData(r)?.bild||r.bild:''}
 function phase(){return state?E().currentPhase(state):null}
+let aiTimer=null;
+function aiIsActive(){return !!state && state.winner===null && Number(state.activePlayer)===Number(state.aiPlayer??1) && !!window.G5AI;}
+function scheduleAI(delay=450){if(!aiIsActive())return;clearTimeout(aiTimer);aiTimer=setTimeout(runAIStep,delay);}
+function runAIStep(){if(!aiIsActive())return;const r=window.G5AI.step(state);E().save(state);render(r?.msg||'KI-Gegner überlegt …');if(r?.wait)return;if(r?.unsupported){message('Die KI wartet auf eine komplexe Kartenauswahl, die in dieser ersten KI-Version noch nicht automatisiert ist.','warn');return;}if(aiIsActive())scheduleAI(380);}
+let aiDefenseTimer=null;
+function aiIsDefender(){return !!state?.attack && Number(1-state.activePlayer)===Number(state.aiPlayer??1);}
+function scheduleAIDefense(delay=500){if(!aiIsDefender())return;clearTimeout(aiDefenseTimer);aiDefenseTimer=setTimeout(()=>{if(!aiIsDefender()||phase()?.id!=='rush')return;const r=E().confirmAttack(state);E().save(state);render(r.msg||'KI-Gegner lässt den Angriff zu.');},delay);}
 function selectedAttackerRuntime(){
   if(selectedAttacker===null || !state)return null;
   const p=E().active(state);
@@ -282,6 +290,7 @@ function startGame(){
   let sp=document.getElementById('gameStartPlayer').value;
   sp=sp==='random'?Math.floor(Math.random()*2):Number(sp);
   state=E().startGame(d1,d2,sp);
+  state.aiPlayer=1;
   applyBattlePlayerNames();
   E().save(state);
   document.getElementById('gameSetup').hidden=true;
@@ -1459,6 +1468,13 @@ function renderActions(){
         ${state.attack.attackType==='physical'?'physisch':'ASTRAL'} an.`;
       root.appendChild(info);
 
+      if(Number(opp.index)===Number(state.aiPlayer??1)){
+        const note=document.createElement('span');
+        note.textContent='KI-Gegner prüft mögliche Reaktionen …';
+        root.appendChild(note);
+        return;
+      }
+
       const hidden=E().defenderFaceDownSlots(state);
       if(hidden.length){
         const note=document.createElement('span');
@@ -2101,6 +2117,8 @@ function render(msg=''){
   document.getElementById('gamePreviewToggle')?.setAttribute('aria-pressed',String(cardPreviewMode));
   renderLog();
   requestAnimationFrame(updateStickyGameOffsets);
+  if(aiIsActive())scheduleAI();
+  if(aiIsDefender() && phase()?.id==='rush')scheduleAIDefense();
 }
 
 
@@ -2111,8 +2129,10 @@ function handleInstinctBeforePhaseEnd(){
   const candidates=E().instinctCandidates(state);
   if(!candidates.length)return false;
 
-  const owner=state.players[1-state.activePlayer]?.name||'Gegenspieler';
+  const ownerIndex=1-state.activePlayer;
+  const owner=state.players[ownerIndex]?.name||'Gegenspieler';
   const phaseName=phase()?.id==='honor'?'Ehrungsphase':phase()?.id==='resupply'?'Nachschubphase':phase()?.id==='rush'?'Ansturmphase':'Versorgungsphase';
+  if(Number(ownerIndex)===Number(state.aiPlayer??1)){E().passInstinctWindow(state);E().save(state);return false;}
   const use=confirm(`${owner}: Möchtest du vor dem Ende der gegnerischen ${phaseName} eine verdeckt gesetzte Instinkt-Karte aktivieren?`);
 
   if(!use){
@@ -2145,7 +2165,8 @@ document.getElementById('gameResume')?.addEventListener('click',resumeGame);
 document.getElementById('gameNew')?.addEventListener('click',newGame);
 document.getElementById('gameNextPhase')?.addEventListener('click',async()=>{
   if(!state)return;
-  if(['supply','rush','resupply'].includes(phase()?.id||'') && handleInstinctBeforePhaseEnd())return;
+  if(aiIsActive())return message('Der KI-Gegner ist am Zug.','warn');
+  if(['honor','supply','rush','resupply'].includes(phase()?.id||'') && handleInstinctBeforePhaseEnd())return;
   if(phase()?.id==='end')return animateRoundHandoff();
   const r=E().advancePhase(state);
   selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;selectedAttackType=null;refugeActionSelected=false;
