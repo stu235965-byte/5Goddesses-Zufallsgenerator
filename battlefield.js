@@ -1024,12 +1024,20 @@ function renderActions(){
       return;
     }
   }
-  if(state.pendingBezEffect && ['exekution_target','zweifache_bestrafung_target','lilous_gabe_target','vengeresse_vergeltung_target'].includes(state.pendingBezEffect.type)){
+  if(state.pendingBezEffect && ['exekution_target','zweifache_bestrafung_target','lilous_gabe_target','vengeresse_vergeltung_target','feiertag_target','sprint_angriff_target','auszeichnung_target','aufstieg_target','demoralisierung_target','legionsruestung_search','legionsruestung_equip','neutralisationssiegel_target'].includes(state.pendingBezEffect.type)){
     const labels={
       exekution_target:'Exekution – Bezwingerin wählen',
       zweifache_bestrafung_target:'Zweifache Bestrafung – eigene Bezwingerin wählen',
       lilous_gabe_target:`Lilou's Gabe – eigene Bezwingerin wählen`,
-      vengeresse_vergeltung_target:'Vengeresse Vergeltung – eigene Vengeresse wählen'
+      vengeresse_vergeltung_target:'Vengeresse Vergeltung – eigene Vengeresse wählen',
+      feiertag_target:'Feiertag – gegnerische Bezwingerin wählen',
+      sprint_angriff_target:'Geheimtechnik Sprint-Angriff – eigene Bezwingerin wählen',
+      auszeichnung_target:'Auszeichnung – beliebige offene Karte wählen',
+      aufstieg_target:'Aufstieg – eigene Bezwingerin wählen',
+      demoralisierung_target:'Demoralisierung – gegnerische Bezwingerin wählen',
+      legionsruestung_search:'Legionsrüstung erscheine! – Rüstung aus Eisen wählen',
+      legionsruestung_equip:'Legionsrüstung erscheine! – eigene Bezwingerin ausrüsten',
+      neutralisationssiegel_target:'Neutralisationssiegel – verdeckte Karte wählen'
     };
     const title=document.createElement('strong');title.textContent=labels[state.pendingBezEffect.type]||'ASTRAL-Spruch – Ziel wählen';root.appendChild(title);
     E().newAstralSpellTargets(state).forEach(t=>{

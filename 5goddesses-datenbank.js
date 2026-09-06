@@ -1764,7 +1764,14 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
+      "effekte": [
+        {
+          "engine_key": "feiertag_entwicklungssperre",
+          "trigger": "on_play",
+          "target": "enemy_bez",
+          "description": "Wähle eine gegnerische Bezwingerin. Diese darf in ihrer kommenden Kampfrunde keine Entwicklung durchführen."
+        }
+      ],
       "tags": []
     },
     {
@@ -2056,8 +2063,18 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "beschuetzt_die_bastion",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "own_refuge",
+          "description": "Füge der eigenen Zuflucht 1 physischen Schild hinzu."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-09-32-cb99ac81",
@@ -2083,8 +2100,18 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "auszeichnung_honor",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "any_open_card",
+          "description": "Verteile 1 Ehre auf eine beliebige offene eigene oder gegnerische Karte."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-10-32-67871311",
@@ -2110,8 +2137,18 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "demoralisierung_honor",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "enemy_bez",
+          "description": "Ziehe 1 Ehre von einer gegnerischen Bezwingerin ab; negative Werte sind zulässig."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-11-32-5b16dd91",
@@ -2139,8 +2176,18 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "neutralisationssiegel",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "any_facedown_azr",
+          "description": "Zerstöre eine verdeckt gesetzte Karte in einer ASTRAL-/Rüstkammer-Zone."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-23-32-fe5608d0",
@@ -2166,8 +2213,18 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "legionsruestung_erscheine",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "own_bez",
+          "description": "Durchsuche den Rüstkammer-Stapel nach einer Rüstung aus Eisen und rüste eine eigene Bezwingerin damit aus."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-24-32-a1ff47d0",
@@ -2193,8 +2250,18 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "bastion_schutzbarriere",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "own_refuge",
+          "description": "Füge der eigenen Zuflucht 1 ASTRAL-Schild hinzu."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-25-32-4f2b5034",
@@ -2220,8 +2287,18 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "dein_angriff_scheitert",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "attacking_enemy_bez",
+          "description": "Wähle in der AP eine angreifende gegnerische Bezwingerin. Diese darf in dieser KR nicht angreifen."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-26-32-d473c475",
@@ -2249,7 +2326,14 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
+      "effekte": [
+        {
+          "engine_key": "sprint_angriff_ready",
+          "trigger": "on_play",
+          "target": "own_bez",
+          "description": "Wähle eine eigene Bezwingerin. Diese hat keine Einsatzverzögerung."
+        }
+      ],
       "tags": []
     },
     {
@@ -2276,8 +2360,18 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "aufstieg_free_develop",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "own_bez",
+          "description": "Wähle eine eigene Bezwingerin. Diese steigt ohne Ehrkosten auf; Schaden wird übertragen."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.03-17-32-f817177a",
@@ -2333,22 +2427,12 @@ window.GODDESSES_DB = {
       "effekte": [
         {
           "engine_key": "exekution",
-          "trigger": "on_play",
-          "target": "any_bez",
-          "instinkt": true,
-          "condition": {
-            "hearts_exact": 1,
-            "physical_shield_total": 0,
-            "astral_shield_total": 0
-          },
-          "effect": "destroy"
+          "instinkt": true
         }
       ],
       "tags": [
         "instinkt"
-      ],
-      "effekt_symbol": "on_play+instinkt",
-      "effekt_text": "Wähle eine beliebige Bezwingerin. Hat sie genau 1 Herz und insgesamt 0 physischen sowie 0 ASTRAL-Schild, zerstöre sie."
+      ]
     },
     {
       "id": "1.03-19-32-62426e17",
@@ -2376,19 +2460,10 @@ window.GODDESSES_DB = {
       "wunder": null,
       "effekte": [
         {
-          "engine_key": "zweifache_bestrafung",
-          "trigger": "on_play",
-          "target": "own_bez",
-          "honor_cost_on_target": 3,
-          "extra_combat": 1,
-          "attack_type": "physical",
-          "forbidden_target": "refuge",
-          "duration": "current_round"
+          "engine_key": "zweifache_bestrafung"
         }
       ],
-      "tags": [],
-      "effekt_symbol": "on_play",
-      "effekt_text": "Wähle eine eigene Bezwingerin mit mindestens 3 Ehre. Sie bezahlt 3 Ehre und darf in dieser Kampfrunde einen zusätzlichen physischen Kampf durchführen; die Zuflucht ist als Ziel dieses Zusatzkampfs ausgeschlossen."
+      "tags": []
     },
     {
       "id": "1.03-20-32-53222408",
@@ -2666,7 +2741,7 @@ window.GODDESSES_DB = {
       "stufe": 1,
       "klasse": null,
       "bereich": null,
-      "untertyp": "Vengeresse",
+      "untertyp": null,
       "material": null,
       "nebenattribute": [
         "Vengeresse"
@@ -2681,19 +2756,12 @@ window.GODDESSES_DB = {
       "effekte": [
         {
           "engine_key": "laehmende_angst",
-          "trigger": "rush_when_own_vengeresse_attacked",
-          "target": "attacking_enemy_bez",
-          "instinkt": true,
-          "cancel_current_attack": true,
-          "cannot_attack_again_this_round": true
+          "instinkt": true
         }
       ],
       "tags": [
-        "instinkt",
-        "vengeresse"
-      ],
-      "effekt_symbol": "on_play+instinkt",
-      "effekt_text": "Wenn eine eigene Vengeresse in der Ansturmphase angegriffen wird: Brich den Angriff ab. Die angreifende gegnerische Bezwingerin kann in dieser Kampfrunde nicht mehr angreifen."
+        "instinkt"
+      ]
     },
     {
       "id": "1.02-19-32-6812396b",
@@ -2709,7 +2777,7 @@ window.GODDESSES_DB = {
       "stufe": 1,
       "klasse": null,
       "bereich": null,
-      "untertyp": "Vengeresse",
+      "untertyp": null,
       "material": null,
       "nebenattribute": [
         "Vengeresse"
@@ -2724,20 +2792,12 @@ window.GODDESSES_DB = {
       "effekte": [
         {
           "engine_key": "vengeresse_vergeltung",
-          "trigger": "rush",
-          "target": "own_vengeresse",
-          "instinkt": true,
-          "convert_current_physical_to_astral": true,
-          "duration_combats": 1,
-          "force_attack_type": "astral"
+          "instinkt": true
         }
       ],
       "tags": [
-        "instinkt",
-        "vengeresse"
-      ],
-      "effekt_symbol": "on_play+instinkt",
-      "effekt_text": "Wähle während der Ansturmphase eine eigene Vengeresse. Für einen Kampf wird ihre aktuelle physische Stärke zu ASTRAL-Stärke umgewandelt und zu ihrer aktuellen ASTRAL-Stärke addiert; der Kampf wird als ASTRAL-Kampf geführt."
+        "instinkt"
+      ]
     },
     {
       "id": "1.02-20-32-70faddfa",
@@ -2901,17 +2961,12 @@ window.GODDESSES_DB = {
       "effekte": [
         {
           "engine_key": "lilous_gabe",
-          "trigger": "on_play",
-          "target": "own_bez",
-          "heart_delta": 1,
           "instinkt": true
         }
       ],
       "tags": [
         "instinkt"
-      ],
-      "effekt_symbol": "on_play+instinkt",
-      "effekt_text": "Wähle eine eigene Bezwingerin. Sie erhält dauerhaft +1 Herz."
+      ]
     },
     {
       "id": "1.02-32-32-c04e9575",

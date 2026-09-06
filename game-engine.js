@@ -1989,11 +1989,20 @@ function resolveErlassTarget(state,id){
 }
 
 
+const INSTANT_ASTRAL_KEYS=[
+  'verwuestung','bis_zum_bitteren_ende','saphiras_upsi','exekution','zweifache_bestrafung','lilous_gabe','laehmende_angst','vengeresse_vergeltung',
+  'feiertag_entwicklungssperre','sprint_angriff_ready','dein_angriff_scheitert','beschuetzt_die_bastion','auszeichnung_honor','aufstieg_free_develop','demoralisierung_honor','legionsruestung_erscheine','bastion_schutzbarriere','neutralisationssiegel'
+];
 function isInstantAstralSpell(c){
-  return c?.deck_bereich==='astral' && c?.kartentyp==='ASTRAL-Spruch' && !!c?.effekte?.some(e=>[
-    'verwuestung','bis_zum_bitteren_ende','saphiras_upsi','exekution','zweifache_bestrafung','lilous_gabe','laehmende_angst','vengeresse_vergeltung'
-  ].includes(e.engine_key));
+  return c?.deck_bereich==='astral' && ['ASTRAL-Spruch','ASTRAL-Gebot'].includes(c?.kartentyp) && !!c?.effekte?.some(e=>INSTANT_ASTRAL_KEYS.includes(e.engine_key));
 }
+function instantAstralKey(c){return c?.effekte?.find(e=>INSTANT_ASTRAL_KEYS.includes(e.engine_key))?.engine_key||null;}
+function facedownAzrTargets(state){const out=[];state.players.forEach((p,pi)=>(p.azr||[]).forEach((r,i)=>{if(r?.faceDown)out.push({id:`${pi}:${i}`,name:`${pi===state.pendingBezEffect?.sourcePlayer?'Eigene':'Gegnerische'} verdeckte Karte – AZR ${i+1}`});}));return out;}
+function allOpenHonorTargets(state){return allRuntimeCards(state).filter(x=>x.r&&!x.r.faceDown).map(x=>({id:`${x.playerIndex}|${x.zone}|${x.slot??''}|${x.kind||''}`,name:`${x.playerIndex===state.pendingBezEffect?.sourcePlayer?'Eigene':'Gegnerische'} ${cardData(x.r)?.name||'Karte'}`}));}
+function runtimeByFieldId(state,id){const [piS,zone,slotS,kind]=String(id).split('|'),pi=Number(piS),p=state.players[pi],slot=slotS===''?null:Number(slotS);if(zone==='refuge')return p?.refuge;if(zone==='bez')return p?.bezSlots?.[slot];if(zone==='azr')return p?.azr?.[slot];if(zone==='primary')return p?.primary;if(zone==='secondary')return state.sharedSecondary;if(zone==='equipment')return p?.equipment?.[slot]?.[kind];return null;}
+function ironArmorSearchTargets(state,playerIndex){const p=state.players[playerIndex];return (p.stacks?.ruestkammer||[]).map((bild,i)=>({bild,i,c:dbCard(bild)})).filter(x=>x.c?.kartentyp==='Rüstung'&&String(x.c?.material||'').toLowerCase()==='eisen').map(x=>({id:String(x.i),name:x.c.name,bild:x.bild}));}
+function freeDevelopBez(state,playerIndex,slot){const p=state.players[playerIndex],r=p?.bezSlots?.[slot];if(!r)return {ok:false,msg:'Keine eigene Bezwingerin vorhanden.'};if(r.developedTurn===p.turnCount)return {ok:false,msg:'Diese Bezwingerin wurde in dieser Kampfrunde bereits entwickelt.'};const dev=(p.development||[]).map(dbCard).find(c=>c&&c.grundkarte_bild===r.bild&&c.stufe===r.stufe+1);if(!dev)return {ok:false,msg:'Keine passende Karte der nächsten Stufe im Entwicklungsstapel.'};const alt=cardData(r),oldH=alt?.herzen??r.hearts??0,oldP=alt?.physischer_schild??r.physicalShield??0,oldA=alt?.astraler_schild??r.astralShield??0;const hd=Math.max(0,oldH-(r.hearts??0)),pd=Math.max(0,oldP-(r.physicalShield??0)),ad=Math.max(0,oldA-(r.astralShield??0)),ready=r.ready;p.development=p.development.filter(x=>x!==dev.bild);r.developmentStack.push(dev.bild);r.bild=dev.bild;r.stufe=dev.stufe;r.hearts=Math.max(0,(dev.herzen??oldH)-hd);r.physicalShield=Math.max(0,(dev.physischer_schild??oldP)-pd);r.astralShield=Math.max(0,(dev.astraler_schild??oldA)-ad);r.physical=dev.physische_staerke??r.physical;r.astral=dev.astrale_staerke??r.astral;r.ready=ready;r.developedTurn=p.turnCount;log(state,`${p.name} entwickelt ${dev.name} durch Aufstieg kostenlos. Bereits erlittener Schaden bleibt erhalten.`);resolveBezOnPlay(state,p,slot,r,dev);return {ok:true,pending:!!state.pendingBezEffect,msg:`${dev.name} wurde ohne Ehrkosten entwickelt.`};}
+
 function ownOpenCreatureWurm(state,playerIndex){
   const p=state.players[playerIndex];
   const cards=[...(p.bezSlots||[]),p.primary,...(p.azr||[]),state.sharedSecondary?.owner===playerIndex?state.sharedSecondary:null].filter(Boolean);
@@ -2001,7 +2010,7 @@ function ownOpenCreatureWurm(state,playerIndex){
 }
 function instantAstralValidation(state,playerIndex,c){
   const p=state.players[playerIndex],opp=state.players[1-playerIndex];
-  const key=c?.effekte?.find(e=>['verwuestung','bis_zum_bitteren_ende','saphiras_upsi','exekution','zweifache_bestrafung','lilous_gabe','laehmende_angst','vengeresse_vergeltung'].includes(e.engine_key))?.engine_key;
+  const key=instantAstralKey(c);
   if(key==='verwuestung')return state.sharedSecondary&&!state.sharedSecondary.faceDown?{ok:true}:{ok:false,msg:'Verwüstung benötigt eine offene Karte im Sekundärbereich.'};
   if(key==='saphiras_upsi')return opp.primary&&!opp.primary.faceDown?{ok:true}:{ok:false,msg:'Saphiras Upsi benötigt eine offene Karte im Primärbereich des Gegners.'};
   if(key==='bis_zum_bitteren_ende'||key==='lilous_gabe')return (p.bezSlots||[]).some(Boolean)?{ok:true}:{ok:false,msg:'Dieser ASTRAL-Spruch benötigt eine eigene Bezwingerin.'};
@@ -2017,6 +2026,14 @@ function instantAstralValidation(state,playerIndex,c){
     if(currentPhase(state)?.id!=='rush')return {ok:false,msg:'Vengeresse Vergeltung kann nur in der Ansturmphase aktiviert werden.'};
     return (p.bezSlots||[]).some(r=>r&&isVengeresseCard(cardData(r)))?{ok:true}:{ok:false,msg:'Es liegt keine eigene Vengeresse als Ziel.'};
   }
+  if(key==='feiertag_entwicklungssperre'||key==='demoralisierung_honor')return (opp.bezSlots||[]).some(Boolean)?{ok:true}:{ok:false,msg:'Es liegt keine gegnerische Bezwingerin als Ziel.'};
+  if(key==='sprint_angriff_ready')return (p.bezSlots||[]).some(Boolean)?{ok:true}:{ok:false,msg:'Es liegt keine eigene Bezwingerin als Ziel.'};
+  if(key==='dein_angriff_scheitert'){const a=state.attack;return currentPhase(state)?.id==='rush'&&a?.attackerKind==='bez'&&state.activePlayer===1-playerIndex?{ok:true}:{ok:false,msg:'Dein Angriff scheitert! kann nur auf eine gerade angreifende gegnerische Bezwingerin reagieren.'};}
+  if(key==='beschuetzt_die_bastion'||key==='bastion_schutzbarriere')return p.refuge?{ok:true}:{ok:false,msg:'Keine eigene Zuflucht vorhanden.'};
+  if(key==='auszeichnung_honor')return allRuntimeCards(state).some(x=>x.r&&!x.r.faceDown)?{ok:true}:{ok:false,msg:'Keine offene Karte für Auszeichnung vorhanden.'};
+  if(key==='aufstieg_free_develop')return (p.bezSlots||[]).some(r=>r&&(p.development||[]).map(dbCard).some(d=>d&&d.grundkarte_bild===r.bild&&d.stufe===r.stufe+1))?{ok:true}:{ok:false,msg:'Keine eigene Bezwingerin mit passender nächster Entwicklungsstufe.'};
+  if(key==='legionsruestung_erscheine')return ironArmorSearchTargets(state,playerIndex).length&&(p.bezSlots||[]).some(Boolean)?{ok:true}:{ok:false,msg:'Es wird eine Rüstung aus Eisen im Rüstkammer-Stapel und eine eigene Bezwingerin benötigt.'};
+  if(key==='neutralisationssiegel')return state.players.some(pl=>(pl.azr||[]).some(r=>r?.faceDown))?{ok:true}:{ok:false,msg:'Keine verdeckt gesetzte Karte in einer ASTRAL-/Rüstkammer-Zone.'};
   return {ok:false,msg:'Dieser ASTRAL-Spruch ist noch nicht unterstützt.'};
 }
 function discardInstantAstralSpell(state,playerIndex,azrSlot){
@@ -2028,7 +2045,7 @@ function startInstantAstralSpell(state,playerIndex,azrSlot){
   const p=state.players[playerIndex],r=p?.azr?.[azrSlot],c=cardData(r);
   if(!r||r.faceDown||!isInstantAstralSpell(c))return {ok:false,msg:'Kein unterstützter ASTRAL-Spruch.'};
   const valid=instantAstralValidation(state,playerIndex,c);if(!valid.ok)return valid;
-  const key=c.effekte.find(e=>['verwuestung','bis_zum_bitteren_ende','saphiras_upsi','exekution','zweifache_bestrafung','lilous_gabe','laehmende_angst','vengeresse_vergeltung'].includes(e.engine_key)).engine_key;
+  const key=instantAstralKey(c);
   if(key==='verwuestung'){
     const target=state.sharedSecondary,damage=ownOpenCreatureWurm(state,playerIndex)?2:1;
     applyDamage(target,damage,'physical');
@@ -2042,6 +2059,19 @@ function startInstantAstralSpell(state,playerIndex,azrSlot){
     discardInstantAstralSpell(state,playerIndex,azrSlot);log(state,'Saphiras Upsi verursacht 1 ASTRAL-Effektschaden auf die gegnerische Primärkarte.');
     return {ok:true,msg:'Saphiras Upsi verursacht 1 ASTRAL-Schaden.'};
   }
+  if(key==='dein_angriff_scheitert'){
+    const attacker=state.players[state.activePlayer]?.bezSlots?.[Number(state.attack?.attackerSlot)];if(!attacker)return {ok:false,msg:'Die angreifende Bezwingerin ist nicht mehr vorhanden.'};attacker.effectState=attacker.effectState||{};attacker.effectState.cannotAttackRoundSerial=state.roundSerial;attacker.effectState.cannotAttackThisRound=true;const name=cardData(attacker)?.name||'Angreifende Bezwingerin';state.attack=null;discardInstantAstralSpell(state,playerIndex,azrSlot);log(state,`Dein Angriff scheitert!: ${name}s Angriff wird abgebrochen und sie darf in dieser KR nicht mehr angreifen.`);return {ok:true,msg:`${name}: Angriff abgebrochen und für diese KR gesperrt.`};
+  }
+  if(key==='beschuetzt_die_bastion'||key==='bastion_schutzbarriere'){
+    const type=key==='beschuetzt_die_bastion'?'physicalShield':'astralShield';p.refuge[type]=Number(p.refuge[type]||0)+1;discardInstantAstralSpell(state,playerIndex,azrSlot);log(state,`${c.name}: eigene Zuflucht erhält +1 ${type==='physicalShield'?'physischen':'ASTRAL'} Schild.`);return {ok:true,msg:`Zuflucht erhält +1 ${type==='physicalShield'?'physischen':'ASTRAL'} Schild.`};
+  }
+  if(key==='feiertag_entwicklungssperre'){state.pendingBezEffect={type:'feiertag_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine gegnerische Bezwingerin für Feiertag.'};}
+  if(key==='sprint_angriff_ready'){state.pendingBezEffect={type:'sprint_angriff_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin für Sprint-Angriff.'};}
+  if(key==='auszeichnung_honor'){state.pendingBezEffect={type:'auszeichnung_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine beliebige offene Karte für +1 Ehre.'};}
+  if(key==='aufstieg_free_develop'){state.pendingBezEffect={type:'aufstieg_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin für den kostenlosen Aufstieg.'};}
+  if(key==='demoralisierung_honor'){state.pendingBezEffect={type:'demoralisierung_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine gegnerische Bezwingerin für −1 Ehre.'};}
+  if(key==='legionsruestung_erscheine'){state.pendingBezEffect={type:'legionsruestung_search',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine Rüstung aus Eisen aus dem Rüstkammer-Stapel.'};}
+  if(key==='neutralisationssiegel'){state.pendingBezEffect={type:'neutralisationssiegel_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine verdeckt gesetzte Karte zum Zerstören.'};}
   if(key==='laehmende_angst'){
     const attacker=state.players[state.activePlayer]?.bezSlots?.[Number(state.attack?.attackerSlot)];
     if(!attacker)return {ok:false,msg:'Die angreifende Bezwingerin ist nicht mehr vorhanden.'};
@@ -2082,10 +2112,25 @@ function newAstralSpellTargets(state){
   if(q.type==='zweifache_bestrafung_target')return (own.bezSlots||[]).map((r,i)=>r&&Number(r.honor||0)>=3?{id:String(i),name:cardData(r)?.name||'Bezwingerin',honor:Number(r.honor||0)}:null).filter(Boolean);
   if(q.type==='lilous_gabe_target')return (own.bezSlots||[]).map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
   if(q.type==='vengeresse_vergeltung_target')return (own.bezSlots||[]).map((r,i)=>r&&isVengeresseCard(cardData(r))?{id:String(i),name:cardData(r)?.name||'Vengeresse'}:null).filter(Boolean);
+  if(q.type==='feiertag_target'||q.type==='demoralisierung_target'){const e=state.players[1-q.sourcePlayer];return (e.bezSlots||[]).map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);}
+  if(q.type==='sprint_angriff_target')return (own.bezSlots||[]).map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin',ready:!!r.ready}:null).filter(Boolean);
+  if(q.type==='auszeichnung_target')return allOpenHonorTargets(state);
+  if(q.type==='aufstieg_target')return (own.bezSlots||[]).map((r,i)=>r&&(own.development||[]).map(dbCard).some(d=>d&&d.grundkarte_bild===r.bild&&d.stufe===r.stufe+1)?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
+  if(q.type==='legionsruestung_search')return ironArmorSearchTargets(state,q.sourcePlayer);
+  if(q.type==='legionsruestung_equip')return (own.bezSlots||[]).map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
+  if(q.type==='neutralisationssiegel_target')return facedownAzrTargets(state);
   return [];
 }
 function resolveNewAstralSpellTarget(state,id){
   const q=state.pendingBezEffect;if(!q)return {ok:false,msg:'Keine passende ASTRAL-Auswahl aktiv.'};
+  if(q.type==='feiertag_target'){const e=state.players[1-q.sourcePlayer],r=e?.bezSlots?.[Number(id)];if(!r)return {ok:false,msg:'Ungültige gegnerische Bezwingerin.'};r.effectState=r.effectState||{};r.effectState.feiertagBlockedTurnCount=e.turnCount;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:`${cardData(r)?.name||'Bezwingerin'} darf in ihrer kommenden KR nicht entwickelt werden.`};}
+  if(q.type==='sprint_angriff_target'){const r=state.players[q.sourcePlayer]?.bezSlots?.[Number(id)];if(!r)return {ok:false,msg:'Ungültige eigene Bezwingerin.'};r.ready=true;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:`${cardData(r)?.name||'Bezwingerin'} hat keine Einsatzverzögerung mehr.`};}
+  if(q.type==='auszeichnung_target'){const r=runtimeByFieldId(state,id);if(!r||r.faceDown)return {ok:false,msg:'Ungültige offene Karte.'};r.honor=Number(r.honor||0)+1;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:`${cardData(r)?.name||'Karte'} erhält +1 Ehre.`};}
+  if(q.type==='aufstieg_target'){const slot=Number(id),srcP=q.sourcePlayer,srcSlot=q.sourceAzrSlot;discardInstantAstralSpell(state,srcP,srcSlot);state.pendingBezEffect=null;return freeDevelopBez(state,srcP,slot);}
+  if(q.type==='demoralisierung_target'){const e=state.players[1-q.sourcePlayer],r=e?.bezSlots?.[Number(id)];if(!r)return {ok:false,msg:'Ungültige gegnerische Bezwingerin.'};r.honor=Number(r.honor||0)-1;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:`${cardData(r)?.name||'Bezwingerin'} verliert 1 Ehre und hat jetzt ${r.honor} Ehre.`};}
+  if(q.type==='legionsruestung_search'){const p=state.players[q.sourcePlayer],i=Number(id),bild=p.stacks?.ruestkammer?.[i],c=dbCard(bild);if(!bild||c?.kartentyp!=='Rüstung'||String(c?.material||'').toLowerCase()!=='eisen')return {ok:false,msg:'Diese Karte ist keine Rüstung aus Eisen mehr.'};q.type='legionsruestung_equip';q.selectedBild=bild;return {ok:true,pending:true,msg:`${c.name} gefunden. Wähle eine eigene Bezwingerin zum Ausrüsten.`};}
+  if(q.type==='legionsruestung_equip'){const p=state.players[q.sourcePlayer],slot=Number(id),i=(p.stacks?.ruestkammer||[]).indexOf(q.selectedBild);if(!p.bezSlots?.[slot]||i<0)return {ok:false,msg:'Ziel oder gefundene Rüstung ist nicht mehr verfügbar.'};p.stacks.ruestkammer.splice(i,1);const er=makeRuntimeCard(q.selectedBild,p.index,p.turnCount),rr=equipRuntimeToBez(state,p,er,slot,'armor');if(!rr.ok){p.stacks.ruestkammer.splice(i,0,q.selectedBild);return rr;}const nm=cardData(er)?.name||'Rüstung';discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:`${nm} wurde direkt aus dem Stapel ausgerüstet.`};}
+  if(q.type==='neutralisationssiegel_target'){const [pi,si]=String(id).split(':').map(Number),p=state.players[pi],r=p?.azr?.[si];if(!r?.faceDown)return {ok:false,msg:'Das Ziel ist keine verdeckt gesetzte Karte mehr.'};const nm=cardData(r)?.name||'Verdeckte Karte';discardRuntime(p,r);p.azr[si]=null;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:`${nm} wurde verdeckt zerstört und abgelegt.`};}
   if(q.type==='exekution_target'){
     const [pi,si]=String(id).split(':').map(Number),p=state.players[pi],r=p?.bezSlots?.[si];if(!r)return {ok:false,msg:'Ungültige Bezwingerin.'};
     const st=effectiveBezStats(state,pi,si);if(Number(r.hearts||0)!==1||Number(st?.physicalShield||0)!==0||Number(st?.astralShield||0)!==0)return {ok:false,msg:'Exekution: Ziel benötigt genau 1 Herz sowie 0 physischen und 0 ASTRAL-Schild.'};
@@ -2996,6 +3041,7 @@ function develop(state,kind,slot=null){
   const r=kind==='refuge'?p.refuge:p.bezSlots[slot];
   if(!r)return {ok:false,msg:'Keine Karte vorhanden.'};
   if(r.developedTurn===p.turnCount)return {ok:false,msg:'Diese Karte wurde in dieser Kampfrunde bereits entwickelt.'};
+  if(kind==='bez' && r.effectState?.feiertagBlockedTurnCount===p.turnCount)return {ok:false,msg:'Feiertag verhindert die Entwicklung dieser Bezwingerin in dieser Kampfrunde.'};
   const dev=availableDevelopment(state,r);
   if(!dev)return {ok:false,msg:'Keine passende Karte der nächsten Stufe im Entwicklungsstapel.'};
   const kosten=dev.stufe;

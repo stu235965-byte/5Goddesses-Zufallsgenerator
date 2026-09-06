@@ -1764,7 +1764,14 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
+      "effekte": [
+        {
+          "engine_key": "feiertag_entwicklungssperre",
+          "trigger": "on_play",
+          "target": "enemy_bez",
+          "description": "Wähle eine gegnerische Bezwingerin. Diese darf in ihrer kommenden Kampfrunde keine Entwicklung durchführen."
+        }
+      ],
       "tags": []
     },
     {
@@ -2056,8 +2063,18 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "beschuetzt_die_bastion",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "own_refuge",
+          "description": "Füge der eigenen Zuflucht 1 physischen Schild hinzu."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-09-32-cb99ac81",
@@ -2083,8 +2100,18 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "auszeichnung_honor",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "any_open_card",
+          "description": "Verteile 1 Ehre auf eine beliebige offene eigene oder gegnerische Karte."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-10-32-67871311",
@@ -2110,8 +2137,18 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "demoralisierung_honor",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "enemy_bez",
+          "description": "Ziehe 1 Ehre von einer gegnerischen Bezwingerin ab; negative Werte sind zulässig."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-11-32-5b16dd91",
@@ -2139,8 +2176,18 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "neutralisationssiegel",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "any_facedown_azr",
+          "description": "Zerstöre eine verdeckt gesetzte Karte in einer ASTRAL-/Rüstkammer-Zone."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-23-32-fe5608d0",
@@ -2166,8 +2213,18 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "legionsruestung_erscheine",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "own_bez",
+          "description": "Durchsuche den Rüstkammer-Stapel nach einer Rüstung aus Eisen und rüste eine eigene Bezwingerin damit aus."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-24-32-a1ff47d0",
@@ -2193,8 +2250,18 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "bastion_schutzbarriere",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "own_refuge",
+          "description": "Füge der eigenen Zuflucht 1 ASTRAL-Schild hinzu."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-25-32-4f2b5034",
@@ -2220,8 +2287,18 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "dein_angriff_scheitert",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "attacking_enemy_bez",
+          "description": "Wähle in der AP eine angreifende gegnerische Bezwingerin. Diese darf in dieser KR nicht angreifen."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.01-26-32-d473c475",
@@ -2249,7 +2326,14 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
+      "effekte": [
+        {
+          "engine_key": "sprint_angriff_ready",
+          "trigger": "on_play",
+          "target": "own_bez",
+          "description": "Wähle eine eigene Bezwingerin. Diese hat keine Einsatzverzögerung."
+        }
+      ],
       "tags": []
     },
     {
@@ -2276,8 +2360,18 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "aufstieg_free_develop",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "own_bez",
+          "description": "Wähle eine eigene Bezwingerin. Diese steigt ohne Ehrkosten auf; Schaden wird übertragen."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.03-17-32-f817177a",
@@ -2330,8 +2424,15 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "exekution",
+          "instinkt": true
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.03-19-32-62426e17",
@@ -2357,7 +2458,11 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
+      "effekte": [
+        {
+          "engine_key": "zweifache_bestrafung"
+        }
+      ],
       "tags": []
     },
     {
@@ -2648,8 +2753,15 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "laehmende_angst",
+          "instinkt": true
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.02-19-32-6812396b",
@@ -2677,8 +2789,15 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "vengeresse_vergeltung",
+          "instinkt": true
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.02-20-32-70faddfa",
@@ -2839,8 +2958,15 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "lilous_gabe",
+          "instinkt": true
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.02-32-32-c04e9575",
