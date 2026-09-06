@@ -1961,8 +1961,15 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "wunderunterdrueckung_block_wonder",
+          "text": "Die gewählte gegnerische Bezwingerin darf in ihrer kommenden Kampfrunde kein Wunder aktivieren."
+        }
+      ],
+      "tags": [
+        "programmiert"
+      ]
     },
     {
       "id": "1.04-26-32-06df567e",
@@ -2072,8 +2079,15 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "unerwarteter_reichtum_draw",
+          "text": "Ziehe eine Karte und füge deiner Zuflucht 1 Ehre hinzu."
+        }
+      ],
+      "tags": [
+        "programmiert"
+      ]
     },
     {
       "id": "1.01-08-32-49edc2a7",
@@ -2538,8 +2552,16 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "ueberlegene_kriegsfuehrung_swap",
+          "text": "Tausche die Feldposition einer eigenen Bezwingerin mit einer anderen eigenen Bezwingerin samt Ausrüstungen; sonst wechsle auf ein freies Bezwingerinnenfeld. Deklarierte Angriffe und zielgerichtete Effekte bleiben an der ursprünglichen Feldposition gebunden."
+        }
+      ],
+      "tags": [
+        "instinkt",
+        "programmiert"
+      ]
     },
     {
       "id": "1.03-21-32-bc24b966",
@@ -2567,8 +2589,16 @@
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "wiederbelebungsapparatur_virus_lock",
+          "text": "Bestimme eine ASTRAL-/RÜSTKAMMER-Zone. Sie kann während der Wirkungsdauer weder zum Setzen noch offenen Spielen verwendet werden; eine dort gesetzte Karte darf nicht aktiviert werden."
+        }
+      ],
+      "tags": [
+        "programmiert"
+      ],
+      "effekt_dauer_kr": 2
     },
     {
       "id": "1.03-28-32-78f675f4",
@@ -2641,8 +2671,16 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "kontrollierte_ueberlastung_automata",
+          "text": "Eigene Automata erhalten bis Ende der Kampfrunde für jede Angriffsart mit Wert 0 den Wert 1."
+        }
+      ],
+      "tags": [
+        "instinkt",
+        "programmiert"
+      ]
     },
     {
       "id": "1.03-30-32-7ded76d1",
@@ -2746,8 +2784,16 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "energieschildsynchronisation_search",
+          "text": "Wähle eine eigene Bezwingerin, suche ein Energie-Schild aus dem Rüstkammer-Stapel und rüste sie damit aus. Ist sie Automata, erhält sie +1 Ehre."
+        }
+      ],
+      "tags": [
+        "instinkt",
+        "programmiert"
+      ]
     },
     {
       "id": "1.02-17-32-53fde771",
@@ -2917,8 +2963,15 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "begnadete_reflexe_dodge_counter",
+          "text": "Eine eigene Bezwingerin weicht in dieser Kampfrunde Gegenangriffen aus."
+        }
+      ],
+      "tags": [
+        "programmiert"
+      ]
     },
     {
       "id": "1.02-28-32-4919cb8e",
@@ -3012,8 +3065,16 @@
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "abstieg_downgrade_negate",
+          "text": "Stufe eine entwickelte gegnerische Bezwingerin um eine Stufe zurück. Direkt nach gegnerischer Entwicklung oder Wunder einer entwickelten gegnerischen Bezwingerin kann der vorherige Spielzustand wiederhergestellt werden."
+        }
+      ],
+      "tags": [
+        "instinkt",
+        "programmiert"
+      ]
     },
     {
       "id": "1.02-31-32-7df986e6",
@@ -3075,8 +3136,16 @@
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "dornenwald_taunt",
+          "text": "Alle Bezwingerinnen auf diesem Spielfeld müssen Dornenwald angreifen, wenn sie kämpfen."
+        }
+      ],
+      "tags": [
+        "programmiert"
+      ],
+      "effekt_dauer_kr": 3
     },
     {
       "id": "1.05-07-32-86ddc423",

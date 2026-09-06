@@ -312,8 +312,8 @@ function effectiveBezStats(state,playerIndex,bezSlot){
 
   const out={
     hearts:Number(bez.hearts||0),
-    physical:Math.max(0,Number(bez.physical ?? cardData(bez)?.physische_staerke ?? 0)+Number(bez.effectState?.bitterEndPhysicalBonus||0)-Number(bez.effectState?.kampfschwaechePhysicalPenalty||0)),
-    astral:Math.max(0,Number(bez.astral ?? cardData(bez)?.astrale_staerke ?? 0)+Number(bez.effectState?.bitterEndAstralBonus||0)-Number(bez.effectState?.astralschwaecheAstralPenalty||0)),
+    physical:Math.max(0,(bez.effectState?.kontrolliertePhysicalToOneRound===state.roundSerial&&Number(bez.physical ?? cardData(bez)?.physische_staerke ?? 0)===0?1:Number(bez.physical ?? cardData(bez)?.physische_staerke ?? 0))+Number(bez.effectState?.bitterEndPhysicalBonus||0)-Number(bez.effectState?.kampfschwaechePhysicalPenalty||0)),
+    astral:Math.max(0,(bez.effectState?.kontrollierteAstralToOneRound===state.roundSerial&&Number(bez.astral ?? cardData(bez)?.astrale_staerke ?? 0)===0?1:Number(bez.astral ?? cardData(bez)?.astrale_staerke ?? 0))+Number(bez.effectState?.bitterEndAstralBonus||0)-Number(bez.effectState?.astralschwaecheAstralPenalty||0)),
     physicalShield:Number(bez.physicalShield||0)+Number(bez.effectState?.aufopferungPhysicalShield||0),
     astralShield:Number(bez.astralShield||0)+Number(bez.effectState?.aufopferungAstralShield||0),
     base:{
@@ -461,6 +461,7 @@ function startWunderumwandlungsapparatur(state){
     return {ok:false,msg:'Die Wunderumwandlungsapparatur liegt nicht in deinem Primärbereich.'};
   if(!['supply','resupply'].includes(currentPhase(state).id))
     return {ok:false,msg:'Dieses Wunder kann nur in VP oder NP gewirkt werden.'};
+  if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
   if(r.wonderTurn===p.turnCount)
     return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
 
@@ -560,6 +561,7 @@ function startMantaWonder(state){
   const p=active(state),r=p.primary,c=cardData(r);
   if(!r || r.owner!==p.index || !isManta(r))return {ok:false,msg:'MANTA liegt nicht in deinem Primärbereich.'};
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'MANTAs Wunder kann nur in VP oder NP gewirkt werden.'};
+  if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'MANTAs Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
   const cost=Number(c?.wunder?.kosten_ehre??3);
   if(Number(r.honor||0)<cost)return {ok:false,msg:`MANTA benötigt ${cost} Ehre.`};
@@ -847,6 +849,7 @@ function bezEffectInfo(state,slot){
 function activateBezEffect(state,slot,choice=null){
  const p=active(state),r=p.bezSlots[slot];if(!r)return {ok:false,msg:'Keine Bezwingerin in diesem Bereich.'};
  const c=cardData(r),sym=c?.effekt_symbol||'none',key=c?.effekte?.[0]?.engine_key;
+ if(sym==='wonder' && Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
  if(r.effectDisabled||sym==='none'||sym==='permanent'||sym==='duration'||sym==='on_play')return {ok:false,msg:'Dieser Effekt wird nicht manuell auf diese Weise aktiviert.'};
 
  // Thal Ziris Stufe 2: Kosten werden erst nach Zielwahl berechnet,
@@ -854,7 +857,8 @@ function activateBezEffect(state,slot,choice=null){
  if(sym==='wonder' && key==='talisia1')return startTalisia1Wonder(state,slot);
  if(sym==='wonder' && key==='thal2'){
    if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
-   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+   if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
+  if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
    if((r.honor||0)<2)return {ok:false,msg:'Benötigt mindestens 2 Ehre.'};
    const targets=thalZirisTargets(state);
    if(!targets.length)return {ok:false,msg:'Es gibt keine gültige Karte mit aktiver Kampfrundendauer.'};
@@ -884,9 +888,10 @@ function activateBezEffect(state,slot,choice=null){
 
  if(sym==='wonder'){
    if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
-   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+   if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
+  if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
    const cost=effectiveWonderCost(state,p.index,slot,r);if((r.honor||0)<cost)return {ok:false,msg:`Benötigt ${cost} Ehre.`};
-   r.honor-=cost;r.wonderTurn=p.turnCount;
+   captureNegatableSnapshot(state,'wonder',p.index,slot);r.honor-=cost;r.wonderTurn=p.turnCount;
  }else if(sym==='charges'){
    if(r.effectUsedTurn===p.turnCount)return {ok:false,msg:'Dieser Effekt wurde in dieser Kampfrunde bereits aktiviert.'};
    if((r.effectUsesRemaining??0)<=0)return {ok:false,msg:'Keine Zählermarken mehr vorhanden.'};
@@ -1013,6 +1018,7 @@ function activateParierdolchDodge(state,bezSlot){
 function consumeCounterDodgeIfActive(state,p,bezSlot,bez){
   if(!bez)return null;
   bez.effectState=bez.effectState||{};
+  if(bez.effectState.begnadeteReflexeRoundSerial===state.roundSerial)return 'Begnadete Reflexe';
   if(bez.effectState.kikiCounterDodgeActive && bez.effectState.kikiCounterDodgeRoundSerial===state.roundSerial){
     bez.effectState.kikiCounterDodgeActive=false;
     return 'Rabe der Hoffnung Kiki';
@@ -1073,6 +1079,7 @@ function matchingDevelopmentsForBase(baseBild){return (window.GODDESSES_DB?.kart
 function startLilou2Wonder(state,slot){
   const p=active(state),r=p.bezSlots[slot],c=cardData(r);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+  if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
   if(!(p.bezSlots||[]).some(x=>!x))return {ok:false,msg:'Keine freie Bezwingerinnen-Feldposition.'};
   if(!lilou2Targets(state,p.index).length)return {ok:false,msg:'Keine Bezwingerin der Stufe 1 in deiner Ablage.'};
@@ -1129,6 +1136,7 @@ function startBaronesse2Wonder(state,slot){
   const p=active(state),r=p.bezSlots[slot],c=cardData(r);
   if(!['supply','resupply'].includes(currentPhase(state).id))
     return {ok:false,msg:'Baronesse kann ihr Wunder nur in VP oder NP wirken.'};
+  if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
   const cost=Number(r.wonderCostCurrent??c?.wunder?.kosten_ehre??2);
   if((r.honor||0)<cost)return {ok:false,msg:`Baronesse benötigt ${cost} Ehre.`};
@@ -1249,7 +1257,8 @@ function startMornakTokenPlacement(state,controllerIndex,allowEnemyAzr=false,sou
 function startNemesisWonder(state,slot){
  const p=active(state),r=p.bezSlots[slot];
  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
- if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
+ if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
+  if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
  const cost=Math.max(0,Number(r.wonderCostCurrent??cardData(r)?.wunder?.kosten_ehre??3)-(ownMornakLocations(state,p.index).length?1:0));
  if((r.honor||0)<cost)return {ok:false,msg:`Nemesis benötigt ${cost} Ehre.`};
  const targets=mornakTokenTargets(state,p.index,false);if(!targets.length)return {ok:false,msg:'Kein freier Bereich für einen Mornak-Brut-Token.'};
@@ -1401,6 +1410,7 @@ function cancelPendingBezEffect(state){state.pendingBezEffect=null;return {ok:tr
 function startQueen2Wonder(state,slot){
   const p=active(state),r=p.bezSlots[slot],c=cardData(r);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+  if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
   const cost=Number(r.wonderCostCurrent ?? c?.wunder?.kosten_ehre ?? 2);
   if((r.honor||0)<cost)return {ok:false,msg:`Q.U.E.E.N. benötigt ${cost} Ehre.`};
@@ -1494,6 +1504,7 @@ function isCreatureCard(c){
 function startPsiloWonder(state,slot){
   const p=active(state),r=p.bezSlots[slot];
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+  if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
   const cost=Number(r.wonderCostCurrent ?? cardData(r)?.wunder?.kosten_ehre ?? 2);
   if((r.honor||0)<cost)return {ok:false,msg:`Psilo benötigt ${cost} Ehre.`};
@@ -1818,6 +1829,7 @@ function awardBerserkerMarksAfterCombat(state,attackSnapshot){
 function startZahiraWonder(state,slot){
   const p=active(state),r=p.bezSlots[slot];
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+  if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
   const cost=Number(r.wonderCostCurrent??cardData(r)?.wunder?.kosten_ehre??1);if((r.honor||0)<cost)return {ok:false,msg:`Zahira benötigt ${cost} Ehre.`};
   if(!p.bezSlots.some((x,i)=>x&&i!==slot))return {ok:false,msg:'Es gibt keine andere eigene Bezwingerin als Ziel.'};
@@ -1827,6 +1839,7 @@ function startZahiraWonder(state,slot){
 function startCassandraWonder(state,slot){
   const p=active(state),r=p.bezSlots[slot];
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in VP oder NP gewirkt werden.'};
+  if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Dieses Wunder wurde in dieser Kampfrunde bereits gewirkt.'};
   const cost=Number(r.wonderCostCurrent??cardData(r)?.wunder?.kosten_ehre??3);if((r.honor||0)<cost)return {ok:false,msg:`Cassandra benötigt ${cost} Ehre.`};
   state.pendingBezEffect={type:'cassandra',sourcePlayer:p.index,sourceSlot:slot};
@@ -1913,7 +1926,8 @@ function resolveCheckedEffectTarget(state,id){
  return {ok:false,msg:'Unbekannte Effektauswahl.'};
 }
 function startTalisia1Wonder(state,slot){
- const p=active(state),r=p.bezSlots[slot],c=cardData(r);if(c?.effekte?.[0]?.engine_key!=='talisia1')return {ok:false,msg:'Falsche Karte.'};if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder nur in VP oder NP.'};if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Wunder bereits benutzt.'};const cost=Number(r.wonderCostCurrent??c?.wunder?.kosten_ehre??2);if((r.honor||0)<cost)return {ok:false,msg:`Benötigt ${cost} Ehre.`};if(!(p.bezSlots.some(x=>x&&(x.astralShield||0)>0)||(p.refuge&&(p.refuge.astralShield||0)>0)))return {ok:false,msg:'Keine Quelle mit ASTRAL-Schild.'};state.pendingBezEffect={type:'talisia1_source',sourcePlayer:p.index,sourceSlot:slot};return {ok:true,pending:true,msg:'Wähle die Quelle des ASTRAL-Schildes.'};
+ const p=active(state),r=p.bezSlots[slot],c=cardData(r);if(c?.effekte?.[0]?.engine_key!=='talisia1')return {ok:false,msg:'Falsche Karte.'};if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder nur in VP oder NP.'};if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
+  if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Wunder bereits benutzt.'};const cost=Number(r.wonderCostCurrent??c?.wunder?.kosten_ehre??2);if((r.honor||0)<cost)return {ok:false,msg:`Benötigt ${cost} Ehre.`};if(!(p.bezSlots.some(x=>x&&(x.astralShield||0)>0)||(p.refuge&&(p.refuge.astralShield||0)>0)))return {ok:false,msg:'Keine Quelle mit ASTRAL-Schild.'};state.pendingBezEffect={type:'talisia1_source',sourcePlayer:p.index,sourceSlot:slot};return {ok:true,pending:true,msg:'Wähle die Quelle des ASTRAL-Schildes.'};
 }
 function hasOtherDeploymentDelay(r){
   if(!r)return false;
@@ -2030,7 +2044,7 @@ function resolveErlassTarget(state,id){
 
 const INSTANT_ASTRAL_KEYS=[
   'verwuestung','bis_zum_bitteren_ende','saphiras_upsi','exekution','zweifache_bestrafung','lilous_gabe','laehmende_angst','vengeresse_vergeltung',
-  'feiertag_entwicklungssperre','sprint_angriff_ready','dein_angriff_scheitert','beschuetzt_die_bastion','auszeichnung_honor','aufstieg_free_develop','demoralisierung_honor','legionsruestung_erscheine','bastion_schutzbarriere','neutralisationssiegel','exonova_mass_astral','system_reset_return_azr','portalgeschoss_reactive','tauschportal_swap_equipment','zeitlose_unterwerfung_wonder_discount','strahl_des_vergessens_void','siegel_kampfschwaeche_physical_minus','siegel_astralschwaeche_astral_minus','aufopferung_shield_temp','parade_riposte_primary','keine_ruestung_naechste_kr','sofortige_zerstoerung_armor','vollendete_toetungstechnik_dual','astral_feuerball_damage','zeitsprung_skip_supply','ehrenlos_next_honor'
+  'feiertag_entwicklungssperre','sprint_angriff_ready','dein_angriff_scheitert','beschuetzt_die_bastion','auszeichnung_honor','aufstieg_free_develop','demoralisierung_honor','legionsruestung_erscheine','bastion_schutzbarriere','neutralisationssiegel','exonova_mass_astral','system_reset_return_azr','portalgeschoss_reactive','tauschportal_swap_equipment','zeitlose_unterwerfung_wonder_discount','strahl_des_vergessens_void','siegel_kampfschwaeche_physical_minus','siegel_astralschwaeche_astral_minus','aufopferung_shield_temp','parade_riposte_primary','keine_ruestung_naechste_kr','sofortige_zerstoerung_armor','vollendete_toetungstechnik_dual','astral_feuerball_damage','zeitsprung_skip_supply','ehrenlos_next_honor','wunderunterdrueckung_block_wonder','ueberlegene_kriegsfuehrung_swap','kontrollierte_ueberlastung_automata','energieschildsynchronisation_search','unerwarteter_reichtum_draw','begnadete_reflexe_dodge_counter','abstieg_downgrade_negate'
 ];
 function isInstantAstralSpell(c){
   return c?.deck_bereich==='astral' && ['ASTRAL-Spruch','ASTRAL-Gebot'].includes(c?.kartentyp) && !!c?.effekte?.some(e=>INSTANT_ASTRAL_KEYS.includes(e.engine_key));
@@ -2040,7 +2054,7 @@ function facedownAzrTargets(state){const out=[];state.players.forEach((p,pi)=>(p
 function allOpenHonorTargets(state){return allRuntimeCards(state).filter(x=>x.r&&!x.r.faceDown).map(x=>({id:`${x.playerIndex}|${x.zone}|${x.slot??''}|${x.kind||''}`,name:`${x.playerIndex===state.pendingBezEffect?.sourcePlayer?'Eigene':'Gegnerische'} ${cardData(x.r)?.name||'Karte'}`}));}
 function runtimeByFieldId(state,id){const [piS,zone,slotS,kind]=String(id).split('|'),pi=Number(piS),p=state.players[pi],slot=slotS===''?null:Number(slotS);if(zone==='refuge')return p?.refuge;if(zone==='bez')return p?.bezSlots?.[slot];if(zone==='azr')return p?.azr?.[slot];if(zone==='primary')return p?.primary;if(zone==='secondary')return state.sharedSecondary;if(zone==='equipment')return p?.equipment?.[slot]?.[kind];return null;}
 function ironArmorSearchTargets(state,playerIndex){const p=state.players[playerIndex];return (p.stacks?.ruestkammer||[]).map((bild,i)=>({bild,i,c:dbCard(bild)})).filter(x=>x.c?.kartentyp==='Rüstung'&&String(x.c?.material||'').toLowerCase()==='eisen').map(x=>({id:String(x.i),name:x.c.name,bild:x.bild}));}
-function freeDevelopBez(state,playerIndex,slot){const p=state.players[playerIndex],r=p?.bezSlots?.[slot];if(!r)return {ok:false,msg:'Keine eigene Bezwingerin vorhanden.'};if(r.developedTurn===p.turnCount)return {ok:false,msg:'Diese Bezwingerin wurde in dieser Kampfrunde bereits entwickelt.'};const dev=(p.development||[]).map(dbCard).find(c=>c&&c.grundkarte_bild===r.bild&&c.stufe===r.stufe+1);if(!dev)return {ok:false,msg:'Keine passende Karte der nächsten Stufe im Entwicklungsstapel.'};const alt=cardData(r),oldH=alt?.herzen??r.hearts??0,oldP=alt?.physischer_schild??r.physicalShield??0,oldA=alt?.astraler_schild??r.astralShield??0;const hd=Math.max(0,oldH-(r.hearts??0)),pd=Math.max(0,oldP-(r.physicalShield??0)),ad=Math.max(0,oldA-(r.astralShield??0)),ready=r.ready;p.development=p.development.filter(x=>x!==dev.bild);r.developmentStack.push(dev.bild);r.bild=dev.bild;r.stufe=dev.stufe;r.hearts=Math.max(0,(dev.herzen??oldH)-hd);r.physicalShield=Math.max(0,(dev.physischer_schild??oldP)-pd);r.astralShield=Math.max(0,(dev.astraler_schild??oldA)-ad);r.physical=dev.physische_staerke??r.physical;r.astral=dev.astrale_staerke??r.astral;r.ready=ready;r.developedTurn=p.turnCount;log(state,`${p.name} entwickelt ${dev.name} durch Aufstieg kostenlos. Bereits erlittener Schaden bleibt erhalten.`);resolveBezOnPlay(state,p,slot,r,dev);return {ok:true,pending:!!state.pendingBezEffect,msg:`${dev.name} wurde ohne Ehrkosten entwickelt.`};}
+function freeDevelopBez(state,playerIndex,slot){const p=state.players[playerIndex],r=p?.bezSlots?.[slot];if(!r)return {ok:false,msg:'Keine eigene Bezwingerin vorhanden.'};if(r.developedTurn===p.turnCount)return {ok:false,msg:'Diese Bezwingerin wurde in dieser Kampfrunde bereits entwickelt.'};const dev=(p.development||[]).map(dbCard).find(c=>c&&c.grundkarte_bild===r.bild&&c.stufe===r.stufe+1);if(!dev)return {ok:false,msg:'Keine passende Karte der nächsten Stufe im Entwicklungsstapel.'};const alt=cardData(r),oldH=alt?.herzen??r.hearts??0,oldP=alt?.physischer_schild??r.physicalShield??0,oldA=alt?.astraler_schild??r.astralShield??0;const hd=Math.max(0,oldH-(r.hearts??0)),pd=Math.max(0,oldP-(r.physicalShield??0)),ad=Math.max(0,oldA-(r.astralShield??0)),ready=r.ready;captureNegatableSnapshot(state,'development',p.index,slot);p.development=p.development.filter(x=>x!==dev.bild);r.developmentStack.push(dev.bild);r.bild=dev.bild;r.stufe=dev.stufe;r.hearts=Math.max(0,(dev.herzen??oldH)-hd);r.physicalShield=Math.max(0,(dev.physischer_schild??oldP)-pd);r.astralShield=Math.max(0,(dev.astraler_schild??oldA)-ad);r.physical=dev.physische_staerke??r.physical;r.astral=dev.astrale_staerke??r.astral;r.ready=ready;r.developedTurn=p.turnCount;log(state,`${p.name} entwickelt ${dev.name} durch Aufstieg kostenlos. Bereits erlittener Schaden bleibt erhalten.`);resolveBezOnPlay(state,p,slot,r,dev);return {ok:true,pending:!!state.pendingBezEffect,msg:`${dev.name} wurde ohne Ehrkosten entwickelt.`};}
 
 function ownOpenCreatureWurm(state,playerIndex){
   const p=state.players[playerIndex];
@@ -2092,6 +2106,12 @@ function resolveVoidReturnsAtPhase(state){
   state.voidZone=state.voidZone.filter(e=>!e.returned);
 }
 
+function isAutomataBez(r){const c=cardData(r);return !!r&&c?.hauptattribut==='BEZWINGERIN'&&((c.nebenattribute||[]).includes('Automata')||(c.tags||[]).includes('automata')||c.untertyp==='Automata');}
+function energyShieldSearchTargets(state,playerIndex){const p=state.players[playerIndex];return (p.stacks?.ruestkammer||[]).map((bild,i)=>({bild,i,c:dbCard(bild)})).filter(x=>x.c?.kartentyp==='Schild'&&String(x.c?.material||'').toLowerCase()==='energie').map(x=>({id:String(x.i),name:x.c.name,bild:x.bild}));}
+function downgradeOpponentBez(state,sourcePlayer,slot){const p=state.players[1-sourcePlayer],r=p?.bezSlots?.[slot];if(!r||Number(r.stufe||1)<=1||!Array.isArray(r.developmentStack)||r.developmentStack.length<2)return {ok:false,msg:'Das Ziel ist keine entwickelte gegnerische Bezwingerin.'};const cur=cardData(r),removed=r.developmentStack.pop(),prevBild=r.developmentStack[r.developmentStack.length-1],prev=dbCard(prevBild);if(!prev)return {ok:false,msg:'Vorherige Entwicklungsstufe nicht gefunden.'};const heartD=Math.max(0,Number(cur?.herzen??r.hearts??0)-Number(r.hearts||0)),physD=Math.max(0,Number(cur?.physischer_schild??r.physicalShield??0)-Number(r.physicalShield||0)),astrD=Math.max(0,Number(cur?.astraler_schild??r.astralShield??0)-Number(r.astralShield||0));r.bild=prevBild;r.stufe=prev.stufe;r.hearts=Math.max(0,Number(prev.herzen||0)-heartD);r.physicalShield=Math.max(0,Number(prev.physischer_schild||0)-physD);r.astralShield=Math.max(0,Number(prev.astraler_schild||0)-astrD);r.physical=Number(prev.physische_staerke||0);r.astral=Number(prev.astrale_staerke||0);p.development.push(removed);return {ok:true,msg:`${prev.name} ist wieder die aktive Entwicklungsstufe; erlittener Schaden wurde übertragen.`};}
+function activeDornenwald(state){const r=state.sharedSecondary;return r&&!r.faceDown&&!r.effectDisabled&&cardData(r)?.effekte?.some(e=>e.engine_key==='dornenwald_taunt')?r:null;}
+function captureNegatableSnapshot(state,type,playerIndex,slot){const old=state.lastNegatableEvent;state.lastNegatableEvent=null;const snapshot=JSON.parse(JSON.stringify(state));state.lastNegatableEvent=old;state.lastNegatableEvent={type,playerIndex,slot,roundSerial:state.roundSerial,phaseIndex:state.phaseIndex,snapshot};}
+function rollbackLastNegatable(state,sourcePlayer,sourceAzrSlot){const ev=state.lastNegatableEvent;if(!ev||Number(ev.playerIndex)!==1-Number(sourcePlayer)||!['development','wonder'].includes(ev.type))return null;const snap=ev.snapshot;for(const k of Object.keys(state))delete state[k];Object.assign(state,JSON.parse(JSON.stringify(snap)));const p=state.players[sourcePlayer],r=p?.azr?.[sourceAzrSlot];if(r){discardRuntime(p,r);p.azr[sourceAzrSlot]=null;}state.lastNegatableEvent=null;log(state,`Abstieg negiert die gegnerische ${ev.type==='development'?'Entwicklung':'Wunderwirkung'} und stellt den vorherigen Spielzustand wieder her.`);return {ok:true,msg:`Abstieg: ${ev.type==='development'?'Entwicklung':'Wunder'} negiert.`};}
 function instantAstralValidation(state,playerIndex,c){
   const p=state.players[playerIndex],opp=state.players[1-playerIndex];
   const key=instantAstralKey(c);
@@ -2129,6 +2149,11 @@ function instantAstralValidation(state,playerIndex,c){
   if(key==='keine_ruestung_naechste_kr'||key==='ehrenlos_next_honor'||key==='astral_feuerball_damage')return (opp.bezSlots||[]).some(r=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN')?{ok:true}:{ok:false,msg:'Dieser ASTRAL-Spruch benötigt eine gegnerische Bezwingerin.'};
   if(key==='sofortige_zerstoerung_armor'){ensureEquipmentState(p);ensureEquipmentState(opp);return state.players.some(pl=>(pl.equipment||[]).some(eq=>eq?.armor&&!eq.armor.faceDown))?{ok:true}:{ok:false,msg:'Sofortige Zerstörung benötigt eine offene Rüstungskarte.'};}
   if(key==='vollendete_toetungstechnik_dual')return (p.bezSlots||[]).some(r=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN'&&cardData(r)?.klasse==='Assassine')?{ok:true}:{ok:false,msg:'Vollendete Tötungstechnik benötigt eine eigene Assassine.'};
+  if(key==='wunderunterdrueckung_block_wonder'||key==='abstieg_downgrade_negate'){const e=state.players[1-playerIndex];return (e.bezSlots||[]).some(r=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN'&&(key!=='abstieg_downgrade_negate'||Number(r.stufe||1)>1))?{ok:true}:{ok:false,msg:key==='abstieg_downgrade_negate'?'Abstieg benötigt eine entwickelte gegnerische Bezwingerin.':'Wunderunterdrückung benötigt eine gegnerische Bezwingerin.'};}
+  if(key==='ueberlegene_kriegsfuehrung_swap'||key==='begnadete_reflexe_dodge_counter')return (p.bezSlots||[]).some(r=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN')?{ok:true}:{ok:false,msg:'Dieser ASTRAL-Spruch benötigt eine eigene Bezwingerin.'};
+  if(key==='kontrollierte_ueberlastung_automata')return (p.bezSlots||[]).some(isAutomataBez)?{ok:true}:{ok:false,msg:'Kontrollierte Überlastung benötigt mindestens eine eigene Automata.'};
+  if(key==='energieschildsynchronisation_search')return energyShieldSearchTargets(state,playerIndex).length&&(p.bezSlots||[]).some(r=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN')?{ok:true}:{ok:false,msg:'Es werden ein Energie-Schild im Rüstkammer-Stapel und eine eigene Bezwingerin benötigt.'};
+  if(key==='unerwarteter_reichtum_draw')return {ok:true};
   if(key==='zeitsprung_skip_supply')return {ok:true};
   if(key==='portalgeschoss_reactive'){
     const a=state.attack;
@@ -2197,6 +2222,13 @@ function startInstantAstralSpell(state,playerIndex,azrSlot){
   if(key==='vollendete_toetungstechnik_dual'){state.pendingBezEffect={type:'vollendete_toetungstechnik_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine eigene Assassine.'};}
   if(key==='astral_feuerball_damage'){state.pendingBezEffect={type:'astral_feuerball_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine gegnerische Bezwingerin für 1 ASTRAL-Schaden.'};}
   if(key==='ehrenlos_next_honor'){state.pendingBezEffect={type:'ehrenlos_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine gegnerische Bezwingerin für Ehrenlos.'};}
+  if(key==='wunderunterdrueckung_block_wonder'){state.pendingBezEffect={type:'wunderunterdrueckung_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine gegnerische Bezwingerin.'};}
+  if(key==='ueberlegene_kriegsfuehrung_swap'){state.pendingBezEffect={type:'ueberlegene_kriegsfuehrung_source',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin für den Positionswechsel.'};}
+  if(key==='kontrollierte_ueberlastung_automata'){for(const r of p.bezSlots||[]){if(!isAutomataBez(r))continue;r.effectState=r.effectState||{};if(Number(effectiveBezStats(state,p.index,p.bezSlots.indexOf(r))?.physical||0)===0)r.effectState.kontrolliertePhysicalToOneRound=state.roundSerial;if(Number(effectiveBezStats(state,p.index,p.bezSlots.indexOf(r))?.astral||0)===0)r.effectState.kontrollierteAstralToOneRound=state.roundSerial;}discardInstantAstralSpell(state,playerIndex,azrSlot);return {ok:true,msg:'Kontrollierte Überlastung aktiviert.'};}
+  if(key==='energieschildsynchronisation_search'){state.pendingBezEffect={type:'energieschild_search',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle ein Energie-Schild aus dem Rüstkammer-Stapel.'};}
+  if(key==='unerwarteter_reichtum_draw'){discardInstantAstralSpell(state,playerIndex,azrSlot);p.refuge.honor=Number(p.refuge.honor||0)+1;state.pendingWonderDraw={playerIndex,reason:'Unerwarteter Reichtum',count:1};return {ok:true,msg:'Zuflucht erhält +1 Ehre. Ziehe 1 Karte von einem Hauptstapel.'};}
+  if(key==='begnadete_reflexe_dodge_counter'){state.pendingBezEffect={type:'begnadete_reflexe_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin.'};}
+  if(key==='abstieg_downgrade_negate'){const rb=rollbackLastNegatable(state,playerIndex,azrSlot);if(rb)return rb;state.pendingBezEffect={type:'abstieg_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};return {ok:true,pending:true,msg:'Wähle eine entwickelte gegnerische Bezwingerin.'};}
   if(key==='zeitsprung_skip_supply'){const e=state.players[1-playerIndex];e.skipNextSupplyCount=Number(e.skipNextSupplyCount||0)+1;discardInstantAstralSpell(state,playerIndex,azrSlot);log(state,`Zeitsprung: ${e.name} überspringt die nächste Versorgungsphase.`);return {ok:true,msg:`${e.name} überspringt die nächste Versorgungsphase.`};}
   if(key==='portalgeschoss_reactive'){
     const targetSlot=Number(state.attack.target.slot);
@@ -2254,6 +2286,12 @@ function startInstantAstralSpell(state,playerIndex,azrSlot){
 function newAstralSpellTargets(state){
   const q=state.pendingBezEffect;if(!q)return [];
   const own=state.players[q.sourcePlayer];
+  if(q.type==='virus_azr_slot'){const out=[];for(const pl of state.players)(pl.azr||[]).forEach((r,i)=>{if(!r||r.faceDown)out.push({id:`${pl.index}:${i}`,name:`${pl.name} – AZR ${i+1}${r?' (gesetzt)':' (frei)'}`});});return out;}
+  if(q.type==='wunderunterdrueckung_target'||q.type==='abstieg_target'){const e=state.players[1-q.sourcePlayer];return (e.bezSlots||[]).map((r,i)=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN'&&(q.type!=='abstieg_target'||Number(r.stufe||1)>1)?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);}
+  if(q.type==='ueberlegene_kriegsfuehrung_source'||q.type==='begnadete_reflexe_target')return (own.bezSlots||[]).map((r,i)=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN'?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
+  if(q.type==='ueberlegene_kriegsfuehrung_dest'){return [0,1].filter(i=>i!==q.sourceSlot).map(i=>({id:String(i),name:own.bezSlots[i]?`Tauschen mit ${cardData(own.bezSlots[i])?.name||'Bezwingerin'}`:`Freies Bezwingerinnenfeld ${i+1}`}));}
+  if(q.type==='energieschild_search')return energyShieldSearchTargets(state,q.sourcePlayer);
+  if(q.type==='energieschild_equip')return (own.bezSlots||[]).map((r,i)=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN'?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
   if(q.type==='aufopferung_shield_target'||q.type==='parade_riposte_target')return (own.bezSlots||[]).map((r,i)=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN'?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
   if(q.type==='vollendete_toetungstechnik_target')return (own.bezSlots||[]).map((r,i)=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN'&&cardData(r)?.klasse==='Assassine'?{id:String(i),name:cardData(r)?.name||'Assassine'}:null).filter(Boolean);
   if(q.type==='keine_ruestung_target'||q.type==='astral_feuerball_target'||q.type==='ehrenlos_target'){const e=state.players[1-q.sourcePlayer];return (e.bezSlots||[]).map((r,i)=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN'?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);}
@@ -2285,6 +2323,14 @@ function newAstralSpellTargets(state){
 }
 function resolveNewAstralSpellTarget(state,id){
   const q=state.pendingBezEffect;if(!q)return {ok:false,msg:'Keine passende ASTRAL-Auswahl aktiv.'};
+  if(q.type==='virus_azr_slot'){const [pi,si]=String(id).split(':').map(Number);state.azrLocks=state.azrLocks||[];state.azrLocks.push({playerIndex:pi,slot:si,sourceOwner:q.sourcePlayer,sourceCard:'Wiederbelebungsapparatur Virus'});state.pendingBezEffect=null;return {ok:true,msg:'ASTRAL-/RÜSTKAMMER-Zone durch Virus blockiert.'};}
+  if(q.type==='wunderunterdrueckung_target'){const e=state.players[1-q.sourcePlayer],r=e?.bezSlots?.[Number(id)];if(!r)return {ok:false,msg:'Ungültige gegnerische Bezwingerin.'};r.effectState=r.effectState||{};r.effectState.wunderunterdrueckungTargetTurn=Number(e.turnCount||0)+1;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:'Wunder in der kommenden eigenen KR gesperrt.'};}
+  if(q.type==='ueberlegene_kriegsfuehrung_source'){q.type='ueberlegene_kriegsfuehrung_dest';q.sourceSlot=Number(id);return {ok:true,pending:true,msg:'Wähle das andere Bezwingerinnenfeld.'};}
+  if(q.type==='ueberlegene_kriegsfuehrung_dest'){const p=state.players[q.sourcePlayer],a=q.sourceSlot,b=Number(id);if(a===b||!p.bezSlots[a])return {ok:false,msg:'Ungültiger Positionswechsel.'};ensureEquipmentState(p);[p.bezSlots[a],p.bezSlots[b]]=[p.bezSlots[b],p.bezSlots[a]];[p.equipment[a],p.equipment[b]]=[p.equipment[b],p.equipment[a]];discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:'Bezwingerinnen-Feldpositionen samt Ausrüstung wurden gewechselt.'};}
+  if(q.type==='energieschild_search'){const p=state.players[q.sourcePlayer],i=Number(id),bild=p.stacks?.ruestkammer?.[i],c=dbCard(bild);if(!bild||c?.kartentyp!=='Schild'||String(c?.material||'').toLowerCase()!=='energie')return {ok:false,msg:'Kein gültiges Energie-Schild.'};q.type='energieschild_equip';q.selectedBild=bild;return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin zum Ausrüsten.'};}
+  if(q.type==='energieschild_equip'){const p=state.players[q.sourcePlayer],slot=Number(id),i=(p.stacks?.ruestkammer||[]).indexOf(q.selectedBild);if(!p.bezSlots?.[slot]||i<0)return {ok:false,msg:'Ziel oder Schild nicht mehr verfügbar.'};p.stacks.ruestkammer.splice(i,1);const er=makeRuntimeCard(q.selectedBild,p.index,p.turnCount),rr=equipRuntimeToBez(state,p,er,slot,'shield');if(!rr.ok){p.stacks.ruestkammer.splice(i,0,q.selectedBild);return rr;}if(isAutomataBez(p.bezSlots[slot]))p.bezSlots[slot].honor=Number(p.bezSlots[slot].honor||0)+1;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:'Energie-Schild ausgerüstet'+(isAutomataBez(p.bezSlots[slot])?' und +1 Ehre vergeben.':'.')};}
+  if(q.type==='begnadete_reflexe_target'){const p=state.players[q.sourcePlayer],r=p?.bezSlots?.[Number(id)];if(!r)return {ok:false,msg:'Ungültige eigene Bezwingerin.'};r.effectState=r.effectState||{};r.effectState.begnadeteReflexeRoundSerial=state.roundSerial;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:'Diese Bezwingerin weicht Gegenangriffen bis Ende der KR aus.'};}
+  if(q.type==='abstieg_target'){const rr=downgradeOpponentBez(state,q.sourcePlayer,Number(id));if(!rr.ok)return rr;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return rr;}
   if(q.type==='feiertag_target'){const e=state.players[1-q.sourcePlayer],r=e?.bezSlots?.[Number(id)];if(!r)return {ok:false,msg:'Ungültige gegnerische Bezwingerin.'};r.effectState=r.effectState||{};r.effectState.feiertagBlockedTurnCount=e.turnCount;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:`${cardData(r)?.name||'Bezwingerin'} darf in ihrer kommenden KR nicht entwickelt werden.`};}
   if(q.type==='sprint_angriff_target'){const r=state.players[q.sourcePlayer]?.bezSlots?.[Number(id)];if(!r)return {ok:false,msg:'Ungültige eigene Bezwingerin.'};r.ready=true;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:`${cardData(r)?.name||'Bezwingerin'} hat keine Einsatzverzögerung mehr.`};}
   if(q.type==='auszeichnung_target'){const r=runtimeByFieldId(state,id);if(!r||r.faceDown)return {ok:false,msg:'Ungültige offene Karte.'};r.honor=Number(r.honor||0)+1;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:`${cardData(r)?.name||'Karte'} erhält +1 Ehre.`};}
@@ -2738,6 +2784,7 @@ function consumeTrankAstralMachtBonus(r){
 function setFaceDown(state,handIndex,slot){
   const p=active(state);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Karten können hier nur in Versorgungs- oder Nachschubphase gesetzt werden.'};
+  if((state.azrLocks||[]).some(x=>x.playerIndex===p.index&&x.slot===slot))return {ok:false,msg:'Diese ASTRAL-/Rüstkammer-Zone ist durch Wiederbelebungsapparatur Virus blockiert.'};
   if(p.azr[slot])return {ok:false,msg:'Dieser ASTRAL-/Rüstkammer-Bereich ist belegt.'};
   const bild=p.hand[handIndex],c=dbCard(bild);
   if(!c || !['astral','ruestkammer'].includes(c.deck_bereich))return {ok:false,msg:'Nur ASTRAL- oder Rüstkammer-Karten können hier gesetzt werden.'};
@@ -2751,6 +2798,7 @@ function setFaceDown(state,handIndex,slot){
 function playOpenAzr(state,handIndex,slot){
   const p=active(state);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Karten können hier nur in Versorgungs- oder Nachschubphase ausgespielt werden.'};
+  if((state.azrLocks||[]).some(x=>x.playerIndex===p.index&&x.slot===slot))return {ok:false,msg:'Diese ASTRAL-/Rüstkammer-Zone ist durch Wiederbelebungsapparatur Virus blockiert.'};
   if(p.azr[slot])return {ok:false,msg:'Dieser ASTRAL-/Rüstkammer-Bereich ist belegt.'};
   const bild=p.hand[handIndex],c=dbCard(bild);
   if(!c || !['astral','ruestkammer'].includes(c.deck_bereich))return {ok:false,msg:'Nur ASTRAL- oder Rüstkammer-Karten können hier ausgespielt werden.'};
@@ -2895,6 +2943,8 @@ function playFieldFromHand(state,handIndex,area){
   else if(areaKind==='secondary')state.sharedSecondary=r;
   else p.bezSlots[Number(bezMatch[1])]=r;
   if(areaKind==='secondary' && isNebel(c))armNebelForNextOpponentRound(state,r);
+  if(areaKind==='secondary'&&c?.effekte?.some(e=>e.engine_key==='wiederbelebungsapparatur_virus_lock')){r.effectRoundsRemaining=2;r.effectState=r.effectState||{};r.effectState.durationOwnRounds=true;state.pendingBezEffect={type:'virus_azr_slot',sourcePlayer:p.index};}
+  if(areaKind==='secondary'&&c?.effekte?.some(e=>e.engine_key==='dornenwald_taunt')){r.effectRoundsRemaining=3;r.effectState=r.effectState||{};r.effectState.durationOwnRounds=true;}
 
   const areaLabel=areaKind==='primary'?'Primärbereich':areaKind==='secondary'?'Sekundärbereich':`Bezwingerinnen-Bereich ${Number(bezMatch[1])+1}`;
   log(state,`${p.name} spielt ${c.name} offen in den ${areaLabel}.`);
@@ -2937,6 +2987,8 @@ function moveRevealedFieldCard(state,azrSlot){
     if(secondaryLockedFor(state,p.index))return {ok:false,msg:'Der Sekundärbereich ist für dich derzeit durch Wurzelpeinverschlinger gesperrt.'};
     state.sharedSecondary=r;
     if(isNebel(c))armNebelForNextOpponentRound(state,r);
+    if(c?.effekte?.some(e=>e.engine_key==='wiederbelebungsapparatur_virus_lock')){r.effectRoundsRemaining=2;r.effectState=r.effectState||{};r.effectState.durationOwnRounds=true;state.pendingBezEffect={type:'virus_azr_slot',sourcePlayer:p.index};}
+    if(c?.effekte?.some(e=>e.engine_key==='dornenwald_taunt')){r.effectRoundsRemaining=3;r.effectState=r.effectState||{};r.effectState.durationOwnRounds=true;}
   }
   p.azr[azrSlot]=null;
   state.pendingFieldCard=null;
@@ -3133,6 +3185,7 @@ function discardEquipment(state,bezSlot,kind){
 }
 function reveal(state,slot){
   const p=active(state),r=p.azr[slot];
+  if((state.azrLocks||[]).some(x=>x.playerIndex===p.index&&x.slot===slot))return {ok:false,msg:'Diese gesetzte Karte ist durch Wiederbelebungsapparatur Virus blockiert.'};
   if(!r || !r.faceDown)return {ok:false,msg:'Hier liegt keine verdeckte Karte.'};
   const c=cardData(r);
 
@@ -3208,6 +3261,7 @@ function refugeWonderAvailable(state){
   const p=active(state),r=p.refuge,c=cardData(r);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Wunder können nur in Versorgungs- oder Nachschubphase gewirkt werden.'};
   if(!c?.wunder)return {ok:false,msg:'Diese Zuflucht besitzt kein Wunder.'};
+  if(Number(r.effectState?.wunderunterdrueckungTargetTurn)===Number(p.turnCount))return {ok:false,msg:'Wunderunterdrückung verhindert das Wunder dieser Bezwingerin in dieser Kampfrunde.'};
   if(r.wonderTurn===p.turnCount)return {ok:false,msg:'Diese Zuflucht hat in dieser Kampfrunde bereits ein Wunder gewirkt.'};
   const cost=Number(c.wunder.kosten_ehre||0);
   if((r.honor||0)<cost)return {ok:false,msg:`Für dieses Wunder werden ${cost} Ehre auf der Zuflucht benötigt.`};
@@ -3280,6 +3334,7 @@ function develop(state,kind,slot=null){
   const astralSchildSchaden=Math.max(0,alterMaxAstralSchild-(r.astralShield ?? 0));
 
   const deploymentReadyBeforeDevelopment=r.ready;
+  captureNegatableSnapshot(state,'development',p.index,slot);
   r.honor-=kosten;
   p.development=p.development.filter(x=>x!==dev.bild);
   r.developmentStack.push(dev.bild);
@@ -3369,6 +3424,8 @@ function attackTargets(state,attackerSource){
   if(state.sharedSecondary && state.sharedSecondary.owner===opp.index && hasHeartAttribute(state.sharedSecondary)){
     targets.push({type:'secondary',label:cardData(state.sharedSecondary)?.name||'Sekundärbereich'});
   }
+
+  const dw=activeDornenwald(state);if(dw){const dt=targets.find(t=>t.type==='secondary');if(dt)return [dt];}
 
   const forcedJeanne=jeanneForcedTarget(state,attackerSource);
   const forcedJeanneTarget=forcedJeanne
@@ -3972,6 +4029,7 @@ function beginPhase(state){
   if(phase.id==='supply'||phase.id==='resupply')resolveVoidReturnsAtPhase(state);
   if(phase.id==='supply')releaseMiraDelayLocks(state);
   if(phase.id==='start'){
+    state.azrLocks=(state.azrLocks||[]).filter(x=>state.sharedSecondary&&cardData(state.sharedSecondary)?.effekte?.some(e=>e.engine_key==='wiederbelebungsapparatur_virus_lock')&&Number(state.sharedSecondary.owner)===Number(x.sourceOwner));
     tickBezEffectDurations(state);
     tickFieldDurations(state);
     p.recruitedThisTurn=false;
