@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.86';
+window.G5_BATTLEFIELD_BUILD='1.87';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -1055,8 +1055,10 @@ function renderActions(){
     E().strikelynTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.onclick=()=>{const rr=E().resolveStrikelynTarget(state,t.id);saveRender(rr.msg)};root.appendChild(b)});
     return;
   }
-  if(state.pendingBezEffect && ['exekution_target','zweifache_bestrafung_target','lilous_gabe_target','vengeresse_vergeltung_target','feiertag_target','sprint_angriff_target','auszeichnung_target','aufstieg_target','demoralisierung_target','legionsruestung_search','legionsruestung_equip','neutralisationssiegel_target','system_reset_target','tauschportal_source','tauschportal_destination','zeitlose_unterwerfung_target','strahl_des_vergessens_target','siegel_kampfschwaeche_target','siegel_astralschwaeche_target'].includes(state.pendingBezEffect.type)){
+  if(state.pendingBezEffect && ['virus_azr_slot','begnadete_reflexe_target','exekution_target','zweifache_bestrafung_target','lilous_gabe_target','vengeresse_vergeltung_target','feiertag_target','sprint_angriff_target','auszeichnung_target','aufstieg_target','demoralisierung_target','legionsruestung_search','legionsruestung_equip','neutralisationssiegel_target','system_reset_target','tauschportal_source','tauschportal_destination','zeitlose_unterwerfung_target','strahl_des_vergessens_target','siegel_kampfschwaeche_target','siegel_astralschwaeche_target'].includes(state.pendingBezEffect.type)){
     const labels={
+      virus_azr_slot:'Wiederbelebungsapparatur Virus – ASTRAL-/Rüstkammer-Zone blockieren',
+      begnadete_reflexe_target:'Begnadete Reflexe – eigene Bezwingerin wählen',
       exekution_target:'Exekution – Bezwingerin wählen',
       zweifache_bestrafung_target:'Zweifache Bestrafung – eigene Bezwingerin wählen',
       lilous_gabe_target:`Lilou's Gabe – eigene Bezwingerin wählen`,
@@ -1377,7 +1379,7 @@ function renderActions(){
 
         const field=E().fieldArea(c);
         const mornakAreas=E().mornakAllowedAreas?.(c)||[];
-        const fieldAreas=mornakAreas.includes('secondary')?['primary','secondary']:(field?[field]:[]);
+        const fieldAreas=mornakAreas.includes('bez')?['primary','secondary']:(field?[field]:[]);
         fieldAreas.forEach(area=>{
           const fieldBtn=document.createElement('button');
           fieldBtn.className='primary';

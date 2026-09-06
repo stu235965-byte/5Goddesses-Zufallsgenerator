@@ -2381,10 +2381,21 @@ function startInstantAstralSpell(state,playerIndex,azrSlot){
   return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin für Bis zum bitteren Ende.'};
 }
 
+function virusAzrTargets(state){
+  const out=[];
+  for(const pl of state.players){
+    (pl.azr||[]).forEach((r,i)=>{
+      if((!r||r.faceDown) && !(state.azrLocks||[]).some(x=>Number(x.playerIndex)===Number(pl.index)&&Number(x.slot)===Number(i))){
+        out.push({id:`${pl.index}:${i}`,name:`${pl.name} – AZR ${i+1}${r?' (gesetzt)':' (frei)'}`});
+      }
+    });
+  }
+  return out;
+}
 function rawNewAstralSpellTargets(state){
   const q=state.pendingBezEffect;if(!q)return [];
   const own=state.players[q.sourcePlayer];
-  if(q.type==='virus_azr_slot'){const out=[];for(const pl of state.players)(pl.azr||[]).forEach((r,i)=>{if(!r||r.faceDown)out.push({id:`${pl.index}:${i}`,name:`${pl.name} – AZR ${i+1}${r?' (gesetzt)':' (frei)'}`});});return out;}
+  if(q.type==='virus_azr_slot')return virusAzrTargets(state);
   if(q.type==='wunderunterdrueckung_target'||q.type==='abstieg_target'){const e=state.players[1-q.sourcePlayer];return (e.bezSlots||[]).map((r,i)=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN'&&(q.type!=='abstieg_target'||Number(r.stufe||1)>1)?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);}
   if(q.type==='ueberlegene_kriegsfuehrung_source'||q.type==='begnadete_reflexe_target')return (own.bezSlots||[]).map((r,i)=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN'?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
   if(q.type==='ueberlegene_kriegsfuehrung_dest'){return [0,1].filter(i=>i!==q.sourceSlot).map(i=>({id:String(i),name:own.bezSlots[i]?`Tauschen mit ${cardData(own.bezSlots[i])?.name||'Bezwingerin'}`:`Freies Bezwingerinnenfeld ${i+1}`}));}
@@ -2427,7 +2438,11 @@ function newAstralSpellTargets(state){
 function resolveNewAstralSpellTarget(state,id){
   const q=state.pendingBezEffect;if(!q)return {ok:false,msg:'Keine passende ASTRAL-Auswahl aktiv.'};
   const protection=pendingTargetProtectionReason(state,q,id);if(protection)return {ok:false,msg:protection};
-  if(q.type==='virus_azr_slot'){const [pi,si]=String(id).split(':').map(Number);state.azrLocks=state.azrLocks||[];state.azrLocks.push({playerIndex:pi,slot:si,sourceOwner:q.sourcePlayer,sourceCard:'Wiederbelebungsapparatur Virus'});state.pendingBezEffect=null;return {ok:true,msg:'ASTRAL-/RÜSTKAMMER-Zone durch Virus blockiert.'};}
+  if(q.type==='virus_azr_slot'){
+    const valid=virusAzrTargets(state).some(t=>t.id===String(id));
+    if(!valid)return {ok:false,msg:'Diese ASTRAL-/RÜSTKAMMER-Zone kann nicht durch den Virus blockiert werden.'};
+    const [pi,si]=String(id).split(':').map(Number);state.azrLocks=state.azrLocks||[];state.azrLocks.push({playerIndex:pi,slot:si,sourceOwner:q.sourcePlayer,sourceCard:'Wiederbelebungsapparatur Virus'});state.pendingBezEffect=null;return {ok:true,msg:'ASTRAL-/RÜSTKAMMER-Zone durch Virus blockiert.'};
+  }
   if(q.type==='wunderunterdrueckung_target'){const e=state.players[1-q.sourcePlayer],r=e?.bezSlots?.[Number(id)];if(!r)return {ok:false,msg:'Ungültige gegnerische Bezwingerin.'};r.effectState=r.effectState||{};r.effectState.wunderunterdrueckungTargetTurn=Number(e.turnCount||0)+1;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:'Wunder in der kommenden eigenen KR gesperrt.'};}
   if(q.type==='ueberlegene_kriegsfuehrung_source'){q.type='ueberlegene_kriegsfuehrung_dest';q.sourceSlot=Number(id);return {ok:true,pending:true,msg:'Wähle das andere Bezwingerinnenfeld.'};}
   if(q.type==='ueberlegene_kriegsfuehrung_dest'){const p=state.players[q.sourcePlayer],a=q.sourceSlot,b=Number(id);if(a===b||!p.bezSlots[a])return {ok:false,msg:'Ungültiger Positionswechsel.'};ensureEquipmentState(p);[p.bezSlots[a],p.bezSlots[b]]=[p.bezSlots[b],p.bezSlots[a]];[p.equipment[a],p.equipment[b]]=[p.equipment[b],p.equipment[a]];discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:'Bezwingerinnen-Feldpositionen samt Ausrüstung wurden gewechselt.'};}
@@ -3036,6 +3051,7 @@ function playFieldFromHand(state,handIndex,area){
   const bezMatch=String(area||'').match(/^bez:(0|1)$/);
   const areaKind=bezMatch?'bez':area;
   if(!c || !allowed.includes(areaKind) || !['primary','secondary','bez'].includes(areaKind))return {ok:false,msg:'Diese Karte gehört nicht in diesen Bereich.'};
+  if(c?.effekte?.some(e=>e.engine_key==='wiederbelebungsapparatur_virus_lock') && !virusAzrTargets(state).length)return {ok:false,msg:'Wiederbelebungsapparatur Virus benötigt eine freie oder verdeckt belegte ASTRAL-/Rüstkammer-Zone als Ziel.'};
 
   if(areaKind==='primary'){
     // Eine eigene Primärkarte darf regelkonform durch die neu ausgespielte Primärkarte ersetzt werden.
@@ -3099,6 +3115,7 @@ function moveRevealedFieldCard(state,azrSlot){
   if(!r || r.faceDown)return {ok:false,msg:'Hier liegt keine aufgedeckte Karte.'};
   const c=cardData(r),area=fieldArea(c);
   if(!area)return {ok:false,msg:'Diese Karte gehört nicht in Primär- oder Sekundärbereich.'};
+  if(c?.effekte?.some(e=>e.engine_key==='wiederbelebungsapparatur_virus_lock') && !virusAzrTargets(state).length)return {ok:false,msg:'Wiederbelebungsapparatur Virus benötigt eine freie oder verdeckt belegte ASTRAL-/Rüstkammer-Zone als Ziel.'};
 
   if(area==='primary'){
     if(p.primary){const old=p.primary;discardRuntime(p,old);log(state,`${cardData(old)?.name||'Die bisherige Primärkarte'} wird durch ${c?.name||'die neue Primärkarte'} ersetzt und abgelegt.`);}
@@ -4236,6 +4253,16 @@ function advancePhase(state){
   }
   if(state.pendingBezEffect){
     return {ok:false,msg:'Die aktuelle Bezwingerinnen-Effektauswahl muss zuerst abgeschlossen werden.'};
+  }
+
+  // Zeitsprung muss die VP vollständig überspringen. Diese zusätzliche Prüfung
+  // fängt auch geladene Altstände ab, die bereits direkt in der VP stehen.
+  if(phase.id==='supply' && Number(p.skipNextSupplyCount||0)>0){
+    p.skipNextSupplyCount--;
+    log(state,`${p.name}s Versorgungsphase wird durch Zeitsprung übersprungen.`);
+    state.phaseIndex=5;
+    beginPhase(state);
+    return {ok:true,msg:'Versorgungsphase durch Zeitsprung übersprungen.'};
   }
 
   if(phase.id==='draw'){
