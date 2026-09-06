@@ -3634,14 +3634,19 @@ function prepareAttack(state,attackerSource,target,attackType){
 function defenderFaceDownSlots(state){
   if(!state.attack)return [];
   const opp=opponent(state);
-  return opp.azr.map((r,i)=>r?.faceDown?i:null).filter(i=>i!==null);
+  return opp.azr.map((r,i)=>{
+    if(!r?.faceDown)return null;
+    const c=cardData(r);
+    return hasInstinct(c) && (isInstantAstralSpell(c)||isInstantRuestkammerItem(c)) ? i : null;
+  }).filter(i=>i!==null);
 }
 function revealDefenderCard(state,slot){
   if(currentPhase(state).id!=='rush' || !state.attack)return {ok:false,msg:'Es wartet kein Angriff auf die Reaktion des Verteidigers.'};
   const opp=opponent(state),r=opp.azr[slot];
   if(!r || !r.faceDown)return {ok:false,msg:'In diesem AZR-Feld liegt keine verdeckte Karte.'};
-  r.faceDown=false;
   const c=cardData(r);
+  if(!hasInstinct(c) || !(isInstantAstralSpell(c)||isInstantRuestkammerItem(c)))return {ok:false,msg:'Diese verdeckte Karte besitzt keinen in diesem Reaktionsfenster aktivierbaren Instinkt.'};
+  r.faceDown=false;
   let result={ok:true};
   if(isInstantAstralSpell(c))result=startInstantAstralSpell(state,opp.index,slot);
   else if(isInstantRuestkammerItem(c))result=startInstantRuestkammerItem(state,opp.index,slot);
