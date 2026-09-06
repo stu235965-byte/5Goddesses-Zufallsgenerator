@@ -1161,13 +1161,21 @@ function resolveThalZirisStage1(state,targetId,delta){
  return {ok:true,msg:`Kampfrundendauer auf ${t.r.effectRoundsRemaining} geändert.`};
 }
 function isMornak(c){return c?.name==='Mornak - Brut'}
+function isBezwingerinRuntime(r){return cardData(r)?.deck_bereich==='bezwingerinnen'}
 function isMornakCard(c){return isMornak(c)||c?.effekte?.some?.(e=>e.engine_key==='mornak_brut')}
-function mornakAllowedAreas(c){return isMornakCard(c)?['primary','secondary','azr']:(fieldArea(c)?[fieldArea(c)]:['azr'])}
+function mornakAllowedAreas(c){return isMornakCard(c)?['primary','secondary','bez']:(fieldArea(c)?[fieldArea(c)]:['azr'])}
+function isUeberwachungssektor(c){return c?.name==='Überwachungssektor'||c?.effekte?.some?.(e=>e.engine_key==='ueberwachungssektor')}
+function surveillanceRevealsAzr(state,playerIndex){
+  const s=state?.sharedSecondary;if(!s||s.faceDown||s.effectDisabled)return false;
+  const c=cardData(s);if(!isUeberwachungssektor(c))return false;
+  const controller=Number(s.controllerIndex??s.ownerIndex??s.owner);
+  return Number.isInteger(controller)&&controller!==Number(playerIndex);
+}
 function ownMornakLocations(state,playerIndex){
  const p=state.players[playerIndex],out=[];
  if(p.primary && (p.primary.controllerIndex??p.primary.ownerIndex??p.primary.owner)===playerIndex && isMornak(cardData(p.primary)))out.push({zone:'primary',r:p.primary});
  if(state.sharedSecondary && (state.sharedSecondary.controllerIndex??state.sharedSecondary.ownerIndex??state.sharedSecondary.owner)===playerIndex && isMornak(cardData(state.sharedSecondary)))out.push({zone:'secondary',r:state.sharedSecondary});
- (p.azr||[]).forEach((r,i)=>{if(r&&isMornak(cardData(r))&&(r.controllerIndex??playerIndex)===playerIndex)out.push({zone:'azr',slot:i,r});});
+ (p.bezSlots||[]).forEach((r,i)=>{if(r&&isMornak(cardData(r))&&(r.controllerIndex??playerIndex)===playerIndex)out.push({zone:'bez',slot:i,r});});
  for(const op of state.players)(op.azr||[]).forEach((r,i)=>{if(r&&isMornak(cardData(r))&&r.controllerIndex===playerIndex&&!out.some(x=>x.r===r))out.push({zone:'enemy_azr',hostPlayer:op.index,slot:i,r});});
  return out;
 }
@@ -1175,7 +1183,7 @@ function mornakTokenTargets(state,controllerIndex,allowEnemyAzr=false){
  const p=state.players[controllerIndex],out=[];
  if(!p.primary)out.push({id:'primary',name:'Eigener PRIMÄR-Bereich'});
  if(!state.sharedSecondary)out.push({id:'secondary',name:'Gemeinsamer SEKUNDÄR-Bereich'});
- (p.azr||[]).forEach((r,i)=>{if(!r)out.push({id:`azr:${i}`,name:`Eigene ASTRAL-/Rüstkammer-Zone ${i+1}`})});
+ (p.bezSlots||[]).forEach((r,i)=>{if(!r)out.push({id:`bez:${i}`,name:`Eigener freier Bezwingerinnen-Bereich ${i+1}`})});
  if(allowEnemyAzr){
    const e=state.players[1-controllerIndex];
    (e.azr||[]).forEach((r,i)=>{if(!r)out.push({id:`enemyazr:${i}`,name:`Gegnerische ASTRAL-/Rüstkammer-Zone ${i+1} (unter deiner Kontrolle)`})});
@@ -1185,7 +1193,7 @@ function mornakTokenTargets(state,controllerIndex,allowEnemyAzr=false){
 function createMornakTokenRuntime(state,controllerIndex){
  const c=window.GODDESSES_DB?.karten?.find(x=>x.name==='Mornak - Brut');if(!c)return null;
  const r=makeRuntimeCard(c.bild,controllerIndex,state.players[controllerIndex].turnCount);
- r.faceDown=false;r.isToken=true;r.controllerIndex=controllerIndex;r.ownerIndex=controllerIndex;r.ready=true;
+ r.faceDown=false;r.isToken=true;r.controllerIndex=controllerIndex;r.ownerIndex=controllerIndex;r.ready=false;
  return r;
 }
 function resolveMornakTokenPlacement(state,id){
@@ -1194,7 +1202,7 @@ function resolveMornakTokenPlacement(state,id){
  const valid=mornakTokenTargets(state,ctrl,!!pend.allowEnemyAzr).some(t=>t.id===id);if(!valid)return {ok:false,msg:'Dieser Bereich ist nicht mehr frei.'};
  if(id==='primary')p.primary=r;
  else if(id==='secondary')state.sharedSecondary=r;
- else if(String(id).startsWith('azr:'))p.azr[Number(String(id).split(':')[1])]=r;
+ else if(String(id).startsWith('bez:'))p.bezSlots[Number(String(id).split(':')[1])]=r;
  else if(String(id).startsWith('enemyazr:'))state.players[1-ctrl].azr[Number(String(id).split(':')[1])]=r;
  else return {ok:false,msg:'Ungültiger Bereich.'};
  state.pendingBezEffect=null;log(state,`Mornak-Brut TOKEN wurde in ${id} erzeugt.`);
@@ -2556,8 +2564,9 @@ function playOpenAzr(state,handIndex,slot){
     return {ok:false,msg:`${c.kartentyp} darf offen nicht in der AZR liegen. Spiele die Karte direkt an eine Bezwingerin oder setze sie verdeckt.`};
   }
   const area=fieldArea(c);
-  if(area && !isMornakCard(c)){
-    return {ok:false,msg:`Diese Karte gehört offen in den ${area==='primary'?'Primär':'Sekundär'}bereich. Alternativ kannst du sie verdeckt in die AZR setzen.`};
+  if(area){
+    const extra=isMornakCard(c)?' Mornak-Brut darf stattdessen auch in einen freien Bezwingerinnen-Bereich gespielt werden.':'';
+    return {ok:false,msg:`Diese Karte gehört offen in den ${area==='primary'?'Primär':'Sekundär'}bereich. Alternativ kannst du sie verdeckt in die AZR setzen.${extra}`};
   }
   p.hand.splice(handIndex,1);
   const r=makeRuntimeCard(bild,p.index,p.turnCount);
@@ -2666,13 +2675,18 @@ function playFieldFromHand(state,handIndex,area){
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Primär- und Sekundärkarten können nur in Versorgungs- oder Nachschubphase ausgespielt werden.'};
   const bild=p.hand[handIndex],c=dbCard(bild);
   const allowed=mornakAllowedAreas(c);
-  if(!c || !allowed.includes(area) || !['primary','secondary'].includes(area))return {ok:false,msg:'Diese Karte gehört nicht in diesen Bereich.'};
+  const bezMatch=String(area||'').match(/^bez:(0|1)$/);
+  const areaKind=bezMatch?'bez':area;
+  if(!c || !allowed.includes(areaKind) || !['primary','secondary','bez'].includes(areaKind))return {ok:false,msg:'Diese Karte gehört nicht in diesen Bereich.'};
 
-  if(area==='primary'){
+  if(areaKind==='primary'){
     if(p.primary)return {ok:false,msg:'Dein Primärbereich ist bereits belegt.'};
-  }else{
+  }else if(areaKind==='secondary'){
     if(state.sharedSecondary)return {ok:false,msg:'Der gemeinsame Sekundärbereich ist bereits belegt.'};
     if(secondaryLockedFor(state,p.index))return {ok:false,msg:'Der Sekundärbereich ist für dich bis zum Beginn der nächsten Versorgungsphase des Wurzelpeinverschlinger-Besitzers gesperrt.'};
+  }else{
+    const slot=Number(bezMatch[1]);
+    if(p.bezSlots[slot])return {ok:false,msg:'Dieser Bezwingerinnenbereich ist bereits belegt.'};
   }
 
   p.hand.splice(handIndex,1);
@@ -2682,32 +2696,36 @@ function playFieldFromHand(state,handIndex,area){
 
   if(c?.effekte?.some(e=>e.engine_key==='ruth_shop'))r.effectUsesRemaining=3;
   if(c?.effekte?.some(e=>e.engine_key==='kiki_counter_dodge')){r.effectRoundsRemaining=Number(c.effekt_dauer_kr||3);r.effectDisabled=false;r.effectUsedTurn=null;r.effectState=r.effectState||{};}
-  if(area==='primary')p.primary=r;
-  else state.sharedSecondary=r;
+  if(areaKind==='primary')p.primary=r;
+  else if(areaKind==='secondary')state.sharedSecondary=r;
+  else p.bezSlots[Number(bezMatch[1])]=r;
 
-  log(state,`${p.name} spielt ${c.name} offen in den ${area==='primary'?'Primär':'Sekundär'}bereich.`);
+  const areaLabel=areaKind==='primary'?'Primärbereich':areaKind==='secondary'?'Sekundärbereich':`Bezwingerinnen-Bereich ${Number(bezMatch[1])+1}`;
+  log(state,`${p.name} spielt ${c.name} offen in den ${areaLabel}.`);
   if(c?.effekte?.some(e=>e.engine_key==='wurzelpeinverschlinger'))resolveWurzelpeinverschlingerOnPlay(state,p.index,r);
   return {ok:true};
 }
 function moveMornakFromAzr(state,azrSlot,area){
   const p=active(state),r=p.azr[azrSlot],c=cardData(r);
   if(!r || r.faceDown || !isMornakCard(c))return {ok:false,msg:'Hier liegt keine aufgedeckte Mornak-Brut.'};
-  if(!['primary','secondary','azr'].includes(area))return {ok:false,msg:'Ungültiger Bereich für Mornak-Brut.'};
-  if(area==='azr'){
-    state.pendingFieldCard=null;
-    log(state,`${p.name} lässt ${c.name} offen in der ASTRAL-/Rüstkammer-Zone.`);
-    return {ok:true,msg:'Mornak-Brut bleibt offen in der ASTRAL-/Rüstkammer-Zone.'};
-  }
-  if(area==='primary'){
+  const bezMatch=String(area||'').match(/^bez:(0|1)$/);
+  const areaKind=bezMatch?'bez':area;
+  if(!['primary','secondary','bez'].includes(areaKind))return {ok:false,msg:'Ungültiger Bereich für Mornak-Brut.'};
+  if(areaKind==='primary'){
     if(p.primary)return {ok:false,msg:'Dein Primärbereich ist bereits belegt.'};
     p.primary=r;
-  }else{
+  }else if(areaKind==='secondary'){
     if(state.sharedSecondary)return {ok:false,msg:'Der gemeinsame Sekundärbereich ist bereits belegt.'};
     state.sharedSecondary=r;
+  }else{
+    const slot=Number(bezMatch[1]);
+    if(p.bezSlots[slot])return {ok:false,msg:'Dieser Bezwingerinnenbereich ist bereits belegt.'};
+    p.bezSlots[slot]=r;
   }
   p.azr[azrSlot]=null;state.pendingFieldCard=null;
-  log(state,`${p.name} verschiebt ${c.name} in den ${area==='primary'?'Primär':'Sekundär'}bereich.`);
-  return {ok:true,msg:`Mornak-Brut in den ${area==='primary'?'Primär':'Sekundär'}bereich verschoben.`};
+  const areaLabel=areaKind==='primary'?'Primärbereich':areaKind==='secondary'?'Sekundärbereich':`Bezwingerinnen-Bereich ${Number(bezMatch[1])+1}`;
+  log(state,`${p.name} verschiebt ${c.name} in den ${areaLabel}.`);
+  return {ok:true,msg:`Mornak-Brut in den ${areaLabel} verschoben.`};
 }
 function moveRevealedFieldCard(state,azrSlot){
   const p=active(state),r=p.azr[azrSlot];
@@ -2876,7 +2894,7 @@ function equipFromHand(state,handIndex,bezSlot,kind){
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Ausrüstungen können nur in Versorgungs- oder Nachschubphase angelegt werden.'};
   const bild=p.hand[handIndex],c=dbCard(bild);
   if(!c || (equipmentKind(c)!==kind && !(kind==='shield'&&equipmentKind(c)==='weapon'&&canUseWeaponAsShield(p,bezSlot,c))))return {ok:false,msg:'Diese Handkarte gehört nicht in diesen Ausrüstungsbereich.'};
-  if(!p.bezSlots[bezSlot])return {ok:false,msg:'Hier liegt keine Bezwingerin, an die die Ausrüstung angelegt werden kann.'};
+  if(!p.bezSlots[bezSlot]||!isBezwingerinRuntime(p.bezSlots[bezSlot]))return {ok:false,msg:'Hier liegt keine Bezwingerin, an die die Ausrüstung angelegt werden kann.'};
 
   const r=makeRuntimeCard(bild,p.index,p.turnCount);
   const result=equipRuntimeToBez(state,p,r,bezSlot,kind);
@@ -2891,6 +2909,7 @@ function equipFromAzr(state,azrSlot,bezSlot,kind){
   if(!r || r.faceDown)return {ok:false,msg:'Die Ausrüstung muss zuerst aufgedeckt werden.'};
   const c=cardData(r);
   if(!c || (equipmentKind(c)!==kind && !(kind==='shield'&&equipmentKind(c)==='weapon'&&canUseWeaponAsShield(p,bezSlot,c))))return {ok:false,msg:'Diese Karte gehört nicht in diesen Ausrüstungsbereich.'};
+  if(!p.bezSlots[bezSlot]||!isBezwingerinRuntime(p.bezSlots[bezSlot]))return {ok:false,msg:'Hier liegt keine Bezwingerin, an die die Ausrüstung angelegt werden kann.'};
 
   const result=equipRuntimeToBez(state,p,r,bezSlot,kind);
   if(result.ok){
@@ -2936,7 +2955,7 @@ function reveal(state,slot){
     r.faceDown=false;
     if(isMornakCard(c)){
       state.pendingFieldCard={owner:p.index,azrSlot:slot,area:'mornak_choice'};
-      log(state,`${p.name} deckt ${c.name} auf. Wähle PRIMÄR, SEKUNDÄR oder lasse sie offen in der AZR.`);
+      log(state,`${p.name} deckt ${c.name} auf. Wähle PRIMÄR, SEKUNDÄR oder einen freien Bezwingerinnen-Bereich.`);
       return {ok:true,needsFieldPlacement:true,area:'mornak_choice',msg:'Mornak-Brut: Zielbereich wählen.'};
     }
     state.pendingFieldCard={owner:p.index,azrSlot:slot,area};
@@ -3340,11 +3359,15 @@ function applyChosenShieldSource(state,packet,choice){
     log(state,`Mornak-Brut übernimmt ${loss} Schaden für Nemesis.`);
     if((loc.r.hearts||0)<=0){
       let target=null;
-      if(loc.zone==='primary')target={playerIndex:packet.playerIndex,zone:'primary',r:loc.r};
-      else if(loc.zone==='secondary')target={playerIndex:packet.playerIndex,zone:'secondary',r:loc.r};
-      else if(loc.zone==='azr')target={playerIndex:packet.playerIndex,zone:'azr',slot:loc.slot,r:loc.r};
-      else if(loc.zone==='enemy_azr')target={playerIndex:loc.hostPlayer,zone:'azr',slot:loc.slot,r:loc.r};
-      if(target)destroyFieldRuntime(state,target,'durch umgeleiteten Schaden zerstört');
+      if(loc.zone==='bez'){
+        killIfNeeded(state,packet.playerIndex,'bez',loc.slot);
+      }else{
+        if(loc.zone==='primary')target={playerIndex:packet.playerIndex,zone:'primary',r:loc.r};
+        else if(loc.zone==='secondary')target={playerIndex:packet.playerIndex,zone:'secondary',r:loc.r};
+        else if(loc.zone==='azr')target={playerIndex:packet.playerIndex,zone:'azr',slot:loc.slot,r:loc.r};
+        else if(loc.zone==='enemy_azr')target={playerIndex:loc.hostPlayer,zone:'azr',slot:loc.slot,r:loc.r};
+        if(target)destroyFieldRuntime(state,target,'durch umgeleiteten Schaden zerstört');
+      }
     }
     return {ok:true,loss};
   }else if(choice.source==='equipment'){
@@ -3928,7 +3951,7 @@ window.G5Engine={
   availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,destroyedQueenProtectionActive,prepareAttack,
   refugeWonderAvailable,activateRefugeWonder,resolveWonderDraw,chooseRefugeStage2Bonus,
   bezEffectInfo,activateBezEffect,thalZirisTargets,resolveThalZiris,thalZirisStage1Targets,resolveThalZirisStage1,
-  mornakTokenTargets,resolveMornakTokenPlacement,startNemesisWonder,cancelPendingBezEffect,
+  mornakTokenTargets,resolveMornakTokenPlacement,startNemesisWonder,cancelPendingBezEffect,surveillanceRevealsAzr,
   checkedEffectTargets,resolveCheckedEffectTarget,startTalisia1Wonder,jeanneForcedTarget,
   startZahiraWonder,startCassandraWonder,meniaDaggerTargets,resolveMeniaDagger,
   startPsiloWonder,psiloTargets,resolvePsiloTarget,keylaSearchTargets,resolveKeylaSearch,

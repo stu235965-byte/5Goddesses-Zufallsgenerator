@@ -1,20 +1,22 @@
-5Goddesses PWA v1.75 – Datenpflege / Konsistenz
+5Goddesses PWA v1.76 – Überwachungssektor + Mornak-Brut
 
 Geänderte Dateien dieses Updates:
 - index.html
 - battlefield.js
+- game-engine.js
 - service-worker.js
+- 5goddesses-datenbank.js
+- 5goddesses-datenbank.json
 - karten_daten.json
 - karten_daten.csv
-- datenmodell_schema.json
 - README.txt
 - README_UPDATE.txt
-- README_v1.72.txt
-- README_v1.73.txt
-- README_v1.74.txt
-- README_v1.75.txt
+- README_v1.76.txt
+- tests/test_v1_76.js
 
-Bereinigt wurden ausschließlich Versions-/Dokumentations- und Datenkonsistenzprobleme. Die Karten- und Gefechtslogik bleibt gegenüber v1.74 unverändert.
+Kernänderungen:
+- Überwachungssektor vollständig implementiert, einschließlich rein visueller Aufdeckung bei weiterhin regeltechnischem faceDown-Status.
+- Mornak - Brut auf den Originalkartentext korrigiert: freier Bezwingerinnen-Bereich statt eigener AZR; Token-, Aufdeck-, Schadensumleitungs- und UI-Logik entsprechend angepasst.
 
-Sichtbare Version: v1.75
-Service Worker Cache: 5goddesses-pwa-v86
+Sichtbare Version: v1.76
+Service Worker Cache: 5goddesses-pwa-v87

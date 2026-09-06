@@ -3125,7 +3125,7 @@
       "stufe": 1,
       "klasse": null,
       "bereich": "Sekundär",
-      "untertyp": null,
+      "untertyp": "Stadt",
       "material": null,
       "nebenattribute": [
         "Stadt"
@@ -3137,8 +3137,21 @@
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "permanent",
+          "engine_key": "ueberwachungssektor",
+          "reveal_opponent_set_azr": true,
+          "rules_still_face_down": true,
+          "applies_to_future_set_cards": true
+        }
+      ],
+      "tags": [
+        "stadt",
+        "ueberwachungssektor"
+      ],
+      "effekt_symbol": "permanent",
+      "effekt_text": "Alle vom gegenüberliegenden Spieler in der ASTRAL/RÜSTKAMMER-Zone verdeckt gesetzten Karten werden aufgedeckt, gelten jedoch weiterhin als gesetzt und verhalten sich regeltechnisch wie verdeckte Karten. Gilt auch für später gesetzte Karten."
     },
     {
       "id": "1.05-23-32-26ae9beb",
@@ -3200,7 +3213,7 @@
           "redirect_nemesis_damage": true,
           "alternate_areas": [
             "secondary",
-            "azr"
+            "bez"
           ]
         }
       ],
@@ -3208,7 +3221,7 @@
         "brut"
       ],
       "effekt_symbol": "permanent",
-      "effekt_text": "Schaden, der „Geißel der Galaxie Nemesis“ zugefügt wird, kann auf diese Karte umgeleitet werden. Überschüssiger Schaden wird „Geißel der Galaxie Nemesis“ zugefügt. Du kannst diese Karte auch im SEKUNDÄR- oder in einem freien ASTRAL-Rüstkammer-Bereich spielen, falls möglich.",
+      "effekt_text": "Schaden, der „Geißel der Galaxie Nemesis“ zugefügt wird, kann auf diese Karte umgeleitet werden. Überschüssiger Schaden wird „Geißel der Galaxie Nemesis“ zugefügt. Du kannst diese Karte auch im SEKUNDÄR- oder in einem freien Bezwingerinnen-Bereich spielen, falls möglich.",
       "kreatur": true
     },
     {

@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.75';
+window.G5_BATTLEFIELD_BUILD='1.76';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -388,11 +388,14 @@ function runtimeCountersHtml(r){
   return parts.length?`<div class="runtime-counters">${parts.join('')}</div>`:'';
 }
 
-function runtimeCardHtml(r,{hidden=false,small=false,playerIndex=null,bezSlot=null}={}){
+function runtimeCardHtml(r,{hidden=false,small=false,playerIndex=null,bezSlot=null,revealSet=false}={}){
   if(!r)return '<div class="board-empty">Frei</div>';
   const c=E().cardData(r);
-  if(hidden || r.faceDown){
+  if(hidden || (r.faceDown&&!revealSet)){
     return `<div class="board-card back ${small?'small':''}"><img class="real-card-back" src="icons/kartenrueckseite.png" alt="Kartenrückseite"></div>`;
+  }
+  if(r.faceDown&&revealSet){
+    return `<div class="board-card exposed-set ${small?'small':''}"><img src="${esc(c?.bild||r.bild)}" alt="${esc(c?.name||'Aufgedeckte gesetzte Karte')}"><div class="board-card-meta"><strong>${esc(c?.name||'Karte')}</strong><em>AUFGEDECKT · REGELTECHNISCH GESETZT</em></div></div>`;
   }
   const isRefuge=c?.deck_bereich==='zuflucht'||String(c?.kartentyp||'').toLowerCase()==='zuflucht';
   const deploymentDelayApplies=!isRefuge && c?.herzen!==null && c?.herzen!==undefined;
@@ -463,7 +466,8 @@ function playerBoardHtml(p,isActive,isOpponent){
   const stacks=p.stacks||{bezwingerinnen:[],astral:[],ruestkammer:[]};
   const safePlayer={...p,azr:azrList,bezSlots,hand,discard,development,stacks,equipment:eq};
 
-  const azr=azrList.map((r,i)=>`<button class="board-slot azr-slot" data-azr="${i}" ${(isActive||cardPreviewMode)?'':'disabled'}>${runtimeCardHtml(r,{hidden:isOpponent&&r?.faceDown})}<span class="slot-label">AZR ${i+1}</span></button>`).join('');
+  const surveillanceReveal=!!E().surveillanceRevealsAzr?.(state,p.index);
+  const azr=azrList.map((r,i)=>{const revealSet=!!(r?.faceDown&&surveillanceReveal);return `<button class="board-slot azr-slot" data-azr="${i}" ${(isActive||cardPreviewMode)?'':'disabled'}>${runtimeCardHtml(r,{hidden:isOpponent&&r?.faceDown&&!revealSet,revealSet})}<span class="slot-label">AZR ${i+1}${revealSet?' · SICHTBAR':''}</span></button>`}).join('');
   const oppClass=isOpponent?' mirrored':'';
 
   return `<div class="board-inner${oppClass}">
@@ -558,7 +562,8 @@ function previewCard(runtime,ownerIndex,{forceBack=false}={}){
   const overlay=ensureGameCardPreview();
   overlay.hidden=false;
   const activeIndex=state.activePlayer;
-  const hiddenFromViewer=forceBack || (!!runtime.faceDown && ownerIndex!==activeIndex);
+  const surveillanceReveal=!!runtime.faceDown&&!!E().surveillanceRevealsAzr?.(state,ownerIndex);
+  const hiddenFromViewer=forceBack || (!!runtime.faceDown && ownerIndex!==activeIndex && !surveillanceReveal);
   const c=E().cardData(runtime);
   const img=overlay.querySelector('#gameCardPreviewImage');
   const empty=overlay.querySelector('#gameCardPreviewEmpty');
@@ -640,7 +645,8 @@ function previewRuntimeFromBoardElement(target){
   if(azr&&player){
     const slot=Number(azr.dataset.azr);
     const runtime=player.azr?.[slot]||null;
-    return {runtime,ownerIndex:player.index,forceBack:inOpp&&!!runtime?.faceDown};
+    const revealSet=!!runtime?.faceDown&&!!E().surveillanceRevealsAzr?.(state,player.index);
+    return {runtime,ownerIndex:player.index,forceBack:inOpp&&!!runtime?.faceDown&&!revealSet};
   }
 
   const equip=target.closest('[data-equip]');
@@ -687,7 +693,7 @@ function wirePreviewTargets(){
   bind('#opponentBoard [data-primary-target]',opp.primary,opp.index);
   bind('#sharedSecondaryZone [data-secondary-target]',state.sharedSecondary,state.sharedSecondary?.owner);
   own.azr.forEach((r,i)=>bind(`#playerBoard [data-azr="${i}"]`,r,own.index));
-  opp.azr.forEach((r,i)=>bind(`#opponentBoard [data-azr="${i}"]`,r,opp.index,{forceBack:!!r?.faceDown}));
+  opp.azr.forEach((r,i)=>bind(`#opponentBoard [data-azr="${i}"]`,r,opp.index,{forceBack:!!r?.faceDown&&!E().surveillanceRevealsAzr?.(state,opp.index)}));
   (own.equipment||[]).forEach((eq,bi)=>Object.entries(eq||{}).forEach(([kind,r])=>bind(`#playerBoard [data-equip="${kind}"][data-equip-bez="${bi}"]`,r,own.index)));
   (opp.equipment||[]).forEach((eq,bi)=>Object.entries(eq||{}).forEach(([kind,r])=>bind(`#opponentBoard [data-equip="${kind}"][data-equip-bez="${bi}"]`,r,opp.index)));
 }
@@ -1180,11 +1186,11 @@ function renderActions(){
       const r=p.azr[pending.azrSlot];
       if(pending.area==='mornak_choice'){
         const info=document.createElement('span');
-        info.textContent='Mornak-Brut ist aufgedeckt. Wähle PRIMÄR, SEKUNDÄR oder lasse sie offen in dieser AZR.';
+        info.textContent='Mornak-Brut ist aufgedeckt. Wähle PRIMÄR, SEKUNDÄR oder einen freien Bezwingerinnen-Bereich.';
         root.appendChild(info);
-        [['primary','PRIMÄR'],['secondary','SEKUNDÄR'],['azr','In AZR lassen']].forEach(([area,label])=>{
-          const b=document.createElement('button');b.className='primary';b.textContent=label;
-          b.disabled=area==='primary'?!!p.primary:area==='secondary'?!!state.sharedSecondary:false;
+        const choices=[['primary','PRIMÄR',!!p.primary],['secondary','SEKUNDÄR',!!state.sharedSecondary],['bez:0','Bezwingerinnen-Bereich 1',!!p.bezSlots[0]],['bez:1','Bezwingerinnen-Bereich 2',!!p.bezSlots[1]]];
+        choices.forEach(([area,label,disabled])=>{
+          const b=document.createElement('button');b.className='primary';b.textContent=label;b.disabled=!!disabled;
           b.addEventListener('click',()=>saveRender(E().moveMornakFromAzr(state,pending.azrSlot,area).msg));
           root.appendChild(b);
         });
@@ -1324,7 +1330,7 @@ function renderActions(){
           [0,1].forEach(bezSlot=>{
             const b=document.createElement('button');
             b.textContent=`${c.kartentyp} an Bezwingerin ${bezSlot+1} anlegen`;
-            b.disabled=!p.bezSlots[bezSlot];
+            b.disabled=!p.bezSlots[bezSlot] || E().cardData(p.bezSlots[bezSlot])?.deck_bereich!=='bezwingerinnen';
             b.addEventListener('click',()=>{
               let r=E().equipFromHand(state,selectedHandIndex,bezSlot,eqKind);
               if(r.ok){
@@ -1353,6 +1359,21 @@ function renderActions(){
           root.appendChild(fieldBtn);
         });
 
+        if(mornakAreas.includes('bez')){
+          [0,1].forEach(bezSlot=>{
+            const bezBtn=document.createElement('button');
+            bezBtn.className='primary';
+            bezBtn.textContent=`Offen in freien Bezwingerinnen-Bereich ${bezSlot+1} spielen`;
+            bezBtn.disabled=!!p.bezSlots[bezSlot];
+            bezBtn.addEventListener('click',()=>{
+              const r=E().playFieldFromHand(state,selectedHandIndex,`bez:${bezSlot}`);
+              if(r.ok)selectedHandIndex=null;
+              saveRender(r.msg||'Mornak-Brut ausgespielt.');
+            });
+            root.appendChild(bezBtn);
+          });
+        }
+
         [0,1,2].forEach(slot=>{
           const hiddenBtn=document.createElement('button');
           hiddenBtn.textContent=`Verdeckt in AZR ${slot+1}`;
@@ -1364,7 +1385,7 @@ function renderActions(){
           });
           root.appendChild(hiddenBtn);
 
-          if(!eqKind && (!field || mornakAreas.includes('azr'))){
+          if(!eqKind && !field){
             const openBtn=document.createElement('button');
             openBtn.textContent=`Offen in AZR ${slot+1}`;
             openBtn.disabled=!!p.azr[slot];
@@ -1382,7 +1403,7 @@ function renderActions(){
         note.textContent=eqKind
           ?'Ausrüstungen werden offen direkt an eine Bezwingerin angelegt. In der AZR dürfen sie nur verdeckt gesetzt werden.'
           :mornakAreas.includes('secondary')
-            ?'Mornak-Brut darf offen in PRIMÄR, SEKUNDÄR oder eine freie eigene ASTRAL-/Rüstkammer-Zone gespielt werden.'
+            ?'Mornak-Brut darf offen in PRIMÄR, SEKUNDÄR oder einen freien eigenen Bezwingerinnen-Bereich gespielt werden.'
           :field
             ?`Diese Karte gehört offen in den ${field==='primary'?'Primär':'Sekundär'}bereich. Alternativ darf sie verdeckt in die AZR gesetzt werden.`
             :'Diese Karte kann offen oder verdeckt in die AZR gespielt werden. Individuelle Karteneffekte folgen später.';
