@@ -19,14 +19,10 @@ function datenbank(){return window.GODDESSES_DB?.karten||[]}
 function kartenInBereich(b){return datenbank().filter(k=>k.deck_bereich===b)}
 function istImPool(k){return ausgewaehlt.has(k.bild)}
 const GESPERRTE_GENERATORKARTEN=new Set([
-  'Genova Toshi',
-  'Strikelyn',
-  'Mantel der Stille Dunkelglanz'
+  'Genova Toshi'
 ]);
 function istGeneratorFreigegeben(k){
-  return !!k &&
-    !GESPERRTE_GENERATORKARTEN.has(k.name) &&
-    !/\bStrikelyn\b/i.test(k.name||'');
+  return !!k && !GESPERRTE_GENERATORKARTEN.has(k.name);
 }
 function istImAktivenGeneratorPool(k){return istImPool(k) && istGeneratorFreigegeben(k)}
 function mischen(a){

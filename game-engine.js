@@ -169,6 +169,84 @@ function equipmentKind(c){
   return EQUIPMENT_TYPE_TO_SLOT[c.kartentyp]||null;
 }
 function isEquipmentCard(c){return !!equipmentKind(c)}
+function sourceTargetCategory(c){
+  const deck=String(c?.deck_bereich||'').toLowerCase();
+  const type=String(c?.kartentyp||'').toLowerCase();
+  if(deck==='astral' && type==='astral-spruch')return 'astral_spell';
+  if(deck==='astral' && type==='astral-gebot')return 'astral_gebot';
+  if(deck==='ruestkammer' && type==='gegenstand')return 'ruestkammer_item';
+  return null;
+}
+function targetProtectionReason(state,targetPlayerIndex,targetBezSlot,sourcePlayerIndex,sourceCard){
+  targetPlayerIndex=Number(targetPlayerIndex);targetBezSlot=Number(targetBezSlot);sourcePlayerIndex=Number(sourcePlayerIndex);
+  if(targetPlayerIndex===sourcePlayerIndex)return null;
+  const p=state.players?.[targetPlayerIndex],r=p?.bezSlots?.[targetBezSlot];
+  if(!r||cardData(r)?.hauptattribut!=='BEZWINGERIN')return null;
+  const cat=sourceTargetCategory(sourceCard);if(!cat)return null;
+  ensureEquipmentState(p);
+  const armor=p.equipment?.[targetBezSlot]?.armor,armorCard=cardData(armor);
+  const dunkel=armor&&!armor.faceDown&&!armor.effectDisabled&&armorCard?.name==='Mantel der Stille Dunkelglanz';
+  if(dunkel && (cat==='astral_spell'||cat==='ruestkammer_item'))return 'Mantel der Stille Dunkelglanz schützt diese Bezwingerin vor dieser Zielwahl.';
+  const prot=r.effectState?.strikelynProtection;
+  if(prot){
+    if(cat==='astral_spell'||cat==='ruestkammer_item')return 'Strikelyn schützt diese Bezwingerin vor dieser Zielwahl.';
+    if(cat==='astral_gebot'&&prot.enhanced&&String(sourceCard?.fraktion||'').toLowerCase()==='zwischenwelt')return 'Strikelyns verstärkter Schutz verhindert dieses Zwischenwelt-Gebot als Zielwahl.';
+  }
+  return null;
+}
+function pendingSourceCard(state,q){
+  const p=state.players?.[q?.sourcePlayer];
+  const r=p?.azr?.[q?.sourceAzrSlot];
+  return cardData(r);
+}
+const ENEMY_SLOT_PENDING_TYPES=new Set([
+  'wunderunterdrueckung_target','abstieg_target','keine_ruestung_target','astral_feuerball_target','ehrenlos_target',
+  'feiertag_target','demoralisierung_target','siegel_kampfschwaeche_target','siegel_astralschwaeche_target'
+]);
+function pendingBezTargetRef(state,q,id){
+  if(!q)return null;
+  if(ENEMY_SLOT_PENDING_TYPES.has(q.type))return {playerIndex:1-Number(q.sourcePlayer),slot:Number(id)};
+  if(q.type==='exekution_target'||q.type==='strahl_des_vergessens_target'){
+    const [pi,si]=String(id).split(':').map(Number);return Number.isFinite(pi)&&Number.isFinite(si)?{playerIndex:pi,slot:si}:null;
+  }
+  if(q.type==='auszeichnung_target'){
+    const [piS,zone,slotS]=String(id).split('|');if(zone==='bez')return {playerIndex:Number(piS),slot:Number(slotS)};
+  }
+  return null;
+}
+function pendingTargetProtectionReason(state,q,id){
+  const ref=pendingBezTargetRef(state,q,id);if(!ref)return null;
+  return targetProtectionReason(state,ref.playerIndex,ref.slot,q.sourcePlayer,pendingSourceCard(state,q));
+}
+function expireStrikelynProtectionsAtSupplyStart(state,p){
+  const runtimes=[...(p?.bezSlots||[])];
+  for(const e of (state.voidZone||[]))if(Number(e.originalPlayerIndex)===Number(p?.index)&&e.runtime)runtimes.push(e.runtime);
+  for(const r of runtimes){if(r?.effectState?.strikelynProtection)delete r.effectState.strikelynProtection;}
+}
+function strikelynTargets(state,playerIndex){
+  const p=state.players[playerIndex];return (p?.bezSlots||[]).map((r,i)=>r&&cardData(r)?.hauptattribut==='BEZWINGERIN'?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
+}
+function startStrikelynEffect(state,slot,enhanced=false){
+  const p=active(state),r=p?.bezSlots?.[Number(slot)],c=cardData(r);
+  if(!r||c?.effekte?.[0]?.engine_key!=='strikelyn')return {ok:false,msg:'Strikelyn liegt nicht in diesem Bezwingerinnenbereich.'};
+  if(r.effectUsedTurn===p.turnCount)return {ok:false,msg:'Strikelyns Ladungseffekt wurde in dieser Kampfrunde bereits aktiviert.'};
+  const cost=enhanced?2:1;if(Number(r.effectUsesRemaining||0)<cost)return {ok:false,msg:`Strikelyn benötigt ${cost} Ladung(en).`};
+  if(!strikelynTargets(state,p.index).length)return {ok:false,msg:'Keine eigene Bezwingerin als Ziel vorhanden.'};
+  state.pendingBezEffect={type:'strikelyn_target',sourcePlayer:p.index,sourceSlot:Number(slot),enhanced:!!enhanced,chargeCost:cost};
+  return {ok:true,pending:true,msg:`Wähle eine eigene Bezwingerin für Strikelyns ${enhanced?'verstärkten ':''}Zielschutz.`};
+}
+function resolveStrikelynTarget(state,id){
+  const q=state.pendingBezEffect;if(q?.type!=='strikelyn_target')return {ok:false,msg:'Keine Strikelyn-Zielauswahl aktiv.'};
+  const p=state.players[q.sourcePlayer],src=p?.bezSlots?.[q.sourceSlot],target=p?.bezSlots?.[Number(id)];
+  if(!src||cardData(src)?.effekte?.[0]?.engine_key!=='strikelyn')return {ok:false,msg:'Strikelyn ist nicht mehr auf dem Spielfeld.'};
+  if(!target||cardData(target)?.hauptattribut!=='BEZWINGERIN')return {ok:false,msg:'Ungültige eigene Bezwingerin.'};
+  if(Number(src.effectUsesRemaining||0)<Number(q.chargeCost||1))return {ok:false,msg:'Nicht genügend Ladungen.'};
+  src.effectUsesRemaining-=Number(q.chargeCost||1);src.effectUsedTurn=p.turnCount;
+  target.effectState=target.effectState||{};target.effectState.strikelynProtection={enhanced:!!q.enhanced,sourcePlayer:p.index};
+  state.pendingBezEffect=null;
+  log(state,`Strikelyn schützt ${cardData(target)?.name||'eine Bezwingerin'} bis zum Beginn der nächsten eigenen Versorgungsphase${q.enhanced?' zusätzlich vor Zwischenwelt-Geboten':''}. Verbleibende Ladungen: ${src.effectUsesRemaining}.`);
+  return {ok:true,msg:`Zielschutz aktiv. Strikelyn hat noch ${src.effectUsesRemaining} Ladung(en).`};
+}
 function fieldArea(c){
   const b=String(c?.bereich||'').trim().toLowerCase();
   if(b.includes('primär') || b.includes('primaer'))return 'primary';
@@ -874,6 +952,8 @@ function activateBezEffect(state,slot,choice=null){
  if(sym==='wonder' && key==='nemesis')return startNemesisWonder(state,slot);
  if(sym==='wonder' && key==='lilou2')return startLilou2Wonder(state,slot);
  if(sym==='wonder' && key==='baronesse2')return startBaronesse2Wonder(state,slot);
+
+ if(key==='strikelyn')return startStrikelynEffect(state,slot,choice==='enhanced');
 
  // Bei normalen Effekten erst Validität prüfen, dann Ressourcen verbrauchen.
  if(key==='serinith'){
@@ -2118,7 +2198,7 @@ function instantAstralValidation(state,playerIndex,c){
   if(key==='verwuestung')return state.sharedSecondary&&!state.sharedSecondary.faceDown?{ok:true}:{ok:false,msg:'Verwüstung benötigt eine offene Karte im Sekundärbereich.'};
   if(key==='saphiras_upsi')return opp.primary&&!opp.primary.faceDown?{ok:true}:{ok:false,msg:'Saphiras Upsi benötigt eine offene Karte im Primärbereich des Gegners.'};
   if(key==='bis_zum_bitteren_ende'||key==='lilous_gabe')return (p.bezSlots||[]).some(Boolean)?{ok:true}:{ok:false,msg:'Dieser ASTRAL-Spruch benötigt eine eigene Bezwingerin.'};
-  if(key==='exekution')return state.players.some(pl=>(pl.bezSlots||[]).some(Boolean))?{ok:true}:{ok:false,msg:'Exekution benötigt eine Bezwingerin als Ziel.'};
+  if(key==='exekution')return {ok:true};
   if(key==='zweifache_bestrafung')return (p.bezSlots||[]).some(r=>r&&Number(r.honor||0)>=3)?{ok:true}:{ok:false,msg:'Zweifache Bestrafung benötigt eine eigene Bezwingerin mit mindestens 3 Ehre.'};
   if(key==='laehmende_angst'){
     const a=state.attack,def=state.players[playerIndex];
@@ -2265,6 +2345,8 @@ function startInstantAstralSpell(state,playerIndex,azrSlot){
   }
   if(key==='exekution'){
     state.pendingBezEffect={type:'exekution_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
+    const legal=newAstralSpellTargets(state).filter(t=>{const [pi,si]=String(t.id).split(':').map(Number),rr=state.players[pi]?.bezSlots?.[si];if(!rr)return false;const st=effectiveBezStats(state,pi,si);return Number(rr.hearts||0)===1&&Number(st?.physicalShield||0)===0&&Number(st?.astralShield||0)===0;});
+    if(!legal.length){discardInstantAstralSpell(state,playerIndex,azrSlot);state.pendingBezEffect=null;log(state,'Exekution findet kein gültiges Ziel und wird ohne Effekt abgelegt.');return {ok:true,msg:'Exekution: Kein gültiges Ziel – ohne Effekt abgelegt.'};}
     return {ok:true,pending:true,msg:'Wähle eine Bezwingerin für Exekution.'};
   }
   if(key==='zweifache_bestrafung'){
@@ -2283,7 +2365,7 @@ function startInstantAstralSpell(state,playerIndex,azrSlot){
   return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin für Bis zum bitteren Ende.'};
 }
 
-function newAstralSpellTargets(state){
+function rawNewAstralSpellTargets(state){
   const q=state.pendingBezEffect;if(!q)return [];
   const own=state.players[q.sourcePlayer];
   if(q.type==='virus_azr_slot'){const out=[];for(const pl of state.players)(pl.azr||[]).forEach((r,i)=>{if(!r||r.faceDown)out.push({id:`${pl.index}:${i}`,name:`${pl.name} – AZR ${i+1}${r?' (gesetzt)':' (frei)'}`});});return out;}
@@ -2321,8 +2403,14 @@ function newAstralSpellTargets(state){
   if(q.type==='sofortige_zerstoerung_target'){const out=[];for(const pl of state.players){ensureEquipmentState(pl);for(let i=0;i<pl.equipment.length;i++){const r=pl.equipment[i]?.armor;if(r&&!r.faceDown)out.push({id:`${pl.index}:${i}`,name:`${pl.name}: ${cardData(r)?.name||'Rüstung'}`});}}return out;}
   return [];
 }
+function newAstralSpellTargets(state){
+  const q=state.pendingBezEffect,raw=rawNewAstralSpellTargets(state);
+  if(!q||!raw.length)return raw;
+  return raw.filter(t=>!pendingTargetProtectionReason(state,q,t.id));
+}
 function resolveNewAstralSpellTarget(state,id){
   const q=state.pendingBezEffect;if(!q)return {ok:false,msg:'Keine passende ASTRAL-Auswahl aktiv.'};
+  const protection=pendingTargetProtectionReason(state,q,id);if(protection)return {ok:false,msg:protection};
   if(q.type==='virus_azr_slot'){const [pi,si]=String(id).split(':').map(Number);state.azrLocks=state.azrLocks||[];state.azrLocks.push({playerIndex:pi,slot:si,sourceOwner:q.sourcePlayer,sourceCard:'Wiederbelebungsapparatur Virus'});state.pendingBezEffect=null;return {ok:true,msg:'ASTRAL-/RÜSTKAMMER-Zone durch Virus blockiert.'};}
   if(q.type==='wunderunterdrueckung_target'){const e=state.players[1-q.sourcePlayer],r=e?.bezSlots?.[Number(id)];if(!r)return {ok:false,msg:'Ungültige gegnerische Bezwingerin.'};r.effectState=r.effectState||{};r.effectState.wunderunterdrueckungTargetTurn=Number(e.turnCount||0)+1;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;return {ok:true,msg:'Wunder in der kommenden eigenen KR gesperrt.'};}
   if(q.type==='ueberlegene_kriegsfuehrung_source'){q.type='ueberlegene_kriegsfuehrung_dest';q.sourceSlot=Number(id);return {ok:true,pending:true,msg:'Wähle das andere Bezwingerinnenfeld.'};}
@@ -2607,7 +2695,7 @@ function startInstantRuestkammerItem(state,playerIndex,azrSlot){
   }
   return {ok:false,msg:'Unbekannter Gegenstandseffekt.'};
 }
-function instantRuestkammerTargets(state){
+function rawInstantRuestkammerTargets(state){
   const pend=state.pendingBezEffect;if(!pend)return [];
   if(pend.type==='laehmendes_nervengift' || pend.type==='die_kanone'){
     return state.players[1-pend.sourcePlayer].bezSlots.map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
@@ -2628,9 +2716,19 @@ function instantRuestkammerTargets(state){
   }
   return [];
 }
+function instantRuestkammerTargets(state){
+  const q=state.pendingBezEffect,raw=rawInstantRuestkammerTargets(state);if(!q||!raw.length)return raw;
+  const source=pendingSourceCard(state,q);
+  if(!source)return raw;
+  return raw.filter(t=>{
+    if(!['laehmendes_nervengift','die_kanone'].includes(q.type))return true;
+    return !targetProtectionReason(state,1-q.sourcePlayer,Number(t.id),q.sourcePlayer,source);
+  });
+}
 function resolveInstantRuestkammerTarget(state,id){
   const pend=state.pendingBezEffect;if(!pend||!['laehmendes_nervengift','trank_der_staerke','trank_der_astral_macht','die_kanone','ueberladung','skyflux'].includes(pend.type))
     return {ok:false,msg:'Keine passende Gegenstandsauswahl aktiv.'};
+  if(['laehmendes_nervengift','die_kanone'].includes(pend.type)){const reason=targetProtectionReason(state,1-pend.sourcePlayer,Number(id),pend.sourcePlayer,pendingSourceCard(state,pend));if(reason)return {ok:false,msg:reason};}
   const sourcePlayer=pend.sourcePlayer,sourceAzrSlot=pend.sourceAzrSlot;
   const p=state.players[sourcePlayer];
 
@@ -4049,6 +4147,7 @@ function beginPhase(state){
     grantHonor(state);
   }
   if(phase.id==='supply_start'){
+    expireStrikelynProtectionsAtSupplyStart(state,p);
     if(state.secondaryLock && Number(state.secondaryLock.untilOwnerSupplyStart)===p.index){log(state,'Die Sekundärbereich-Sperre von Wurzelpeinverschlinger endet.');state.secondaryLock=null;}
     expireEquipmentCombatBonuses(state,p);
     resolveLebensfresserschildHungerAtSupplyStart(state,p);
@@ -4256,7 +4355,7 @@ window.G5Engine={
   chooseEquipmentShieldBonus,equipmentCombatProfile,effectiveBezStats,combatStrength,startMantaWonder,consumeMantaCombatBonus,effectiveWonderCost,ruthTargets,activateRuth,selectEhrisTarget,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,destroyedQueenProtectionActive,prepareAttack,
   refugeWonderAvailable,activateRefugeWonder,resolveWonderDraw,chooseRefugeStage2Bonus,
-  bezEffectInfo,activateBezEffect,thalZirisTargets,resolveThalZiris,thalZirisStage1Targets,resolveThalZirisStage1,
+  bezEffectInfo,activateBezEffect,strikelynTargets,startStrikelynEffect,resolveStrikelynTarget,targetProtectionReason,thalZirisTargets,resolveThalZiris,thalZirisStage1Targets,resolveThalZirisStage1,
   mornakTokenTargets,resolveMornakTokenPlacement,startNemesisWonder,cancelPendingBezEffect,surveillanceRevealsAzr,
   checkedEffectTargets,resolveCheckedEffectTarget,startTalisia1Wonder,jeanneForcedTarget,
   startZahiraWonder,startCassandraWonder,meniaDaggerTargets,resolveMeniaDagger,

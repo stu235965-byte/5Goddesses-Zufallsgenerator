@@ -1,2 +1,2 @@
-5Goddesses PWA Update v1.80
-Siehe README_v1.80.txt für Änderungen.
+5Goddesses Update v1.81
+Siehe README_v1.81.txt für Änderungen und Tests.

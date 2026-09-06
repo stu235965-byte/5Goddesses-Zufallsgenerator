@@ -1,4 +1,2 @@
-Sammelliste nach v1.79: leer.
-
-v1.80 ist ein Audit-/Bereinigungsrelease ohne neuen Kartenblock.
-Astralkammer-Audit: 49 echte Karten, vollständiger aktueller Testbestand 110 PASS / 0 FAIL.
+Sammelliste nach v1.81: leer.
+Strikelyn und Mantel der Stille Dunkelglanz sind vollständig implementiert und freigeschaltet.

@@ -16,19 +16,14 @@ let editorPreviewBild=null;
 function deckDb(){return window.GODDESSES_DB?.karten||[]}
 function deckKarte(bild){return deckDb().find(k=>k.bild===bild)||null}
 const GESPERRTE_DECKKARTEN=new Set([
-  'Genova Toshi',
-  'Strikelyn',
-  'Mantel der Stille Dunkelglanz'
+  'Genova Toshi'
 ]);
 function istGesperrteDeckkarte(k){
   if(!k)return false;
-  return GESPERRTE_DECKKARTEN.has(k.name) || /\bStrikelyn\b/i.test(k.name||'');
+  return GESPERRTE_DECKKARTEN.has(k.name);
 }
 function sperrgrundDeckkarte(k){
   if(k?.name==='Genova Toshi')return 'keine offizielle Stufe-2-Entwicklung verfügbar';
-  if(/\bStrikelyn\b/i.test(k?.name||'') || k?.name==='Mantel der Stille Dunkelglanz'){
-    return 'ASTRAL-Spruch-/Gegenstands-Zielmechanik noch nicht vollständig implementiert';
-  }
   return 'vorübergehend gesperrt';
 }
 function deckPoolSet(){

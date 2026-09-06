@@ -1,18 +1,8 @@
-Strikelyn – spätere Implementierung
+Strikelyn – IMPLEMENTIERT seit v1.81
 
-Status: bewusst noch NICHT vollständig in die Spiellogik integriert.
-
-Karteneffekt:
-- Strikelyn besitzt 2 Ladungen.
-- Wähle eine eigene Bezwingerin.
-- Bis zum Beginn deiner nächsten Versorgungsphase kann diese Bezwingerin nicht als Ziel der auf der Karte angegebenen gegnerischen ASTRAL-Spruch- bzw. Rüstkammer-Gegenstandskarten gewählt werden.
-- Alternative: Verbrauche 2 Ladungen auf einmal. Dann gilt derselbe Schutz zusätzlich für die auf Strikelyns Karte angegebenen Gebote.
-- Die normale Variante ist als Verbrauch von 1 Ladung vorgesehen; dadurch sind grundsätzlich zwei normale Nutzungen möglich.
-- Die konkrete Blockierung der Zielauswahl wird erst zuverlässig umgesetzt, wenn die betreffenden ASTRAL-/Rüstkammer-Kartentypen und deren Zielsystem vollständig implementiert sind.
-
-Wichtig für die spätere Umsetzung:
-1. Schutzstatus auf der gewählten eigenen Bezwingerin speichern.
-2. Ende exakt zu Beginn der nächsten eigenen VP.
-3. Verbleibende Ladungen sichtbar anzeigen.
-4. Jede gegnerische Zielauswahl der betroffenen Spruch-/Gegenstands-/Gebotsarten muss den Schutzstatus prüfen.
-5. Die exakten Symbol-Untertypen der geschützten Karten nicht erraten, sondern beim Implementieren anhand der jeweiligen Karten/Symbole verifizieren.
+- 2 Ladungen.
+- Normale Aktivierung: 1 Ladung; eine eigene Bezwingerin kann bis zum Beginn der nächsten eigenen Versorgungsphase nicht als Ziel gegnerischer ASTRAL-Sprüche oder Gegenstandskarten gewählt werden.
+- Verstärkte Aktivierung: 2 Ladungen; zusätzlich Schutz vor gegnerischen Geboten aus der Zwischenwelt.
+- Maximal eine Aktivierung pro eigener Kampfrunde.
+- Zielschutz wird zentral in der Zielauswahl geprüft und läuft zu Beginn der nächsten eigenen Versorgungsphase aus.
+- Strikelyn ist im Deckbuilder und Zufallsgenerator freigeschaltet.

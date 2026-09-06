@@ -1,0 +1,14 @@
+Zielschutz-Audit v1.81
+
+Strikelyn und Mantel der Stille Dunkelglanz verwenden eine gemeinsame zentrale Zielschutzprüfung.
+Geprüfte Kategorien:
+- gegnerischer ASTRAL-Spruch: blockiert
+- gegnerischer Gegenstand: blockiert
+- gegnerisches Zwischenwelt-Gebot: nur bei Strikelyns verstärkter 2-Ladungs-Variante blockiert
+- andere Gebote: nicht blockiert
+- nicht zielende Flächeneffekte: nicht blockiert
+- Schutzende Strikelyn: Beginn der nächsten eigenen Versorgungsphase
+- Schutzende Dunkelglanz: sofort beim Entfernen/Deaktivieren des Mantels
+
+Neue gezielte Tests: 14 PASS / 0 FAIL.
+Gesamter vorhandener Testbestand: 124 PASS / 0 FAIL.

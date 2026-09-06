@@ -603,15 +603,32 @@ window.GODDESSES_DB = {
       "effekte": [
         {
           "trigger": "charges",
-          "text": "Wähle eine Bezwingerin: Bis zum Beginn deiner nächsten Versorgungsphase kann sie nicht als Ziel gegnerischer ASTRAL-Spruch- oder Gegenstandskarten gewählt werden. Alternativ verbrauche 2 Ladungen: Der Effekt gilt auch für Gebote.",
-          "engine_key": "strikelyn"
+          "text": "Wähle eine eigene Bezwingerin. Bis zum Beginn deiner nächsten Versorgungsphase kann sie nicht als Ziel gegnerischer ASTRAL-Spruch- oder Gegenstandskarten gewählt werden. Alternativ: Verbrauche 2 Ladungen. Falls du dies tust, gilt dieser Effekt zusätzlich für gegnerische Gebote aus der Zwischenwelt.",
+          "engine_key": "strikelyn",
+          "target": "own_bezwingerin",
+          "normal_charge_cost": 1,
+          "enhanced_charge_cost": 2,
+          "blocks": [
+            "enemy_astral_spell",
+            "enemy_ruestkammer_item"
+          ],
+          "enhanced_blocks": [
+            "enemy_zwischenwelt_gebot"
+          ],
+          "expires": "next_own_supply_start"
         }
       ],
-      "tags": [],
+      "tags": [
+        "ladungen",
+        "zielschutz",
+        "astral-spruch",
+        "gegenstand",
+        "zwischenwelt-gebot"
+      ],
       "effekt_symbol": "charges",
       "effekt_zaehler_max": 2,
       "effekt_dauer_kr": null,
-      "effekt_text": "Wähle eine Bezwingerin: Bis zum Beginn deiner nächsten Versorgungsphase kann sie nicht als Ziel gegnerischer ASTRAL-Spruch- oder Gegenstandskarten gewählt werden. Alternativ verbrauche 2 Ladungen: Der Effekt gilt auch für Gebote."
+      "effekt_text": "Wähle eine eigene Bezwingerin. Bis zum Beginn deiner nächsten Versorgungsphase kann sie nicht als Ziel gegnerischer ASTRAL-Spruch- oder Gegenstandskarten gewählt werden. Alternativ: Verbrauche 2 Ladungen. Falls du dies tust, gilt dieser Effekt zusätzlich für gegnerische Gebote aus der Zwischenwelt."
     },
     {
       "id": "1.04-21-32-a0ad6302",
@@ -3656,8 +3673,27 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "permanent",
+          "text": "Die ausgerüstete Bezwingerin kann nicht als Ziel gegnerischer ASTRAL-Spruch- oder Gegenstandskarten gewählt werden.",
+          "engine_key": "dunkelglanz_target_protection",
+          "blocks": [
+            "enemy_astral_spell",
+            "enemy_ruestkammer_item"
+          ]
+        }
+      ],
+      "tags": [
+        "permanent",
+        "zielschutz",
+        "astral-spruch",
+        "gegenstand"
+      ],
+      "effekt_symbol": "permanent",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Die ausgerüstete Bezwingerin kann nicht als Ziel gegnerischer ASTRAL-Spruch- oder Gegenstandskarten gewählt werden."
     },
     {
       "id": "1.04-15-32-eea6d3ee",

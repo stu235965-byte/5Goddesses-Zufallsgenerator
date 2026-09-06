@@ -26,16 +26,15 @@ Schattenfluchkralle – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:
 - Nutzt dasselbe sichtbare berserkerMarks-System wie Evelyn.
 
 
-Mantel der Stille Dunkelglanz – FÜR SPÄTER DOKUMENTIERT:
+Mantel der Stille Dunkelglanz – VOLLSTÄNDIG IMPLEMENTIERT seit v1.81:
 - Rüstkammer | Rüstung | Mantel | Seide | Astralwelt.
-- ∞ = permanenter Effekt, solange der Mantel ausgerüstet ist.
-- Die ausgerüstete Bezwingerin kann nicht als Ziel der auf der Karte bezeichneten
-  gegnerischen ASTRAL-Spruchkarten oder Gegenstandskarten gewählt werden.
-- Es handelt sich um eine Zielwahlsperre, nicht pauschal um Schadens-/Effektimmunität.
-- Keine Ladungen und keine zeitliche Begrenzung.
-- Schutz endet, sobald Dunkelglanz nicht mehr ausgerüstet ist.
-- Später gemeinsam mit Strikelyns zentraler Zielschutzprüfung implementieren,
-  sobald die betreffenden ASTRAL-/Rüstkammer-Zielsysteme vollständig vorhanden sind.
+- Permanenter Effekt solange ausgerüstet.
+- Die ausgerüstete Bezwingerin kann nicht als Ziel gegnerischer ASTRAL-Sprüche oder Gegenstandskarten gewählt werden.
+- Gebote werden nicht blockiert.
+- Flächen-/nicht zielende Effekte werden nicht blockiert.
+- Schutz endet sofort, wenn der Mantel nicht mehr ausgerüstet ist.
+- Zentraler Zielschutz wird gemeinsam mit Strikelyn geprüft.
+- Im Deckbuilder und Zufallsgenerator freigeschaltet.
 
 
 Lebensfresserschild Hunger – VOLLSTÄNDIG IMPLEMENTIERT im Arbeitsstand:

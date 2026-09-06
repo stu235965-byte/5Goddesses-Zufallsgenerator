@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.80';
+window.G5_BATTLEFIELD_BUILD='1.81';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -1031,6 +1031,11 @@ function renderActions(){
       return;
     }
   }
+  if(state.pendingBezEffect?.type==='strikelyn_target'){
+    const title=document.createElement('strong');title.textContent='Strikelyn – eigene Bezwingerin schützen';root.appendChild(title);
+    E().strikelynTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.onclick=()=>{const rr=E().resolveStrikelynTarget(state,t.id);saveRender(rr.msg)};root.appendChild(b)});
+    return;
+  }
   if(state.pendingBezEffect && ['exekution_target','zweifache_bestrafung_target','lilous_gabe_target','vengeresse_vergeltung_target','feiertag_target','sprint_angriff_target','auszeichnung_target','aufstieg_target','demoralisierung_target','legionsruestung_search','legionsruestung_equip','neutralisationssiegel_target','system_reset_target','tauschportal_source','tauschportal_destination','zeitlose_unterwerfung_target','strahl_des_vergessens_target','siegel_kampfschwaeche_target','siegel_astralschwaeche_target'].includes(state.pendingBezEffect.type)){
     const labels={
       exekution_target:'Exekution – Bezwingerin wählen',
@@ -1601,6 +1606,19 @@ function renderActions(){
     root.appendChild(info);
   }
 }
+function tryStrikelynCharge(slot,r){
+  const fx=E().bezEffectInfo?.(state,slot),c=E().cardData(r);
+  if(c?.effekte?.[0]?.engine_key!=='strikelyn' || fx?.symbol!=='charges' || (fx.usesRemaining??0)<=0 || fx.usedThisTurn)return false;
+  let mode='normal';
+  if((fx.usesRemaining??0)>=2){
+    const answer=prompt(`Strikelyn – Zielschutz aktivieren?\n1 = 1 Ladung: Schutz vor gegnerischen ASTRAL-Sprüchen und Gegenständen\n2 = 2 Ladungen: zusätzlich Schutz vor gegnerischen Zwischenwelt-Geboten\nAbbrechen = normale Kartenaktion`);
+    if(answer===null||answer==='')return false;
+    if(answer==='1')mode='normal';else if(answer==='2')mode='enhanced';else{message('Bitte 1 oder 2 wählen.','warn');return true;}
+  }else{
+    if(!confirm('Strikelyn: 1 Ladung einsetzen und eine eigene Bezwingerin bis zum Beginn deiner nächsten Versorgungsphase vor gegnerischen ASTRAL-Sprüchen und Gegenständen schützen?'))return false;
+  }
+  const rr=E().startStrikelynEffect(state,slot,mode==='enhanced');saveRender(rr.msg||'Strikelyns Zielschutz vorbereitet.');return true;
+}
 function trySerinithCharge(slot,r){
   const fx=E().bezEffectInfo?.(state,slot),c=E().cardData(r);
   if(c?.effekte?.[0]?.engine_key!=='serinith' || fx?.symbol!=='charges' ||
@@ -1640,6 +1658,7 @@ function handleOwnBez(slot){
 
   // Ladungseffekte wie Serinith sind nicht auf VP/NP beschränkt:
   // höchstens einmal pro eigener KR, solange Ladungen vorhanden sind.
+  if(tryStrikelynCharge(slot,r))return;
   if(trySerinithCharge(slot,r))return;
 
   if(ph.id==='supply'){
