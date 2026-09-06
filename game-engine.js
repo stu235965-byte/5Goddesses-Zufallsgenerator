@@ -579,10 +579,15 @@ function combatStrength(state,playerIndex,bezSlot,type,isAttacking=false){
   const p=state.players[playerIndex],r=p.bezSlots[bezSlot];
   if(!r)return {base:0,equipment:0,total:0};
   const c=cardData(r);
-  const base=type==='physical'
+  let base=type==='physical'
     ? ((r.physical ?? c?.physische_staerke ?? 0) + Number(r.effectState?.psiloPhysicalBonus||0) + Number(r.effectState?.trankStaerkePhysicalBonus||0) + Number(r.effectState?.bitterEndPhysicalBonus||0))
     : ((r.astral ?? c?.astrale_staerke ?? 0) + Number(r.effectState?.trankAstralMachtBonus||0) + Number(r.effectState?.bitterEndAstralBonus||0));
-  const equipment=equipmentStrengthBonus(state,playerIndex,bezSlot,type,isAttacking);
+  let equipment=equipmentStrengthBonus(state,playerIndex,bezSlot,type,isAttacking);
+  if(type==='astral' && r.effectState?.vengeresseVergeltungActive){
+    const physicalBase=(r.physical ?? c?.physische_staerke ?? 0)+Number(r.effectState?.psiloPhysicalBonus||0)+Number(r.effectState?.trankStaerkePhysicalBonus||0)+Number(r.effectState?.bitterEndPhysicalBonus||0);
+    const physicalEquipment=equipmentStrengthBonus(state,playerIndex,bezSlot,'physical',isAttacking);
+    base+=physicalBase;equipment+=physicalEquipment;
+  }
   return {base,equipment,total:Math.max(0,base+equipment)};
 }
 function discardRuntime(p,r){
@@ -931,6 +936,31 @@ function activeArcadiaConstraint(state,attackerPlayerIndex){
   for(let i=0;i<(opp.bezSlots||[]).length;i++){const r=opp.bezSlots[i],c=cardData(r);if(r&&c?.effekte?.some(e=>e.engine_key==='arcadia')&&!r.effectDisabled&&Number(r.effectRoundsRemaining)>0)return {slot:i,r,c};}
   return null;
 }
+function isKiki(r){return cardData(r)?.effekte?.some(e=>e.engine_key==='kiki_counter_dodge')}
+function kikiEligibleTargets(state){
+  const p=active(state),r=p.primary,c=cardData(r);
+  if(!r||r.owner!==p.index||!isKiki(r)||r.faceDown||r.effectDisabled||Number(r.effectRoundsRemaining||0)<=0)return [];
+  const effect=(c?.effekte||[]).find(e=>e.engine_key==='kiki_counter_dodge')||{};
+  const eligible=new Set(effect.eligible_classes||['Assassine','Heilerin','Unterstützerin','Magierin']);
+  return (p.bezSlots||[]).map((b,i)=>{
+    const bc=cardData(b);
+    return b&&eligible.has(bc?.klasse)?{id:String(i),slot:i,name:bc?.name||'Bezwingerin',klasse:bc?.klasse}:null;
+  }).filter(Boolean);
+}
+function activateKikiDodge(state,slot){
+  const p=active(state),r=p.primary,c=cardData(r),b=p.bezSlots?.[Number(slot)],bc=cardData(b);
+  if(currentPhase(state).id!=='supply')return {ok:false,msg:'Kiki kann ihren Effekt nur während deiner Versorgungsphase aktivieren.'};
+  if(!r||r.owner!==p.index||!isKiki(r)||r.faceDown||r.effectDisabled||Number(r.effectRoundsRemaining||0)<=0)return {ok:false,msg:'Rabe der Hoffnung Kiki ist nicht aktiv.'};
+  if(r.effectUsedTurn===p.turnCount)return {ok:false,msg:'Kikis Effekt wurde in dieser Kampfrunde bereits benutzt.'};
+  const valid=kikiEligibleTargets(state).some(t=>t.slot===Number(slot));
+  if(!b||!valid)return {ok:false,msg:'Kiki kann nur eine eigene Assassine, Heilerin, Unterstützerin oder Magierin wählen.'};
+  b.effectState=b.effectState||{};
+  b.effectState.kikiCounterDodgeActive=true;
+  b.effectState.kikiCounterDodgeRoundSerial=state.roundSerial;
+  r.effectUsedTurn=p.turnCount;
+  log(state,`${c.name}: ${bc?.name||'Bezwingerin'} kann in dieser Kampfrunde einmal einem Gegenangriff ausweichen.`);
+  return {ok:true,msg:`${bc?.name||'Bezwingerin'} kann einmal einem Gegenangriff ausweichen.`};
+}
 function activateAliceDodge(state,slot){
   const p=active(state),r=p.bezSlots[slot],c=cardData(r);
   if(currentPhase(state).id!=='supply')return {ok:false,msg:'Alice kann ihren Effekt nur in der Versorgungsphase aktivieren.'};
@@ -982,6 +1012,10 @@ function activateParierdolchDodge(state,bezSlot){
 function consumeCounterDodgeIfActive(state,p,bezSlot,bez){
   if(!bez)return null;
   bez.effectState=bez.effectState||{};
+  if(bez.effectState.kikiCounterDodgeActive && bez.effectState.kikiCounterDodgeRoundSerial===state.roundSerial){
+    bez.effectState.kikiCounterDodgeActive=false;
+    return 'Rabe der Hoffnung Kiki';
+  }
   if(bez.effectState.counterDodgeActive && (bez.effectState.counterDodgeUses||0)>0){
     bez.effectState.counterDodgeActive=false;
     bez.effectState.counterDodgeUses=Math.max(0,Number(bez.effectState.counterDodgeUses||0)-1);
@@ -999,6 +1033,10 @@ function consumeCounterDodgeIfActive(state,p,bezSlot,bez){
 function expireCounterDodgeActivations(state){
   for(const p of state.players){
     for(const r of p.bezSlots||[]){
+      if(r?.effectState?.kikiCounterDodgeActive){
+        r.effectState.kikiCounterDodgeActive=false;
+        log(state,`${cardData(r)?.name||'Bezwingerin'}: nicht genutztes Kiki-Ausweichen verfällt am Ende der Kampfrunde.`);
+      }
       if(r?.effectState?.counterDodgeActive){
         r.effectState.counterDodgeActive=false;
         log(state,`${cardData(r)?.name||'Bezwingerin'}: nicht genutztes Ausweichen ist für diese Kampfrunde nicht mehr aktiv; die gespeicherte Nutzung bleibt erhalten.`);
@@ -1952,7 +1990,9 @@ function resolveErlassTarget(state,id){
 
 
 function isInstantAstralSpell(c){
-  return c?.deck_bereich==='astral' && c?.kartentyp==='ASTRAL-Spruch' && !!c?.effekte?.some(e=>['verwuestung','bis_zum_bitteren_ende','saphiras_upsi'].includes(e.engine_key));
+  return c?.deck_bereich==='astral' && c?.kartentyp==='ASTRAL-Spruch' && !!c?.effekte?.some(e=>[
+    'verwuestung','bis_zum_bitteren_ende','saphiras_upsi','exekution','zweifache_bestrafung','lilous_gabe','laehmende_angst','vengeresse_vergeltung'
+  ].includes(e.engine_key));
 }
 function ownOpenCreatureWurm(state,playerIndex){
   const p=state.players[playerIndex];
@@ -1961,10 +2001,22 @@ function ownOpenCreatureWurm(state,playerIndex){
 }
 function instantAstralValidation(state,playerIndex,c){
   const p=state.players[playerIndex],opp=state.players[1-playerIndex];
-  const key=c?.effekte?.find(e=>['verwuestung','bis_zum_bitteren_ende','saphiras_upsi'].includes(e.engine_key))?.engine_key;
+  const key=c?.effekte?.find(e=>['verwuestung','bis_zum_bitteren_ende','saphiras_upsi','exekution','zweifache_bestrafung','lilous_gabe','laehmende_angst','vengeresse_vergeltung'].includes(e.engine_key))?.engine_key;
   if(key==='verwuestung')return state.sharedSecondary&&!state.sharedSecondary.faceDown?{ok:true}:{ok:false,msg:'Verwüstung benötigt eine offene Karte im Sekundärbereich.'};
   if(key==='saphiras_upsi')return opp.primary&&!opp.primary.faceDown?{ok:true}:{ok:false,msg:'Saphiras Upsi benötigt eine offene Karte im Primärbereich des Gegners.'};
-  if(key==='bis_zum_bitteren_ende')return (p.bezSlots||[]).some(Boolean)?{ok:true}:{ok:false,msg:'Bis zum bitteren Ende benötigt eine eigene Bezwingerin.'};
+  if(key==='bis_zum_bitteren_ende'||key==='lilous_gabe')return (p.bezSlots||[]).some(Boolean)?{ok:true}:{ok:false,msg:'Dieser ASTRAL-Spruch benötigt eine eigene Bezwingerin.'};
+  if(key==='exekution')return state.players.some(pl=>(pl.bezSlots||[]).some(Boolean))?{ok:true}:{ok:false,msg:'Exekution benötigt eine Bezwingerin als Ziel.'};
+  if(key==='zweifache_bestrafung')return (p.bezSlots||[]).some(r=>r&&Number(r.honor||0)>=3)?{ok:true}:{ok:false,msg:'Zweifache Bestrafung benötigt eine eigene Bezwingerin mit mindestens 3 Ehre.'};
+  if(key==='laehmende_angst'){
+    const a=state.attack,def=state.players[playerIndex];
+    if(currentPhase(state)?.id!=='rush'||!a||a.attackerKind!=='bez'||1-state.activePlayer!==playerIndex||a.target?.type!=='bez')return {ok:false,msg:'Lähmende Angst kann nur auf einen angekündigten Angriff gegen eine eigene Vengeresse reagieren.'};
+    const target=def.bezSlots?.[Number(a.target.slot)];
+    return target&&isVengeresseCard(cardData(target))?{ok:true}:{ok:false,msg:'Die angegriffene eigene Bezwingerin ist keine Vengeresse.'};
+  }
+  if(key==='vengeresse_vergeltung'){
+    if(currentPhase(state)?.id!=='rush')return {ok:false,msg:'Vengeresse Vergeltung kann nur in der Ansturmphase aktiviert werden.'};
+    return (p.bezSlots||[]).some(r=>r&&isVengeresseCard(cardData(r)))?{ok:true}:{ok:false,msg:'Es liegt keine eigene Vengeresse als Ziel.'};
+  }
   return {ok:false,msg:'Dieser ASTRAL-Spruch ist noch nicht unterstützt.'};
 }
 function discardInstantAstralSpell(state,playerIndex,azrSlot){
@@ -1976,7 +2028,7 @@ function startInstantAstralSpell(state,playerIndex,azrSlot){
   const p=state.players[playerIndex],r=p?.azr?.[azrSlot],c=cardData(r);
   if(!r||r.faceDown||!isInstantAstralSpell(c))return {ok:false,msg:'Kein unterstützter ASTRAL-Spruch.'};
   const valid=instantAstralValidation(state,playerIndex,c);if(!valid.ok)return valid;
-  const key=c.effekte.find(e=>['verwuestung','bis_zum_bitteren_ende','saphiras_upsi'].includes(e.engine_key)).engine_key;
+  const key=c.effekte.find(e=>['verwuestung','bis_zum_bitteren_ende','saphiras_upsi','exekution','zweifache_bestrafung','lilous_gabe','laehmende_angst','vengeresse_vergeltung'].includes(e.engine_key)).engine_key;
   if(key==='verwuestung'){
     const target=state.sharedSecondary,damage=ownOpenCreatureWurm(state,playerIndex)?2:1;
     applyDamage(target,damage,'physical');
@@ -1990,8 +2042,70 @@ function startInstantAstralSpell(state,playerIndex,azrSlot){
     discardInstantAstralSpell(state,playerIndex,azrSlot);log(state,'Saphiras Upsi verursacht 1 ASTRAL-Effektschaden auf die gegnerische Primärkarte.');
     return {ok:true,msg:'Saphiras Upsi verursacht 1 ASTRAL-Schaden.'};
   }
+  if(key==='laehmende_angst'){
+    const attacker=state.players[state.activePlayer]?.bezSlots?.[Number(state.attack?.attackerSlot)];
+    if(!attacker)return {ok:false,msg:'Die angreifende Bezwingerin ist nicht mehr vorhanden.'};
+    attacker.effectState=attacker.effectState||{};
+    attacker.effectState.cannotAttackRoundSerial=state.roundSerial;attacker.effectState.cannotAttackThisRound=true;
+    const name=cardData(attacker)?.name||'Angreifende Bezwingerin';
+    state.attack=null;
+    discardInstantAstralSpell(state,playerIndex,azrSlot);
+    log(state,`Lähmende Angst: Der Angriff von ${name} wird abgebrochen; sie kann in dieser Kampfrunde nicht mehr angreifen.`);
+    return {ok:true,msg:`${name}: Angriff abgebrochen und für den Rest der Kampfrunde gesperrt.`};
+  }
+  if(key==='exekution'){
+    state.pendingBezEffect={type:'exekution_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
+    return {ok:true,pending:true,msg:'Wähle eine Bezwingerin für Exekution.'};
+  }
+  if(key==='zweifache_bestrafung'){
+    state.pendingBezEffect={type:'zweifache_bestrafung_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
+    return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin mit mindestens 3 Ehre.'};
+  }
+  if(key==='lilous_gabe'){
+    state.pendingBezEffect={type:'lilous_gabe_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
+    return {ok:true,pending:true,msg:`Wähle eine eigene Bezwingerin für Lilou's Gabe.`};
+  }
+  if(key==='vengeresse_vergeltung'){
+    state.pendingBezEffect={type:'vengeresse_vergeltung_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
+    return {ok:true,pending:true,msg:'Wähle eine eigene Vengeresse für Vengeresse Vergeltung.'};
+  }
   state.pendingBezEffect={type:'bis_zum_bitteren_ende_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
   return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin für Bis zum bitteren Ende.'};
+}
+
+function newAstralSpellTargets(state){
+  const q=state.pendingBezEffect;if(!q)return [];
+  const own=state.players[q.sourcePlayer];
+  if(q.type==='exekution_target'){
+    const out=[];for(const p of state.players)(p.bezSlots||[]).forEach((r,i)=>{if(r)out.push({id:`${p.index}:${i}`,name:`${p.index===q.sourcePlayer?'Eigene':'Gegnerische'} ${cardData(r)?.name||'Bezwingerin'}`});});return out;
+  }
+  if(q.type==='zweifache_bestrafung_target')return (own.bezSlots||[]).map((r,i)=>r&&Number(r.honor||0)>=3?{id:String(i),name:cardData(r)?.name||'Bezwingerin',honor:Number(r.honor||0)}:null).filter(Boolean);
+  if(q.type==='lilous_gabe_target')return (own.bezSlots||[]).map((r,i)=>r?{id:String(i),name:cardData(r)?.name||'Bezwingerin'}:null).filter(Boolean);
+  if(q.type==='vengeresse_vergeltung_target')return (own.bezSlots||[]).map((r,i)=>r&&isVengeresseCard(cardData(r))?{id:String(i),name:cardData(r)?.name||'Vengeresse'}:null).filter(Boolean);
+  return [];
+}
+function resolveNewAstralSpellTarget(state,id){
+  const q=state.pendingBezEffect;if(!q)return {ok:false,msg:'Keine passende ASTRAL-Auswahl aktiv.'};
+  if(q.type==='exekution_target'){
+    const [pi,si]=String(id).split(':').map(Number),p=state.players[pi],r=p?.bezSlots?.[si];if(!r)return {ok:false,msg:'Ungültige Bezwingerin.'};
+    const st=effectiveBezStats(state,pi,si);if(Number(r.hearts||0)!==1||Number(st?.physicalShield||0)!==0||Number(st?.astralShield||0)!==0)return {ok:false,msg:'Exekution: Ziel benötigt genau 1 Herz sowie 0 physischen und 0 ASTRAL-Schild.'};
+    const name=cardData(r)?.name||'Bezwingerin';r.hearts=0;killIfNeeded(state,pi,'bez',si);discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;log(state,`Exekution zerstört ${name}.`);return {ok:true,msg:`${name} wurde durch Exekution zerstört.`};
+  }
+  const p=state.players[q.sourcePlayer],slot=Number(id),r=p?.bezSlots?.[slot];if(!r)return {ok:false,msg:'Ungültige eigene Bezwingerin.'};
+  if(q.type==='zweifache_bestrafung_target'){
+    if(Number(r.honor||0)<3)return {ok:false,msg:'Diese Bezwingerin besitzt weniger als 3 Ehre.'};
+    r.honor=Number(r.honor||0)-3;r.effectState=r.effectState||{};r.effectState.extraPhysicalAttackAvailable=true;r.effectState.extraPhysicalAttackRoundSerial=state.roundSerial;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;log(state,`Zweifache Bestrafung: ${cardData(r)?.name||'Bezwingerin'} bezahlt 3 Ehre und erhält einen zusätzlichen physischen Kampf in dieser KR (nicht gegen Zuflucht).`);return {ok:true,msg:'3 Ehre bezahlt; zusätzlicher physischer Kampf verfügbar.'};
+  }
+  if(q.type==='lilous_gabe_target'){
+    r.hearts=Number(r.hearts||0)+1;discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;log(state,`Lilou's Gabe: ${cardData(r)?.name||'Bezwingerin'} erhält dauerhaft +1 Herz.`);return {ok:true,msg:'+1 Herz dauerhaft.'};
+  }
+  if(q.type==='vengeresse_vergeltung_target'){
+    if(!isVengeresseCard(cardData(r)))return {ok:false,msg:'Das Ziel ist keine Vengeresse.'};
+    r.effectState=r.effectState||{};r.effectState.vengeresseVergeltungActive=true;r.effectState.vengeresseVergeltungRoundSerial=state.roundSerial;
+    if(state.attack && (1-state.activePlayer)===q.sourcePlayer && state.attack.target?.type==='bez' && Number(state.attack.target.slot)===slot){state.attack.attackType='astral';}
+    discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;log(state,`Vengeresse Vergeltung: ${cardData(r)?.name||'Vengeresse'} wandelt für einen Kampf ihre aktuelle physische Stärke in zusätzliche ASTRAL-Stärke um.`);return {ok:true,msg:'Vengeresse Vergeltung für einen Kampf aktiviert.'};
+  }
+  return {ok:false,msg:'Unbekannte ASTRAL-Auswahl.'};
 }
 function bisZumBitterenEndeTargets(state,playerIndex){
   const p=state.players[playerIndex];return (p.bezSlots||[]).map((r,i)=>r?{id:String(i),name:cardData(r)?.name||`Bezwingerin ${i+1}`,hearts:Number(r.hearts||0)}:null).filter(Boolean);
@@ -2354,6 +2468,9 @@ function expireRoundLimitedItemEffects(state){
         delete r.effectState.bitterEndPhysicalBonus;delete r.effectState.bitterEndAstralBonus;delete r.effectState.bitterEndExpiresRoundSerial;
         log(state,`${cardData(r)?.name}: Bonus von Bis zum bitteren Ende verfällt am Ende der Kampfrunde.`);
       }
+      if(r.effectState.cannotAttackRoundSerial===state.roundSerial){delete r.effectState.cannotAttackRoundSerial;delete r.effectState.cannotAttackThisRound;}
+      if(r.effectState.extraPhysicalAttackRoundSerial===state.roundSerial){delete r.effectState.extraPhysicalAttackRoundSerial;delete r.effectState.extraPhysicalAttackAvailable;log(state,`${cardData(r)?.name}: ungenutzter Zusatzkampf aus Zweifache Bestrafung verfällt.`);}
+      if(r.effectState.vengeresseVergeltungRoundSerial===state.roundSerial){delete r.effectState.vengeresseVergeltungRoundSerial;delete r.effectState.vengeresseVergeltungActive;log(state,`${cardData(r)?.name}: ungenutzte Vengeresse Vergeltung verfällt.`);}
     }
   }
 }
@@ -2519,6 +2636,7 @@ function playFieldFromHand(state,handIndex,area){
   if(c?.effekte?.some(e=>e.engine_key==='ruth_kaufladen')){r.effectUsesRemaining=3;r.effectUsedTurn=null;}
 
   if(c?.effekte?.some(e=>e.engine_key==='ruth_shop'))r.effectUsesRemaining=3;
+  if(c?.effekte?.some(e=>e.engine_key==='kiki_counter_dodge')){r.effectRoundsRemaining=Number(c.effekt_dauer_kr||3);r.effectDisabled=false;r.effectUsedTurn=null;r.effectState=r.effectState||{};}
   if(area==='primary')p.primary=r;
   else state.sharedSecondary=r;
 
@@ -2562,6 +2680,7 @@ function moveRevealedFieldCard(state,azrSlot){
   }
   p.azr[azrSlot]=null;
   state.pendingFieldCard=null;
+  if(c?.effekte?.some(e=>e.engine_key==='kiki_counter_dodge')){r.effectRoundsRemaining=Number(c.effekt_dauer_kr||3);r.effectDisabled=false;r.effectUsedTurn=null;r.effectState=r.effectState||{};}
   log(state,`${p.name} verschiebt ${c?.name||'die aufgedeckte Karte'} regelkonform in den ${area==='primary'?'Primär':'Sekundär'}bereich.`);
   if(c?.effekte?.some(e=>e.engine_key==='wurzelpeinverschlinger'))resolveWurzelpeinverschlingerOnPlay(state,p.index,r);
   return {ok:true};
@@ -2927,9 +3046,11 @@ function develop(state,kind,slot=null){
 }
 function canAttack(runtime,p){
   // Einsatzverzögerte Karten können angegriffen werden, aber selbst nicht angreifen.
-  return !!runtime && runtime.ready && runtime.attackedTurn!==p.turnCount &&
-    runtime.effectState?.ruthCannotAttackTurn!==p.turnCount &&
-    runtime.effectState?.chronokryptaCannotAttackTurn!==p.turnCount;
+  if(!runtime||!runtime.ready)return false;
+  if(runtime.effectState?.cannotAttackThisRound===true)return false;
+  if(runtime.effectState?.ruthCannotAttackTurn===p.turnCount||runtime.effectState?.chronokryptaCannotAttackTurn===p.turnCount)return false;
+  if(runtime.attackedTurn!==p.turnCount)return true;
+  return !!runtime.effectState?.extraPhysicalAttackAvailable;
 }
 function hasHeartAttribute(runtime){
   if(!runtime)return false;
@@ -3049,9 +3170,13 @@ function prepareAttack(state,attackerSource,target,attackType){
   if(src.kind==='refuge'){
     if(!canRefugeAttack(state,p.index))return {ok:false,msg:'Die Zuflucht kann nur angreifen, wenn auf deiner Spielfeldseite keine Bezwingerin vorhanden ist.'};
   }else if(!canAttack(r,p)){
-    return {ok:false,msg:'Diese Bezwingerin ist einsatzverzögert oder hat bereits angegriffen.'};
+    return {ok:false,msg:'Diese Bezwingerin ist einsatzverzögert, gesperrt oder hat bereits angegriffen.'};
   }
   if(!['physical','astral'].includes(attackType))return {ok:false,msg:'Ungültige Angriffsart.'};
+  const usingExtra=src.kind==='bez' && r.attackedTurn===p.turnCount && !!r.effectState?.extraPhysicalAttackAvailable;
+  if(usingExtra && attackType!=='physical')return {ok:false,msg:'Der zusätzliche Kampf aus Zweifache Bestrafung muss physisch durchgeführt werden.'};
+  if(usingExtra && target?.type==='refuge')return {ok:false,msg:'Der zusätzliche Kampf aus Zweifache Bestrafung darf nicht gegen eine Zuflucht erfolgen.'};
+  if(src.kind==='bez' && r.effectState?.vengeresseVergeltungActive && attackType!=='astral')return {ok:false,msg:'Vengeresse Vergeltung erzwingt für diesen Kampf die ASTRAL-Angriffsart.'};
   const legalTarget=attackTargets(state,attackerSource).find(t=>targetKey(t)===targetKey(target));
   if(legalTarget?.forcedAttackType && attackType!==legalTarget.forcedAttackType)return {ok:false,msg:'Arcadia erzwingt für diesen Kampf einen physischen Angriff.'};
   const vacationTypeChoice=!!legalTarget?.vacationOwnerChoosesAttackType;
@@ -3067,6 +3192,7 @@ function prepareAttack(state,attackerSource,target,attackType){
   }
 
   state.attack={
+    extraAttack:usingExtra,
     attackerKind:src.kind,
     attackerSlot:src.slot,
     target,
@@ -3088,7 +3214,10 @@ function revealDefenderCard(state,slot){
   if(!r || !r.faceDown)return {ok:false,msg:'In diesem AZR-Feld liegt keine verdeckte Karte.'};
   r.faceDown=false;
   state.attack.revealedDuringDefense=true;
-  log(state,`${opp.name} aktiviert die verdeckte Karte in AZR ${slot+1}: ${cardData(r)?.name||'Karte'}.`);
+  const c=cardData(r);
+  log(state,`${opp.name} aktiviert die verdeckte Karte in AZR ${slot+1}: ${c?.name||'Karte'}.`);
+  if(isInstantAstralSpell(c))return startInstantAstralSpell(state,opp.index,slot);
+  if(isInstantRuestkammerItem(c))return startInstantRuestkammerItem(state,opp.index,slot);
   return {ok:true};
 }
 function confirmAttack(state){
@@ -3440,6 +3569,9 @@ function resolveCombat(state){
   log(state,`${ac?.name||'Angreifer'} verursacht ${attackValue}${atkBonus} ${type==='physical'?'physischen':'ASTRAL'} Schaden; ${dc?.name||'Ziel'} hat ${counterValue}${counterBonus} Gegenangriff${timingText}.`);
 
   a.attackedTurn=p.turnCount;
+  if(state.attack?.extraAttack && a?.effectState){a.effectState.extraPhysicalAttackAvailable=false;delete a.effectState.extraPhysicalAttackRoundSerial;}
+  if(a?.effectState?.vengeresseVergeltungActive){delete a.effectState.vengeresseVergeltungActive;delete a.effectState.vengeresseVergeltungRoundSerial;log(state,`${cardData(a)?.name||'Bezwingerin'}: Vengeresse Vergeltung wurde nach diesem Kampf verbraucht.`);}
+  if(target.type==='bez' && d?.effectState?.vengeresseVergeltungActive){delete d.effectState.vengeresseVergeltungActive;delete d.effectState.vengeresseVergeltungRoundSerial;log(state,`${cardData(d)?.name||'Bezwingerin'}: Vengeresse Vergeltung wurde nach diesem Kampf verbraucht.`);}
   if(attackerKind==='bez'){
     a.effectState=a.effectState||{};
     a.effectState.foughtRoundSerial=state.roundSerial;
@@ -3756,12 +3888,12 @@ window.G5Engine={
   startPsiloWonder,psiloTargets,resolvePsiloTarget,keylaSearchTargets,resolveKeylaSearch,
   startQueen2Wonder,queenStackTargets,resolveQueenSearch,queenDiscardTargets,resolveQueen2Discard,
   fragmentfresserSchlundTargets,startFragmentfresserSchlundEffect,resolveFragmentfresserSchlund,
-  startInstantAstralSpell,bisZumBitterenEndeTargets,resolveBisZumBitterenEndeTarget,resolveBisZumBitterenEndeChoice,meteorsturmWonderAvailable,startMeteorsturmWonder,meteorsturmTargets,resolveMeteorsturmTarget,secondaryLockedFor,startInstantRuestkammerItem,instantRuestkammerTargets,resolveInstantRuestkammerTarget,instinctCandidates,instinctWindowNeeded,passInstinctWindow,activateInstinctCard,ueberladungTargets,erlassHonorSources,erlassBegin,erlassRemoveHonor,erlassTargets,resolveErlassTarget,
+  startInstantAstralSpell,newAstralSpellTargets,resolveNewAstralSpellTarget,bisZumBitterenEndeTargets,resolveBisZumBitterenEndeTarget,resolveBisZumBitterenEndeChoice,meteorsturmWonderAvailable,startMeteorsturmWonder,meteorsturmTargets,resolveMeteorsturmTarget,secondaryLockedFor,startInstantRuestkammerItem,instantRuestkammerTargets,resolveInstantRuestkammerTarget,instinctCandidates,instinctWindowNeeded,passInstinctWindow,activateInstinctCard,ueberladungTargets,erlassHonorSources,erlassBegin,erlassRemoveHonor,erlassTargets,resolveErlassTarget,
   chronokryptaBezTargets,chronokryptaEquipmentTargets,startChronokrypta,selectChronokryptaPayer,resolveChronokrypta,ruthTargets,startRuthEffect,resolveRuthTarget,resolveRuthChoice,startWunderumwandlungsapparatur,wunderumwandlungsapparaturHonorSources,resolveWunderumwandlungsapparaturHonor,wunderumwandlungsapparaturTargets,resolveWunderumwandlungsapparaturTarget,ehrisTargets,startEhrisSelection,resolveEhrisSelection,effectiveWonderCost,
   startKristallharnischEffect,resolveKristallharnischEffect,
   triggerLebensfresserschildHunger,resolveLebensfresserschildHungerAtSupplyStart,
   activateDeathPrimaryAttack,hasPrimaryAttack,hasSecondaryAttack,
-  activateAliceDodge,activateVoidpiercerLifebreaker,activateParierdolchDodge,startLilou2Wonder,lilou2Targets,resolveLilou2Discard,startBaronesse2Wonder,
+  kikiEligibleTargets,activateKikiDodge,activateAliceDodge,activateVoidpiercerLifebreaker,activateParierdolchDodge,startLilou2Wonder,lilou2Targets,resolveLilou2Discard,startBaronesse2Wonder,
   keyla2DestroyTargets,keyla2DiscardTargets,resolveKeyla2Choice,resolveKeyla2Destroy,resolveKeyla2Discard,
   fragmentRewardTargets,resolveFragmentReward,
   defenderFaceDownSlots,revealDefenderCard,confirmAttack,killIfNeeded,expireTimedFieldCardNow,titanCanRedirectRefuge,setTitanRedirectChoice,resolveCombat,currentShieldChoice,chooseShieldSource,returnToRush,cardData

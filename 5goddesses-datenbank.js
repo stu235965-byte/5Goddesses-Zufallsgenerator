@@ -2330,8 +2330,25 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "exekution",
+          "trigger": "on_play",
+          "target": "any_bez",
+          "instinkt": true,
+          "condition": {
+            "hearts_exact": 1,
+            "physical_shield_total": 0,
+            "astral_shield_total": 0
+          },
+          "effect": "destroy"
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ],
+      "effekt_symbol": "on_play+instinkt",
+      "effekt_text": "Wähle eine beliebige Bezwingerin. Hat sie genau 1 Herz und insgesamt 0 physischen sowie 0 ASTRAL-Schild, zerstöre sie."
     },
     {
       "id": "1.03-19-32-62426e17",
@@ -2357,8 +2374,21 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "zweifache_bestrafung",
+          "trigger": "on_play",
+          "target": "own_bez",
+          "honor_cost_on_target": 3,
+          "extra_combat": 1,
+          "attack_type": "physical",
+          "forbidden_target": "refuge",
+          "duration": "current_round"
+        }
+      ],
+      "tags": [],
+      "effekt_symbol": "on_play",
+      "effekt_text": "Wähle eine eigene Bezwingerin mit mindestens 3 Ehre. Sie bezahlt 3 Ehre und darf in dieser Kampfrunde einen zusätzlichen physischen Kampf durchführen; die Zuflucht ist als Ziel dieses Zusatzkampfs ausgeschlossen."
     },
     {
       "id": "1.03-20-32-53222408",
@@ -2524,14 +2554,14 @@ window.GODDESSES_DB = {
       "kartengruppe": "Astralkammer",
       "deck_bereich": "astral",
       "hauptattribut": "ASTRAL",
-      "kartentyp": "ASTRAL-Karte",
+      "kartentyp": "Kreatur",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
       "fraktion": "Oberwelt",
       "stufe": 1,
       "klasse": null,
       "bereich": "Primär",
-      "untertyp": null,
+      "untertyp": "Rabe",
       "material": null,
       "nebenattribute": [
         "Rabe"
@@ -2543,8 +2573,28 @@ window.GODDESSES_DB = {
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "kiki_counter_dodge",
+          "trigger": "supply_once_per_round",
+          "duration_rounds": 3,
+          "eligible_classes": [
+            "Assassine",
+            "Heilerin",
+            "Unterstützerin",
+            "Magierin"
+          ],
+          "target": "own_bez",
+          "counter_dodge_uses_this_round": 1
+        }
+      ],
+      "tags": [
+        "kreatur",
+        "rabe"
+      ],
+      "effekt_symbol": "duration",
+      "effekt_dauer_kr": 3,
+      "effekt_text": "Während deiner Versorgungsphase einmal pro Kampfrunde: Wähle eine eigene Bezwingerin der Klasse Assassine, Heilerin, Unterstützerin oder Magierin. Diese Bezwingerin kann in dieser Kampfrunde einmal einem Gegenangriff ausweichen."
     },
     {
       "id": "1.03-32-32-fca1732d",
@@ -2616,7 +2666,7 @@ window.GODDESSES_DB = {
       "stufe": 1,
       "klasse": null,
       "bereich": null,
-      "untertyp": null,
+      "untertyp": "Vengeresse",
       "material": null,
       "nebenattribute": [
         "Vengeresse"
@@ -2628,8 +2678,22 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "laehmende_angst",
+          "trigger": "rush_when_own_vengeresse_attacked",
+          "target": "attacking_enemy_bez",
+          "instinkt": true,
+          "cancel_current_attack": true,
+          "cannot_attack_again_this_round": true
+        }
+      ],
+      "tags": [
+        "instinkt",
+        "vengeresse"
+      ],
+      "effekt_symbol": "on_play+instinkt",
+      "effekt_text": "Wenn eine eigene Vengeresse in der Ansturmphase angegriffen wird: Brich den Angriff ab. Die angreifende gegnerische Bezwingerin kann in dieser Kampfrunde nicht mehr angreifen."
     },
     {
       "id": "1.02-19-32-6812396b",
@@ -2645,7 +2709,7 @@ window.GODDESSES_DB = {
       "stufe": 1,
       "klasse": null,
       "bereich": null,
-      "untertyp": null,
+      "untertyp": "Vengeresse",
       "material": null,
       "nebenattribute": [
         "Vengeresse"
@@ -2657,8 +2721,23 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "vengeresse_vergeltung",
+          "trigger": "rush",
+          "target": "own_vengeresse",
+          "instinkt": true,
+          "convert_current_physical_to_astral": true,
+          "duration_combats": 1,
+          "force_attack_type": "astral"
+        }
+      ],
+      "tags": [
+        "instinkt",
+        "vengeresse"
+      ],
+      "effekt_symbol": "on_play+instinkt",
+      "effekt_text": "Wähle während der Ansturmphase eine eigene Vengeresse. Für einen Kampf wird ihre aktuelle physische Stärke zu ASTRAL-Stärke umgewandelt und zu ihrer aktuellen ASTRAL-Stärke addiert; der Kampf wird als ASTRAL-Kampf geführt."
     },
     {
       "id": "1.02-20-32-70faddfa",
@@ -2819,8 +2898,20 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "lilous_gabe",
+          "trigger": "on_play",
+          "target": "own_bez",
+          "heart_delta": 1,
+          "instinkt": true
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ],
+      "effekt_symbol": "on_play+instinkt",
+      "effekt_text": "Wähle eine eigene Bezwingerin. Sie erhält dauerhaft +1 Herz."
     },
     {
       "id": "1.02-32-32-c04e9575",

@@ -2524,14 +2524,14 @@
       "kartengruppe": "Astralkammer",
       "deck_bereich": "astral",
       "hauptattribut": "ASTRAL",
-      "kartentyp": "ASTRAL-Karte",
+      "kartentyp": "Kreatur",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
       "fraktion": "Oberwelt",
       "stufe": 1,
       "klasse": null,
       "bereich": "Primär",
-      "untertyp": null,
+      "untertyp": "Rabe",
       "material": null,
       "nebenattribute": [
         "Rabe"
@@ -2543,8 +2543,28 @@
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "kiki_counter_dodge",
+          "trigger": "supply_once_per_round",
+          "duration_rounds": 3,
+          "eligible_classes": [
+            "Assassine",
+            "Heilerin",
+            "Unterstützerin",
+            "Magierin"
+          ],
+          "target": "own_bez",
+          "counter_dodge_uses_this_round": 1
+        }
+      ],
+      "tags": [
+        "kreatur",
+        "rabe"
+      ],
+      "effekt_symbol": "duration",
+      "effekt_dauer_kr": 3,
+      "effekt_text": "Während deiner Versorgungsphase einmal pro Kampfrunde: Wähle eine eigene Bezwingerin der Klasse Assassine, Heilerin, Unterstützerin oder Magierin. Diese Bezwingerin kann in dieser Kampfrunde einmal einem Gegenangriff ausweichen."
     },
     {
       "id": "1.03-32-32-fca1732d",

@@ -1024,6 +1024,20 @@ function renderActions(){
       return;
     }
   }
+  if(state.pendingBezEffect && ['exekution_target','zweifache_bestrafung_target','lilous_gabe_target','vengeresse_vergeltung_target'].includes(state.pendingBezEffect.type)){
+    const labels={
+      exekution_target:'Exekution – Bezwingerin wählen',
+      zweifache_bestrafung_target:'Zweifache Bestrafung – eigene Bezwingerin wählen',
+      lilous_gabe_target:`Lilou's Gabe – eigene Bezwingerin wählen`,
+      vengeresse_vergeltung_target:'Vengeresse Vergeltung – eigene Vengeresse wählen'
+    };
+    const title=document.createElement('strong');title.textContent=labels[state.pendingBezEffect.type]||'ASTRAL-Spruch – Ziel wählen';root.appendChild(title);
+    E().newAstralSpellTargets(state).forEach(t=>{
+      const b=document.createElement('button');b.type='button';b.textContent=t.honor!==undefined?`${t.name} (${t.honor} Ehre)`:t.name;
+      b.addEventListener('click',()=>{const rr=E().resolveNewAstralSpellTarget(state,t.id);saveRender(rr.msg);});root.appendChild(b);
+    });
+    return;
+  }
   if(state.pendingBezEffect && ['laehmendes_nervengift','trank_der_staerke','trank_der_astral_macht','die_kanone','ueberladung','skyflux'].includes(state.pendingBezEffect.type)){
     const title=document.createElement('strong');
     title.textContent=state.pendingBezEffect.type==='laehmendes_nervengift'
@@ -1434,7 +1448,7 @@ function renderActions(){
 
       const warn=document.createElement('span');
       warn.className='action-note';
-      warn.textContent='Die konkrete Wirkung aktivierter verdeckter Karten wird noch nicht automatisch ausgeführt.';
+      warn.textContent='Unterstützte Instinkt- und Soforteffekte werden beim Aufdecken automatisch abgehandelt.';
       root.appendChild(warn);
     }else{
       const attackers=p.bezSlots.map((r,i)=>E().canAttack(r,p)?i:null).filter(i=>i!==null);
@@ -1769,6 +1783,17 @@ Abbrechen = 1 ASTRAL → 1 physische`) ? 'physical_to_astral' : 'astral_to_physi
 function handleOwnPrimary(){
   const p=E().active(state),r=p.primary,c=E().cardData(r);
   if(!r || r.owner!==p.index)return;
+  if(c?.effekte?.some(e=>e.engine_key==='kiki_counter_dodge')){
+    if(phase()?.id!=='supply')return message('Kiki kann ihren Effekt nur während deiner Versorgungsphase aktivieren.','warn');
+    const targets=E().kikiEligibleTargets(state);
+    if(!targets.length)return message('Keine eigene Bezwingerin der Klasse Assassine, Heilerin, Unterstützerin oder Magierin ist als Ziel verfügbar.','warn');
+    const raw=prompt(`Rabe der Hoffnung Kiki – Ziel wählen\n\n${targets.map((t,i)=>`${i+1}: ${t.name} (${t.klasse})`).join('\n')}`);
+    if(raw===null)return;
+    const t=targets[Number(raw)-1];
+    if(!t)return message('Ungültige Auswahl.','warn');
+    const rr=E().activateKikiDodge(state,t.slot);
+    return saveRender(rr.msg);
+  }
   if(c?.effekte?.some(e=>e.engine_key==='chronokrypta_duration_trade')){
     if(!['supply','resupply'].includes(phase()?.id||''))return message('Chronokrypta kann nur in VP oder NP benutzt werden.','warn');
     let rr=E().startChronokrypta(state);
