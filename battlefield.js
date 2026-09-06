@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.87';
+window.G5_BATTLEFIELD_BUILD='1.88';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -272,10 +272,10 @@ function fillDeckSelectors(){
   if(!info)return;
   if(!all.length){
     info.hidden=false;
-    info.textContent='Du brauchst zuerst mindestens ein vollständiges Deck unter „Meine Decks“.';
+    info.textContent='Du brauchst zuerst mindestens ein vollständiges Deck unter „Deckbuilder“.';
   }else if(!ds.length){
     info.hidden=false;
-    info.textContent=`${all.length} gespeicherte${all.length===1?'s Deck':' Decks'} gefunden, aber keines erfüllt aktuell alle Gefechtsregeln. Öffne das Deck einmal unter „Meine Decks“ und speichere es erneut.`;
+    info.textContent=`${all.length} gespeicherte${all.length===1?'s Deck':' Decks'} gefunden, aber keines erfüllt aktuell alle Gefechtsregeln. Öffne das Deck einmal unter „Deckbuilder“ und speichere es erneut.`;
   }else{
     info.hidden=true;
     info.textContent='';

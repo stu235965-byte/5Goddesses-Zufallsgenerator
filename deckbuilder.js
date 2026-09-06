@@ -164,7 +164,7 @@ document.getElementById('zufallsdeckSpeichern')?.addEventListener('click',()=>{
   const name=input?.value.trim()||'Zufallsdeck';
   const deck=speichereNeuesDeck(name,karten,'zufall');
   if(input)input.value=deck.name;
-  zeigeGeneratorInfo(`„${deck.name}“ wurde unter „Meine Decks“ gespeichert.`);
+  zeigeGeneratorInfo(`„${deck.name}“ wurde unter „Deckbuilder“ gespeichert.`);
   renderGespeicherteDecks();
 });
 

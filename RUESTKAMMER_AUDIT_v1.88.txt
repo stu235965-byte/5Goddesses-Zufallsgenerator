@@ -1,0 +1,25 @@
+RÜSTKAMMER-AUDIT v1.88
+
+Ziel:
+Die in früheren Arbeitsständen vorhandene vollständige Rüstkammer-Testabdeckung wieder dauerhaft in die aktuelle PWA aufnehmen.
+
+Abdeckung:
+- 50/50 Rüstkammerkarten: Datenbank-/Runtime-Registrierung (Kartengruppe, Hauptattribut, Stufe, ID, Bildpfad, mindestens ein hinterlegter Effekt).
+- 11 zusätzliche verhaltensbasierte Regressionen:
+  1. Legionsschild – physischer Ausrüstungsschild + Ehre beim Anlegen
+  2. Ubusa Brustpanzer – physischer + ASTRAL-Ausrüstungsschild
+  3. Hut der Weisheit – Ehre beim Anlegen
+  4. Fragmentfresser Schlund – nur ASTRALFRAGMENT aus eigener Ablage
+  5. Lebensfresserschild Hunger – 1 Herz, +3 physische Schilde, Dauer 2
+  6. Parierdolch – gespeicherte/aktivierbare Gegenangriff-Ausweichnutzung
+  7. Die Bastion bringt Dir Erleuchtung – Zuflucht +1 Ehre und Ablage
+  8. Lähmendes Nervengift – Sekundärangriff für gegnerische Bezwingerin
+  9. Trank der Stärke – +1 physische Stärke für einen Kampf
+ 10. Urlaub – andere Ausrüstung ablegen, Basisschilde auf 0, Dauer 2
+ 11. Schattenfluchkralle – Berserkermarke nach tatsächlichem Kampf
+
+Ergebnis:
+61 PASS / 0 FAIL
+
+Hinweis:
+Die 50 Registrierungsprüfungen ersetzen nicht jede denkbare Kartenkombination. Die verhaltensbasierten Tests ergänzen die bereits bestehenden Einzelkarten-, Astralkammer-, Core-Rules-, KI- und Bugfix-Suites und verhindern Regressionen in den zentralen Rüstkammermechaniken.

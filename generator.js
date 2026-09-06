@@ -60,7 +60,7 @@ function speicherePool(){
   aktualisiereUebersicht();
   aktualisiereStatus();
 }
-function profilname(){return localStorage.getItem(PROFILE_KEY)||'Mein Kartenpool'}
+function profilname(){return localStorage.getItem(PROFILE_KEY)||'Kartenpool'}
 
 function zeigeSeite(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -225,7 +225,7 @@ function ziehen(){
   }
 
   if(fehler.length){
-    meldung.innerHTML=`Dein Kartenpool erfüllt die Anforderungen für die Ziehung noch nicht:<br>${fehler.join('<br>')}<br><br>Öffne „Mein Kartenpool“ und wähle weitere Karten aus.`;
+    meldung.innerHTML=`Dein Kartenpool erfüllt die Anforderungen für die Ziehung noch nicht:<br>${fehler.join('<br>')}<br><br>Öffne „Kartenpool“ und wähle weitere Karten aus.`;
     meldung.hidden=false;
     return;
   }
@@ -376,7 +376,7 @@ const input=document.getElementById('profilname');
 input.value=profilname();
 
 document.getElementById('profilSpeichern').addEventListener('click',()=>{
-  const name=input.value.trim()||'Mein Kartenpool';
+  const name=input.value.trim()||'Kartenpool';
   localStorage.setItem(PROFILE_KEY,name);
   input.value=name;
   document.getElementById('speicherInfo').textContent='Profil wurde auf diesem Gerät gespeichert.';
