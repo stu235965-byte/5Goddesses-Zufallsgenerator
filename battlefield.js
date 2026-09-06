@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.71';
+window.G5_BATTLEFIELD_BUILD='1.72';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -743,6 +743,7 @@ function renderBoards(){
   document.querySelector('#playerBoard [data-refuge]')?.addEventListener('click',()=>handleRefuge());
   document.querySelector('#playerBoard [data-primary-target]')?.addEventListener('click',()=>{const r=E().active(state).primary,c=E().cardData(r);if(r?.owner===state.activePlayer&&c?.effekte?.some(e=>e.engine_key==='ruth_shop')&&['supply','resupply'].includes(phase().id)){const rr=E().startRuthEffect(state);saveRender(rr.msg);}});
   document.querySelector('#playerBoard [data-primary-target]')?.addEventListener('click',handleOwnPrimary);
+  document.querySelector('#sharedSecondaryZone [data-secondary-target]')?.addEventListener('click',handleOwnSecondary);
 
   if(state.pendingEquipment && state.pendingEquipment.owner===state.activePlayer){
     const pending=state.pendingEquipment;
@@ -853,6 +854,20 @@ function renderActions(){
   if(cardPreviewMode){
     root.innerHTML='<div class="preview-mode-notice">🔍 Kartenvorschau aktiv · Spielinteraktionen sind eingefroren. Tippe eine Karte zum Vergrößern an.</div>';
     return;
+  }
+
+  if(state.pendingBezEffect?.type==='bis_zum_bitteren_ende_target'){
+    const title=document.createElement('strong');title.textContent='Bis zum bitteren Ende – eigene Bezwingerin wählen';root.appendChild(title);
+    E().bisZumBitterenEndeTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=`${t.name} (${t.hearts} Herzen)`;b.onclick=()=>{const rr=E().resolveBisZumBitterenEndeTarget(state,t.id);saveRender(rr.msg)};root.appendChild(b)});return;
+  }
+  if(state.pendingBezEffect?.type==='bis_zum_bitteren_ende_choice'){
+    const title=document.createElement('strong');title.textContent='Bis zum bitteren Ende – Stärkebonus wählen';root.appendChild(title);
+    [['physical','+1 physische Stärke'],['astral','+1 ASTRAL-Stärke']].forEach(([id,label])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>{const rr=E().resolveBisZumBitterenEndeChoice(state,id);saveRender(rr.msg)};root.appendChild(b)});return;
+  }
+  if(state.pendingBezEffect?.type==='meteorsturm_target'){
+    const q=state.pendingBezEffect;const title=document.createElement('strong');title.textContent=`Meteorsturm – W6: ${q.roll}`;root.appendChild(title);
+    const info=document.createElement('span');info.textContent=q.targetMode==='any'?'Gerade Zahl: Wähle eine beliebige Bezwingerin.':'Ungerade Zahl: Wähle eine eigene Bezwingerin.';root.appendChild(info);
+    E().meteorsturmTargets(state).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.onclick=()=>{const rr=E().resolveMeteorsturmTarget(state,t.id);saveRender(rr.msg)};root.appendChild(b)});return;
   }
   // Direkter Kartenschaden (z.B. Die Kanone) kann in VP/NP/Instinkt-Fenstern
   // entstehen und darf deshalb nicht nur in der Kampfphase bedienbar sein.
@@ -1307,7 +1322,7 @@ function renderActions(){
           const fieldBtn=document.createElement('button');
           fieldBtn.className='primary';
           fieldBtn.textContent=`Offen in ${area==='primary'?'Primär':'Sekundär'}bereich spielen`;
-          fieldBtn.disabled=area==='primary' ? !!p.primary : !!state.sharedSecondary;
+          fieldBtn.disabled=area==='primary' ? !!p.primary : (!!state.sharedSecondary || !!E().secondaryLockedFor?.(state,p.index));
           fieldBtn.addEventListener('click',()=>{
             const r=E().playFieldFromHand(state,selectedHandIndex,area);
             if(r.ok)selectedHandIndex=null;
@@ -1797,6 +1812,17 @@ function handleOwnPrimary(){
   }
 }
 
+
+function handleOwnSecondary(){
+  const r=state.sharedSecondary,c=E().cardData(r),p=E().active(state);
+  if(!r || r.owner!==p.index)return;
+  if(c?.effekte?.some(e=>e.engine_key==='meteorsturm_wunder')){
+    const chk=E().meteorsturmWonderAvailable(state,p.index);
+    if(!chk.ok)return message(chk.msg,'warn');
+    const rr=E().startMeteorsturmWonder(state);
+    return saveRender(rr.msg||'Meteorsturm aktiviert.');
+  }
+}
 function handleBattlefieldTargetClick(ev){
   if(phase()?.id!=='rush' || selectedAttacker===null || state.attack)return;
 

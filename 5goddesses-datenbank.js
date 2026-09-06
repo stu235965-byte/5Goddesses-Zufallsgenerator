@@ -1681,7 +1681,7 @@ window.GODDESSES_DB = {
       "stufe": 1,
       "klasse": null,
       "bereich": "Sekundär",
-      "untertyp": null,
+      "untertyp": "Portal",
       "material": null,
       "nebenattribute": [
         "Portal"
@@ -1692,9 +1692,26 @@ window.GODDESSES_DB = {
       "physischer_schild": 0,
       "astraler_schild": 0,
       "ehre": 1,
-      "wunder": null,
-      "effekte": [],
-      "tags": []
+      "wunder": {
+        "kosten_ehre": 2
+      },
+      "effekte": [
+        {
+          "engine_key": "meteorsturm_wunder",
+          "trigger": "wunder",
+          "die": "W6",
+          "even_target": "any_bez",
+          "odd_target": "own_bez",
+          "damage_type": "astral",
+          "damage": 1,
+          "counterattack": false
+        }
+      ],
+      "tags": [
+        "portal"
+      ],
+      "effekt_symbol": null,
+      "effekt_text": "Wunder (2 Ehre): W6. Gerade: beliebige Bezwingerin erhält 1 ASTRAL-Schaden. Ungerade: eigene Bezwingerin erhält 1 ASTRAL-Schaden. Kein Gegenangriff."
     },
     {
       "id": "1.04-08-32-40cf360e",
@@ -1774,8 +1791,21 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "saphiras_upsi",
+          "trigger": "on_play",
+          "instinkt": true,
+          "target": "opponent_open_primary",
+          "damage_type": "astral",
+          "damage": 1
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_text": "Eine offen liegende Karte im Primärbereich des Gegners erhält 1 ASTRAL-Schaden."
     },
     {
       "id": "1.04-11-32-fee6ef97",
@@ -1903,7 +1933,7 @@ window.GODDESSES_DB = {
       "stufe": 1,
       "klasse": null,
       "bereich": null,
-      "untertyp": null,
+      "untertyp": "Wurm",
       "material": null,
       "nebenattribute": [
         "Wurm"
@@ -1915,8 +1945,21 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "verwuestung",
+          "trigger": "on_play",
+          "target": "open_shared_secondary",
+          "damage_type": "physical",
+          "damage": 1,
+          "damage_with_own_creature_wurm": 2
+        }
+      ],
+      "tags": [
+        "wurm"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_text": "Eine offene Karte im Sekundärbereich erhält 1 physischen Schaden; kontrollierst du eine offene KREATUR vom Typ WURM, sind es 2."
     },
     {
       "id": "1.04-27-32-a5709fac",
@@ -1925,14 +1968,14 @@ window.GODDESSES_DB = {
       "kartengruppe": "Astralkammer",
       "deck_bereich": "astral",
       "hauptattribut": "ASTRAL",
-      "kartentyp": "ASTRAL-Karte",
+      "kartentyp": "Kreatur",
       "entwicklungskarte": false,
       "grundkarte_bild": null,
       "fraktion": "Astralwelt",
       "stufe": 1,
       "klasse": null,
       "bereich": "Primär",
-      "untertyp": null,
+      "untertyp": "Wurm",
       "material": null,
       "nebenattribute": [
         "Wurm"
@@ -1944,8 +1987,21 @@ window.GODDESSES_DB = {
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "wurzelpeinverschlinger",
+          "trigger": "on_play",
+          "damage_type": "physical",
+          "damage": 1,
+          "empty_secondary_lock_opponent_until_next_supply_start": true
+        }
+      ],
+      "tags": [
+        "kreatur",
+        "wurm"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_text": "Füge 1 physischen Schaden einer offenen Karte im Sekundärbereich zu. Falls dort keine Karte liegt, darf dein Gegner bis zum Beginn deiner nächsten Versorgungsphase keine Karte im Sekundärbereich spielen."
     },
     {
       "id": "1.01-07-32-03e63bf8",
@@ -2384,8 +2440,26 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "bis_zum_bitteren_ende",
+          "trigger": "on_play",
+          "instinkt": true,
+          "target": "own_bez",
+          "heart_loss": 1,
+          "choice": [
+            "physical",
+            "astral"
+          ],
+          "strength_bonus": 1,
+          "expires": "end_round"
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_text": "Eigene Bezwingerin: −1 Herz; danach bis Ende dieser Kampfrunde +1 physische oder +1 ASTRAL-Stärke."
     },
     {
       "id": "1.03-29-32-d939aab1",

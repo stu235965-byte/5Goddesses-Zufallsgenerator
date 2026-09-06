@@ -312,8 +312,8 @@ function effectiveBezStats(state,playerIndex,bezSlot){
 
   const out={
     hearts:Number(bez.hearts||0),
-    physical:Number(bez.physical ?? cardData(bez)?.physische_staerke ?? 0),
-    astral:Number(bez.astral ?? cardData(bez)?.astrale_staerke ?? 0),
+    physical:Number(bez.physical ?? cardData(bez)?.physische_staerke ?? 0)+Number(bez.effectState?.bitterEndPhysicalBonus||0),
+    astral:Number(bez.astral ?? cardData(bez)?.astrale_staerke ?? 0)+Number(bez.effectState?.bitterEndAstralBonus||0),
     physicalShield:Number(bez.physicalShield||0),
     astralShield:Number(bez.astralShield||0),
     base:{
@@ -580,8 +580,8 @@ function combatStrength(state,playerIndex,bezSlot,type,isAttacking=false){
   if(!r)return {base:0,equipment:0,total:0};
   const c=cardData(r);
   const base=type==='physical'
-    ? ((r.physical ?? c?.physische_staerke ?? 0) + Number(r.effectState?.psiloPhysicalBonus||0) + Number(r.effectState?.trankStaerkePhysicalBonus||0))
-    : ((r.astral ?? c?.astrale_staerke ?? 0) + Number(r.effectState?.trankAstralMachtBonus||0));
+    ? ((r.physical ?? c?.physische_staerke ?? 0) + Number(r.effectState?.psiloPhysicalBonus||0) + Number(r.effectState?.trankStaerkePhysicalBonus||0) + Number(r.effectState?.bitterEndPhysicalBonus||0))
+    : ((r.astral ?? c?.astrale_staerke ?? 0) + Number(r.effectState?.trankAstralMachtBonus||0) + Number(r.effectState?.bitterEndAstralBonus||0));
   const equipment=equipmentStrengthBonus(state,playerIndex,bezSlot,type,isAttacking);
   return {base,equipment,total:Math.max(0,base+equipment)};
 }
@@ -728,6 +728,7 @@ function recruit(state,handIndex,slot){
   if(p.bezSlots[slot])return {ok:false,msg:'Dieser Bezwingerinnenbereich ist bereits belegt.'};
   const bild=p.hand[handIndex],c=dbCard(bild);
   if(!c || c.deck_bereich!=='bezwingerinnen')return {ok:false,msg:'Diese Handkarte ist keine Bezwingerin.'};
+  if(isInstantAstralSpell(c)){const chk=instantAstralValidation(state,p.index,c);if(!chk.ok)return chk;}
   p.hand.splice(handIndex,1);
   const r=makeRuntimeCard(bild,p.index,p.turnCount);
   r.ready=false;
@@ -1949,6 +1950,100 @@ function resolveErlassTarget(state,id){
   return {ok:true,msg:`${cardData(t)?.name||'Bezwingerin'} erhält +${x} Ehre.`};
 }
 
+
+function isInstantAstralSpell(c){
+  return c?.deck_bereich==='astral' && c?.kartentyp==='ASTRAL-Spruch' && !!c?.effekte?.some(e=>['verwuestung','bis_zum_bitteren_ende','saphiras_upsi'].includes(e.engine_key));
+}
+function ownOpenCreatureWurm(state,playerIndex){
+  const p=state.players[playerIndex];
+  const cards=[...(p.bezSlots||[]),p.primary,...(p.azr||[]),state.sharedSecondary?.owner===playerIndex?state.sharedSecondary:null].filter(Boolean);
+  return cards.some(r=>!r.faceDown && !r.effectDisabled && (cardData(r)?.tags||[]).includes('kreatur') && ((cardData(r)?.tags||[]).includes('wurm') || cardData(r)?.untertyp==='Wurm' || (cardData(r)?.nebenattribute||[]).includes('Wurm')));
+}
+function instantAstralValidation(state,playerIndex,c){
+  const p=state.players[playerIndex],opp=state.players[1-playerIndex];
+  const key=c?.effekte?.find(e=>['verwuestung','bis_zum_bitteren_ende','saphiras_upsi'].includes(e.engine_key))?.engine_key;
+  if(key==='verwuestung')return state.sharedSecondary&&!state.sharedSecondary.faceDown?{ok:true}:{ok:false,msg:'Verwüstung benötigt eine offene Karte im Sekundärbereich.'};
+  if(key==='saphiras_upsi')return opp.primary&&!opp.primary.faceDown?{ok:true}:{ok:false,msg:'Saphiras Upsi benötigt eine offene Karte im Primärbereich des Gegners.'};
+  if(key==='bis_zum_bitteren_ende')return (p.bezSlots||[]).some(Boolean)?{ok:true}:{ok:false,msg:'Bis zum bitteren Ende benötigt eine eigene Bezwingerin.'};
+  return {ok:false,msg:'Dieser ASTRAL-Spruch ist noch nicht unterstützt.'};
+}
+function discardInstantAstralSpell(state,playerIndex,azrSlot){
+  const p=state.players[playerIndex],r=p?.azr?.[azrSlot];
+  if(!r)return;
+  discardRuntime(p,r);p.azr[azrSlot]=null;
+}
+function startInstantAstralSpell(state,playerIndex,azrSlot){
+  const p=state.players[playerIndex],r=p?.azr?.[azrSlot],c=cardData(r);
+  if(!r||r.faceDown||!isInstantAstralSpell(c))return {ok:false,msg:'Kein unterstützter ASTRAL-Spruch.'};
+  const valid=instantAstralValidation(state,playerIndex,c);if(!valid.ok)return valid;
+  const key=c.effekte.find(e=>['verwuestung','bis_zum_bitteren_ende','saphiras_upsi'].includes(e.engine_key)).engine_key;
+  if(key==='verwuestung'){
+    const target=state.sharedSecondary,damage=ownOpenCreatureWurm(state,playerIndex)?2:1;
+    applyDamage(target,damage,'physical');
+    const owner=Number(target.owner);killIfNeeded(state,owner,'secondary',null);
+    discardInstantAstralSpell(state,playerIndex,azrSlot);
+    log(state,`Verwüstung: ${damage} physischer Effektschaden auf die offene Karte im Sekundärbereich${damage===2?' (eigene KREATUR vom Typ WURM vorhanden)':''}.`);
+    return {ok:true,msg:`Verwüstung verursacht ${damage} physischen Schaden.`};
+  }
+  if(key==='saphiras_upsi'){
+    const opp=state.players[1-playerIndex];applyDamage(opp.primary,1,'astral');killIfNeeded(state,opp.index,'primary',null);
+    discardInstantAstralSpell(state,playerIndex,azrSlot);log(state,'Saphiras Upsi verursacht 1 ASTRAL-Effektschaden auf die gegnerische Primärkarte.');
+    return {ok:true,msg:'Saphiras Upsi verursacht 1 ASTRAL-Schaden.'};
+  }
+  state.pendingBezEffect={type:'bis_zum_bitteren_ende_target',sourcePlayer:playerIndex,sourceAzrSlot:azrSlot};
+  return {ok:true,pending:true,msg:'Wähle eine eigene Bezwingerin für Bis zum bitteren Ende.'};
+}
+function bisZumBitterenEndeTargets(state,playerIndex){
+  const p=state.players[playerIndex];return (p.bezSlots||[]).map((r,i)=>r?{id:String(i),name:cardData(r)?.name||`Bezwingerin ${i+1}`,hearts:Number(r.hearts||0)}:null).filter(Boolean);
+}
+function resolveBisZumBitterenEndeTarget(state,id){
+  const q=state.pendingBezEffect;if(q?.type!=='bis_zum_bitteren_ende_target')return {ok:false,msg:'Keine passende Auswahl aktiv.'};
+  const p=state.players[q.sourcePlayer],slot=Number(id),r=p?.bezSlots?.[slot];if(!r)return {ok:false,msg:'Ungültige eigene Bezwingerin.'};
+  r.hearts=Math.max(0,Number(r.hearts||0)-1);
+  if(r.hearts<=0){const name=cardData(r)?.name||'Bezwingerin';killIfNeeded(state,p.index,'bez',slot);discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;log(state,`Bis zum bitteren Ende: ${name} verliert 1 Herz und wird zerstört.`);return {ok:true,msg:`${name} verliert 1 Herz und wird zerstört.`};}
+  state.pendingBezEffect={type:'bis_zum_bitteren_ende_choice',sourcePlayer:q.sourcePlayer,sourceAzrSlot:q.sourceAzrSlot,targetSlot:slot};
+  return {ok:true,pending:true,msg:'Wähle +1 physische oder +1 ASTRAL-Stärke bis zum Ende dieser Kampfrunde.'};
+}
+function resolveBisZumBitterenEndeChoice(state,choice){
+  const q=state.pendingBezEffect;if(q?.type!=='bis_zum_bitteren_ende_choice'||!['physical','astral'].includes(choice))return {ok:false,msg:'Ungültige Auswahl.'};
+  const p=state.players[q.sourcePlayer],r=p?.bezSlots?.[q.targetSlot];if(!r)return {ok:false,msg:'Die gewählte Bezwingerin liegt nicht mehr im Spiel.'};
+  r.effectState=r.effectState||{};const k=choice==='physical'?'bitterEndPhysicalBonus':'bitterEndAstralBonus';r.effectState[k]=Number(r.effectState[k]||0)+1;r.effectState.bitterEndExpiresRoundSerial=state.roundSerial;
+  discardInstantAstralSpell(state,q.sourcePlayer,q.sourceAzrSlot);state.pendingBezEffect=null;log(state,`Bis zum bitteren Ende: ${cardData(r)?.name||'Bezwingerin'} erhält bis Ende dieser Kampfrunde +1 ${choice==='physical'?'physische':'ASTRAL'}-Stärke.`);
+  return {ok:true,msg:`+1 ${choice==='physical'?'physische':'ASTRAL'}-Stärke bis Ende der Kampfrunde.`};
+}
+function resolveWurzelpeinverschlingerOnPlay(state,playerIndex,r){
+  const c=cardData(r);if(!c?.effekte?.some(e=>e.engine_key==='wurzelpeinverschlinger'))return;
+  if(state.sharedSecondary && !state.sharedSecondary.faceDown){const t=state.sharedSecondary,owner=Number(t.owner);applyDamage(t,1,'physical');killIfNeeded(state,owner,'secondary',null);log(state,'Wurzelpeinverschlinger: offene Karte im Sekundärbereich erhält 1 physischen Effektschaden.');}
+  else if(!state.sharedSecondary){state.secondaryLock={blockedPlayer:1-playerIndex,untilOwnerSupplyStart:playerIndex};log(state,`Wurzelpeinverschlinger: ${state.players[1-playerIndex].name} darf bis zum Beginn der nächsten Versorgungsphase des Besitzers keine Karte in den Sekundärbereich spielen.`);}
+}
+function secondaryLockedFor(state,playerIndex){return !!state.secondaryLock&&Number(state.secondaryLock.blockedPlayer)===Number(playerIndex);}
+function meteorsturmWonderAvailable(state,playerIndex){
+  const r=state.sharedSecondary,c=cardData(r);if(!r||r.owner!==playerIndex||!c?.effekte?.some(e=>e.engine_key==='meteorsturm_wunder'))return {ok:false,msg:'Meteorsturm liegt nicht unter deiner Kontrolle im Sekundärbereich.'};
+  if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Das Wunder kann nur in VP oder NP gewirkt werden.'};
+  if(r.wonderTurn===state.players[playerIndex].turnCount)return {ok:false,msg:'Meteorsturms Wunder wurde in dieser Kampfrunde bereits benutzt.'};
+  const cost=Number(c.wunder?.kosten_ehre||2);if(Number(r.honor||0)<cost)return {ok:false,msg:`Meteorsturm benötigt ${cost} Ehre.`};return {ok:true,cost};
+}
+function startMeteorsturmWonder(state,forcedRoll=null){
+  const playerIndex=state.activePlayer,chk=meteorsturmWonderAvailable(state,playerIndex);if(!chk.ok)return chk;
+  const roll=forcedRoll===null?Math.floor(Math.random()*6)+1:Number(forcedRoll);if(!(roll>=1&&roll<=6))return {ok:false,msg:'Ungültiger W6-Wurf.'};
+  const r=state.sharedSecondary;r.honor-=chk.cost;r.wonderTurn=state.players[playerIndex].turnCount;
+  const type=roll%2===0?'any':'own';const targets=[];for(const p of state.players){if(type==='own'&&p.index!==playerIndex)continue;(p.bezSlots||[]).forEach((b,i)=>{if(b)targets.push({id:`${p.index}:${i}`,name:`${p.index===playerIndex?'Eigene':'Gegnerische'} ${cardData(b)?.name||'Bezwingerin'}`});});}
+  if(!targets.length){log(state,`Meteorsturm würfelt ${roll}, aber es gibt kein gültiges Ziel.`);return {ok:true,roll,msg:`W6: ${roll}. Kein gültiges Ziel vorhanden.`};}
+  state.pendingBezEffect={type:'meteorsturm_target',sourcePlayer:playerIndex,roll,targetMode:type};return {ok:true,pending:true,roll,msg:`Meteorsturm würfelt ${roll}. Wähle ${type==='any'?'eine beliebige':'eine eigene'} Bezwingerin.`};
+}
+function meteorsturmTargets(state){
+  const q=state.pendingBezEffect;if(q?.type!=='meteorsturm_target')return [];const out=[];for(const p of state.players){if(q.targetMode==='own'&&p.index!==q.sourcePlayer)continue;(p.bezSlots||[]).forEach((r,i)=>{if(r)out.push({id:`${p.index}:${i}`,name:`${p.index===q.sourcePlayer?'Eigene':'Gegnerische'} ${cardData(r)?.name||'Bezwingerin'}`});});}return out;
+}
+function resolveMeteorsturmTarget(state,id){
+  const q=state.pendingBezEffect;if(q?.type!=='meteorsturm_target')return {ok:false,msg:'Kein Meteorsturm-Ziel aktiv.'};
+  const [pi,si]=String(id).split(':').map(Number);if(q.targetMode==='own'&&pi!==q.sourcePlayer)return {ok:false,msg:'Bei ungeradem Wurf ist nur eine eigene Bezwingerin erlaubt.'};
+  const p=state.players[pi],r=p?.bezSlots?.[si];if(!r)return {ok:false,msg:'Ungültige Bezwingerin.'};
+  state.pendingBezEffect=null;
+  state.pendingDamage={attackerIndex:q.sourcePlayer,attackerKind:'effect',attackerSlot:null,defenderIndex:pi,defKind:'bez',defSlot:si,packetIndex:0,packets:[{role:'direct_effect',playerIndex:pi,bezSlot:si,type:'astral',remaining:1,shieldLoss:0,heartLoss:0}],combatTiming:'effect',directDamageTarget:{playerIndex:pi,kind:'bez',slot:si,source:`Meteorsturm (W6=${q.roll})`}};
+  log(state,`Meteorsturm (W6=${q.roll}): ${cardData(r)?.name||'Bezwingerin'} erhält 1 ASTRAL-Effektschaden; kein Gegenangriff.`);
+  const choice=currentShieldChoice(state);if(choice)return {ok:true,needsShieldChoice:true,pendingDamage:true,msg:'Meteorsturm: Wähle die Schildquelle für 1 ASTRAL-Schaden.',choice};
+  const done=finalizePendingCombat(state);return {ok:done.ok,msg:'1 ASTRAL-Schaden durch Meteorsturm. Kein Gegenangriff.'};
+}
 function hasInstinct(c){
   return !!c?.effekte?.some(e=>e.instinkt===true) || (c?.tags||[]).includes('instinkt');
 }
@@ -1963,7 +2058,7 @@ function instinctCandidates(state){
   const p=state.players[owner];
   return (p?.azr||[]).map((r,slot)=>{
     const c=cardData(r);
-    if(!r?.faceDown || !hasInstinct(c) || !isInstantRuestkammerItem(c))return null;
+    if(!r?.faceDown || !hasInstinct(c) || !(isInstantRuestkammerItem(c)||isInstantAstralSpell(c)))return null;
     return {playerIndex:owner,slot,id:String(slot),name:c?.name||'Instinkt-Karte'};
   }).filter(Boolean);
 }
@@ -1983,7 +2078,7 @@ function activateInstinctCard(state,slot){
   r.faceDown=false;
   state.instinctWindowPassed=instinctWindowKey(state);
   log(state,`${p.name} aktiviert ${c.name} per Instinkt in der gegnerischen ${currentPhase(state).name}.`);
-  return startInstantRuestkammerItem(state,owner,Number(slot));
+  return isInstantAstralSpell(c)?startInstantAstralSpell(state,owner,Number(slot)):startInstantRuestkammerItem(state,owner,Number(slot));
 }
 function ueberladungTargets(state,playerIndex){
   const p=state.players[playerIndex];
@@ -2255,6 +2350,10 @@ function expireRoundLimitedItemEffects(state){
         delete r.effectState.trankAstralMachtExpiresRoundSerial;
         log(state,`${cardData(r)?.name}: ungenutzter Bonus des Tranks der ASTRAL-Macht verfällt am Ende der Kampfrunde.`);
       }
+      if(r.effectState.bitterEndExpiresRoundSerial===state.roundSerial){
+        delete r.effectState.bitterEndPhysicalBonus;delete r.effectState.bitterEndAstralBonus;delete r.effectState.bitterEndExpiresRoundSerial;
+        log(state,`${cardData(r)?.name}: Bonus von Bis zum bitteren Ende verfällt am Ende der Kampfrunde.`);
+      }
     }
   }
 }
@@ -2317,6 +2416,7 @@ function playOpenAzr(state,handIndex,slot){
   p.azr[slot]=r;
   log(state,`${p.name} spielt ${c.name} offen in die ASTRAL-/Rüstkammer-Zone.${isAstralFragment(c)?` Kampfrundendauer: ${r.effectRoundsRemaining} eigene KR.`:c?.effekte?.some(e=>e.engine_key==='fluestern_brut')?' Kampfrundendauer: 2 eigene KR.':''}`);
   if(c?.effekte?.some(e=>e.engine_key==='ehris_ohrringe'))return startEhrisSelection(state,slot);
+  if(isInstantAstralSpell(c))return startInstantAstralSpell(state,p.index,slot);
   if(isInstantRuestkammerItem(c))return startInstantRuestkammerItem(state,p.index,slot);
   return {ok:true};
 }
@@ -2410,6 +2510,7 @@ function playFieldFromHand(state,handIndex,area){
     if(p.primary)return {ok:false,msg:'Dein Primärbereich ist bereits belegt.'};
   }else{
     if(state.sharedSecondary)return {ok:false,msg:'Der gemeinsame Sekundärbereich ist bereits belegt.'};
+    if(secondaryLockedFor(state,p.index))return {ok:false,msg:'Der Sekundärbereich ist für dich bis zum Beginn der nächsten Versorgungsphase des Wurzelpeinverschlinger-Besitzers gesperrt.'};
   }
 
   p.hand.splice(handIndex,1);
@@ -2422,6 +2523,7 @@ function playFieldFromHand(state,handIndex,area){
   else state.sharedSecondary=r;
 
   log(state,`${p.name} spielt ${c.name} offen in den ${area==='primary'?'Primär':'Sekundär'}bereich.`);
+  if(c?.effekte?.some(e=>e.engine_key==='wurzelpeinverschlinger'))resolveWurzelpeinverschlingerOnPlay(state,p.index,r);
   return {ok:true};
 }
 function moveMornakFromAzr(state,azrSlot,area){
@@ -2455,11 +2557,13 @@ function moveRevealedFieldCard(state,azrSlot){
     p.primary=r;
   }else{
     if(state.sharedSecondary)return {ok:false,msg:'Der gemeinsame Sekundärbereich ist bereits belegt. Die aufgedeckte Karte kann noch nicht verschoben werden.'};
+    if(secondaryLockedFor(state,p.index))return {ok:false,msg:'Der Sekundärbereich ist für dich derzeit durch Wurzelpeinverschlinger gesperrt.'};
     state.sharedSecondary=r;
   }
   p.azr[azrSlot]=null;
   state.pendingFieldCard=null;
   log(state,`${p.name} verschiebt ${c?.name||'die aufgedeckte Karte'} regelkonform in den ${area==='primary'?'Primär':'Sekundär'}bereich.`);
+  if(c?.effekte?.some(e=>e.engine_key==='wurzelpeinverschlinger'))resolveWurzelpeinverschlingerOnPlay(state,p.index,r);
   return {ok:true};
 }
 function equipmentOnEquipConditionMatches(effect,bezRuntime){
@@ -2692,6 +2796,11 @@ function reveal(state,slot){
     return {ok:true,msg:`${c.name} liegt offen. Kampfrundendauer: ${r.effectRoundsRemaining}.`};
   }
 
+  if(isInstantAstralSpell(c)){
+    const chk=instantAstralValidation(state,p.index,c);if(!chk.ok)return chk;
+    log(state,`${p.name} deckt ${c.name} auf; der ASTRAL-Spruch wird sofort aktiviert.`);
+    return startInstantAstralSpell(state,p.index,slot);
+  }
   if(isInstantRuestkammerItem(c)){
     log(state,`${p.name} deckt ${c.name} auf; der Gegenstandseffekt wird sofort aktiviert.`);
     return startInstantRuestkammerItem(state,p.index,slot);
@@ -3435,6 +3544,7 @@ function beginPhase(state){
     grantHonor(state);
   }
   if(phase.id==='supply_start'){
+    if(state.secondaryLock && Number(state.secondaryLock.untilOwnerSupplyStart)===p.index){log(state,'Die Sekundärbereich-Sperre von Wurzelpeinverschlinger endet.');state.secondaryLock=null;}
     expireEquipmentCombatBonuses(state,p);
     resolveLebensfresserschildHungerAtSupplyStart(state,p);
     log(state,`Anfang der Versorgungsphase von ${p.name}: unterstützte zeitlich begrenzte Ausrüstungsboni wurden geprüft.`);
@@ -3646,7 +3756,7 @@ window.G5Engine={
   startPsiloWonder,psiloTargets,resolvePsiloTarget,keylaSearchTargets,resolveKeylaSearch,
   startQueen2Wonder,queenStackTargets,resolveQueenSearch,queenDiscardTargets,resolveQueen2Discard,
   fragmentfresserSchlundTargets,startFragmentfresserSchlundEffect,resolveFragmentfresserSchlund,
-  startInstantRuestkammerItem,instantRuestkammerTargets,resolveInstantRuestkammerTarget,instinctCandidates,instinctWindowNeeded,passInstinctWindow,activateInstinctCard,ueberladungTargets,erlassHonorSources,erlassBegin,erlassRemoveHonor,erlassTargets,resolveErlassTarget,
+  startInstantAstralSpell,bisZumBitterenEndeTargets,resolveBisZumBitterenEndeTarget,resolveBisZumBitterenEndeChoice,meteorsturmWonderAvailable,startMeteorsturmWonder,meteorsturmTargets,resolveMeteorsturmTarget,secondaryLockedFor,startInstantRuestkammerItem,instantRuestkammerTargets,resolveInstantRuestkammerTarget,instinctCandidates,instinctWindowNeeded,passInstinctWindow,activateInstinctCard,ueberladungTargets,erlassHonorSources,erlassBegin,erlassRemoveHonor,erlassTargets,resolveErlassTarget,
   chronokryptaBezTargets,chronokryptaEquipmentTargets,startChronokrypta,selectChronokryptaPayer,resolveChronokrypta,ruthTargets,startRuthEffect,resolveRuthTarget,resolveRuthChoice,startWunderumwandlungsapparatur,wunderumwandlungsapparaturHonorSources,resolveWunderumwandlungsapparaturHonor,wunderumwandlungsapparaturTargets,resolveWunderumwandlungsapparaturTarget,ehrisTargets,startEhrisSelection,resolveEhrisSelection,effectiveWonderCost,
   startKristallharnischEffect,resolveKristallharnischEffect,
   triggerLebensfresserschildHunger,resolveLebensfresserschildHungerAtSupplyStart,
