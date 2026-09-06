@@ -14,4 +14,4 @@ Neu vollständig umgesetzt und getestet:
 - Zeitsprung
 - Ehrenlos
 
-Hinweis: Bei der Umsetzung wurde festgestellt, dass Vollendete Tötungstechnik in der bisherigen Datenbank vollständig fehlte. Die Originalkarte wurde daher neu aufgenommen. Dadurch steigt der Datenbankbestand von 158 auf 159 Karten und die Astralkammer von 49 auf 50 Karten.
+Hinweis (korrigiert in v1.80): Bei v1.78 wurde Vollendete Tötungstechnik zunächst als zusätzliche Karte aufgenommen. Der spätere vollständige Astralkammer-Audit zeigte, dass der bestehende Datensatz „Vollendete Rettungstechnik“ lediglich eine falsch benannte Dublette derselben Originalkarte war. Der korrekte Bestand beträgt daher 158 Karten insgesamt und 49 Astralkammerkarten.

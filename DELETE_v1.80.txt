@@ -1,0 +1,4 @@
+Bei einem manuellen Update einer bestehenden Installation bitte diese obsolete Datei entfernen:
+Astralkammer/1.03-30-32-7ded76d1.webp
+
+Sie gehört zum in v1.80 entfernten falschen Dubletten-Datensatz „Vollendete Rettungstechnik“.

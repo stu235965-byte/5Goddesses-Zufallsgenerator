@@ -1,0 +1,17 @@
+5Goddesses – Astralkammer-Audit v1.80
+
+Ergebnis:
+- 49 echte Astralkammerkarten.
+- Alle 49 besitzen programmierte Engine-Logik.
+- Vollständiger aktueller Testbestand: 110 PASS / 0 FAIL.
+- node --check game-engine.js: PASS.
+- node --check battlefield.js: PASS.
+- Datenbanken synchron: 158 Karten insgesamt.
+
+Bereinigung:
+- Der Datensatz „Vollendete Rettungstechnik“ wurde entfernt.
+- Er war eine falsch benannte Dublette von „Vollendete Tötungstechnik“ und kein eigener Karteninhalt.
+- Die zugehörige überflüssige Bilddatei Astralkammer/1.03-30-32-7ded76d1.webp wurde aus der Vollversion entfernt.
+
+Offene Regelauslegung:
+- Exekution: Die Engine verbraucht den Spruch derzeit nicht, wenn das ausgewählte Ziel die Bedingung 1 Herz und keine Schilde nicht erfüllt. Keine Änderung ohne bestätigte Regelauslegung.
