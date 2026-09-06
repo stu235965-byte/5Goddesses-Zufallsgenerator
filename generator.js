@@ -64,14 +64,37 @@ function profilname(){return localStorage.getItem(PROFILE_KEY)||'Mein Kartenpool
 
 function zeigeSeite(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
-  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.navbtn[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
+  const ziel=document.getElementById('page-'+name);
+  if(!ziel)return;
+  ziel.classList.add('active');
   if(name==='profil')renderKartenpool();
   if(name==='decks' && window.renderGespeicherteDecks)window.renderGespeicherteDecks();
   if(name==='game' && window.gamePageOpened)window.gamePageOpened();
   window.scrollTo({top:0,behavior:'smooth'});
 }
-document.querySelectorAll('.navbtn').forEach(b=>b.addEventListener('click',()=>zeigeSeite(b.dataset.page)));
+window.zeigeSeite=zeigeSeite;
+
+function zeigeStartbildschirm(spielen=false){
+  zeigeSeite('home');
+  const submenu=document.getElementById('playSubmenu');
+  const btn=document.getElementById('homeSpielen');
+  if(submenu)submenu.hidden=!spielen;
+  if(btn)btn.setAttribute('aria-expanded',spielen?'true':'false');
+}
+
+document.querySelectorAll('.navbtn[data-page]').forEach(b=>b.addEventListener('click',()=>zeigeSeite(b.dataset.page)));
+document.querySelectorAll('[data-home-page]').forEach(b=>b.addEventListener('click',()=>zeigeSeite(b.dataset.homePage)));
+document.getElementById('homeButton')?.addEventListener('click',()=>zeigeStartbildschirm(false));
+document.getElementById('navSpielen')?.addEventListener('click',()=>zeigeStartbildschirm(true));
+document.getElementById('homeSpielen')?.addEventListener('click',()=>{
+  const submenu=document.getElementById('playSubmenu');
+  const btn=document.getElementById('homeSpielen');
+  if(!submenu||!btn)return;
+  submenu.hidden=!submenu.hidden;
+  btn.setAttribute('aria-expanded',submenu.hidden?'false':'true');
+});
+document.getElementById('homeTestgefecht')?.addEventListener('click',()=>zeigeSeite('game'));
 
 function aktualisiereStatus(){
   const alle=datenbank(),n=alle.filter(k=>istImPool(k)).length;

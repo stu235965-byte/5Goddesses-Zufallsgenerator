@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>5Goddesses – Zufallsgenerator</title>
+  <title>5Goddesses</title>
   <meta name="theme-color" content="#101010">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,20 +18,36 @@
 <body>
   <header class="topbar">
     <div class="brand-wrap">
-      <div class="brand">5 GODDESSES</div>
-      <div class="app-version" title="Aktuell geladene PWA-Version">v1.83</div>
+      <button id="homeButton" class="brand brand-button" type="button" aria-label="Zum Startbildschirm">5 GODDESSES</button>
+      <div class="app-version" title="Aktuell geladene PWA-Version">v1.84</div>
     </div>
     <nav>
-      <button class="navbtn active" data-page="generator">Zufallsgenerator</button>
-      <button class="navbtn" data-page="profil">Mein Kartenpool</button>
-      <button class="navbtn" data-page="decks">Meine Decks</button>
-      <button class="navbtn" data-page="game">Gefecht</button>
-      <button id="appInstallieren" class="installbtn" hidden>App installieren</button>
+      <button class="navbtn" id="navSpielen" type="button">Spielen</button>
+      <button class="navbtn" data-page="generator">Zufallsgenerator</button>
+      <button class="navbtn" data-page="profil">Kartenpool</button>
+      <button class="navbtn" data-page="decks">Deckbuilder</button>
     </nav>
   </header>
 
   <main>
-    <section id="page-generator" class="page active">
+    <section id="page-home" class="page active home-page">
+      <div class="home-panel">
+        <h1>5 GODDESSES</h1>
+        <div class="home-menu" aria-label="Hauptmenü">
+          <button id="homeSpielen" class="home-menu-btn primary" type="button" aria-expanded="false">Spielen</button>
+          <div id="playSubmenu" class="play-submenu" hidden>
+            <button id="homeTestgefecht" class="home-menu-btn" type="button">Testgefecht</button>
+            <button id="homeStorymode" class="home-menu-btn storymode-btn" type="button" disabled title="Für eine spätere Version vorbereitet">Storymode</button>
+          </div>
+          <button class="home-menu-btn" data-home-page="generator" type="button">Zufallsgenerator</button>
+          <button class="home-menu-btn" data-home-page="profil" type="button">Kartenpool</button>
+          <button class="home-menu-btn" data-home-page="decks" type="button">Deckbuilder</button>
+          <button id="appInstallieren" class="home-menu-btn installbtn" hidden>App installieren</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-generator" class="page">
       <h1>ZUFALLSGENERATOR</h1>
       <div id="profilStatus" class="status"></div>
       <button id="ziehen" class="primary">Neue Karten ziehen</button>
@@ -47,7 +63,7 @@
     </section>
 
     <section id="page-profil" class="page">
-      <h1>MEIN KARTENPOOL</h1>
+      <h1>KARTENPOOL</h1>
       <p class="intro">Wähle hier alle Karten aus, die du in der Realität besitzt. Der Zufallsgenerator verwendet anschließend nur diese Karten.</p>
 
       <div class="profilbox">
@@ -69,7 +85,7 @@
     </section>
 
     <section id="page-decks" class="page">
-      <h1>MEINE DECKS</h1>
+      <h1>DECKBUILDER</h1>
       <p class="intro">Erstelle eigene Gefecht-Decks ausschließlich aus deinem Kartenpool oder speichere ein Deck direkt aus dem Zufallsgenerator.</p>
 
       <div id="deckListeAnsicht">
@@ -121,7 +137,7 @@
 
 
     <section id="page-game" class="page">
-      <h1>GEFECHT</h1>
+      <h1>TESTGEFECHT</h1>
       <p class="intro">Erste spielbare Gefecht-Version nach dem Regelwerk. Individuelle Karteneffekte werden im nächsten Schritt ergänzt.</p>
 
       <div id="gameSetup" class="game-setup">
@@ -157,7 +173,7 @@
             <div id="gamePhaseInfo" class="game-phase-info">–</div>
           </div>
           <div class="game-toolbar-actions">
-            <button id="gamePreviewToggle" class="game-preview-toggle" type="button" title="Kartenvorschau · v1.83" aria-label="Kartenvorschau" aria-pressed="false">🔍</button>
+            <button id="gamePreviewToggle" class="game-preview-toggle" type="button" title="Kartenvorschau · v1.84" aria-label="Kartenvorschau" aria-pressed="false">🔍</button>
             <button id="gameNew">Neues Gefecht</button>
             <button id="gameNextPhase" class="primary">Nächste Phase</button>
           </div>
