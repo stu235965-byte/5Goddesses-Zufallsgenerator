@@ -2432,9 +2432,7 @@
       ],
       "tags": [
         "instinkt"
-      ],
-      "effekt_symbol": "on_play+instinkt",
-      "effekt_text": "Wähle eine beliebige Bezwingerin. Hat sie genau 1 Herz und insgesamt 0 physischen sowie 0 ASTRAL-Schild, zerstöre sie."
+      ]
     },
     {
       "id": "1.03-19-32-62426e17",
@@ -2465,9 +2463,7 @@
           "engine_key": "zweifache_bestrafung"
         }
       ],
-      "tags": [],
-      "effekt_symbol": "on_play",
-      "effekt_text": "Wähle eine eigene Bezwingerin mit mindestens 3 Ehre. Sie bezahlt 3 Ehre und darf in dieser Kampfrunde einen zusätzlichen physischen Kampf durchführen; die Zuflucht ist als Ziel dieses Zusatzkampfs ausgeschlossen."
+      "tags": []
     },
     {
       "id": "1.03-20-32-53222408",
@@ -2745,7 +2741,7 @@
       "stufe": 1,
       "klasse": null,
       "bereich": null,
-      "untertyp": "Vengeresse",
+      "untertyp": null,
       "material": null,
       "nebenattribute": [
         "Vengeresse"
@@ -2764,11 +2760,8 @@
         }
       ],
       "tags": [
-        "vengeresse",
         "instinkt"
-      ],
-      "effekt_symbol": "on_play+instinkt",
-      "effekt_text": "Wenn eine eigene Vengeresse in der Ansturmphase angegriffen wird: Brich den Angriff ab. Die angreifende gegnerische Bezwingerin kann in dieser Kampfrunde nicht mehr angreifen."
+      ]
     },
     {
       "id": "1.02-19-32-6812396b",
@@ -2784,7 +2777,7 @@
       "stufe": 1,
       "klasse": null,
       "bereich": null,
-      "untertyp": "Vengeresse",
+      "untertyp": null,
       "material": null,
       "nebenattribute": [
         "Vengeresse"
@@ -2803,11 +2796,8 @@
         }
       ],
       "tags": [
-        "vengeresse",
         "instinkt"
-      ],
-      "effekt_symbol": "on_play+instinkt",
-      "effekt_text": "Wähle während der Ansturmphase eine eigene Vengeresse. Für einen Kampf wird ihre aktuelle physische Stärke zu ASTRAL-Stärke umgewandelt und zu ihrer aktuellen ASTRAL-Stärke addiert; der Kampf wird als ASTRAL-Kampf geführt."
+      ]
     },
     {
       "id": "1.02-20-32-70faddfa",
@@ -2976,9 +2966,7 @@
       ],
       "tags": [
         "instinkt"
-      ],
-      "effekt_symbol": "on_play+instinkt",
-      "effekt_text": "Wähle eine eigene Bezwingerin. Sie erhält dauerhaft +1 Herz."
+      ]
     },
     {
       "id": "1.02-32-32-c04e9575",
