@@ -1,6 +1,6 @@
 window.GODDESSES_DB = {
   "schema_version": 1,
-  "anzahl_karten": 158,
+  "anzahl_karten": 159,
   "deckregeln_gefecht": {
     "zuflucht": 1,
     "bezwingerinnen": 3,
@@ -1644,7 +1644,10 @@ window.GODDESSES_DB = {
       "bereich": null,
       "untertyp": null,
       "material": null,
-      "nebenattribute": [],
+      "nebenattribute": [
+        "Astrean",
+        "Xalathir"
+      ],
       "herzen": 2,
       "physische_staerke": 0,
       "astrale_staerke": 1,
@@ -1661,7 +1664,10 @@ window.GODDESSES_DB = {
           "conversion": "astral_physical_shield"
         }
       ],
-      "tags": [],
+      "tags": [
+        "xalathir",
+        "astrean"
+      ],
       "effekt_symbol": "charges",
       "effekt_zaehler_max": 2,
       "effekt_dauer_kr": null,
@@ -1737,7 +1743,12 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
+      "effekte": [
+        {
+          "engine_key": "ehrenlos_next_honor",
+          "description": "Wähle eine gegnerische Bezwingerin. In der nächsten Ehrungsphase ihres Besitzers erhält sie keine Ehre und verliert 1 Ehre, falls sie mindestens 1 besitzt."
+        }
+      ],
       "tags": []
     },
     {
@@ -1840,8 +1851,19 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "typ": "instinkt",
+          "instinkt": true,
+          "engine_key": "siegel_kampfschwaeche_physical_minus",
+          "beschreibung": "Ziehe einer gegnerischen Bezwingerin bis zum Ende dieser Kampfrunde 1 physische Stärke ab."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_text": "Ziehe einer gegnerischen Bezwingerin bis zum Ende dieser Kampfrunde 1 physische Stärke ab."
     },
     {
       "id": "1.04-23-32-1bf37330",
@@ -1867,7 +1889,12 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
+      "effekte": [
+        {
+          "engine_key": "zeitsprung_skip_supply",
+          "description": "Der Gegenspieler überspringt seine nächste Versorgungsphase."
+        }
+      ],
       "tags": []
     },
     {
@@ -1896,8 +1923,19 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "typ": "instinkt",
+          "instinkt": true,
+          "engine_key": "siegel_astralschwaeche_astral_minus",
+          "beschreibung": "Ziehe einer gegnerischen Bezwingerin bis zum Ende dieser Kampfrunde 1 ASTRAL-Stärke ab."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_text": "Ziehe einer gegnerischen Bezwingerin bis zum Ende dieser Kampfrunde 1 ASTRAL-Stärke ab."
     },
     {
       "id": "1.04-25-32-19c01b1f",
@@ -2376,7 +2414,7 @@ window.GODDESSES_DB = {
     {
       "id": "1.03-17-32-f817177a",
       "bild": "Astralkammer/1.03-17-32-f817177a.webp",
-      "name": "Aufforderung der S.H.I.E.L.D.",
+      "name": "Aufopferung der S.H.I.E.L.D.",
       "kartengruppe": "Astralkammer",
       "deck_bereich": "astral",
       "hauptattribut": "ASTRAL",
@@ -2397,8 +2435,19 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "aufopferung_shield_temp",
+          "instinkt": true,
+          "trigger": "instinct",
+          "target": "own_bez",
+          "duration": "end_of_round",
+          "description": "Wähle eine eigene Bezwingerin. Sie erhält bis zum Ende dieser Kampfrunde +1 physischen Schild und +1 ASTRAL-Schild."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.03-18-32-74bd1fd5",
@@ -2724,8 +2773,17 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "sofortige_zerstoerung_armor",
+          "description": "Zerstöre eine offene Rüstungskarte.",
+          "instinkt": true,
+          "trigger": "instinct"
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.02-18-32-7a1953e6",
@@ -2802,7 +2860,7 @@ window.GODDESSES_DB = {
     {
       "id": "1.02-20-32-70faddfa",
       "bild": "Astralkammer/1.02-20-32-70faddfa.webp",
-      "name": "Parade Riposte!",
+      "name": "Parade, Riposte!",
       "kartengruppe": "Astralkammer",
       "deck_bereich": "astral",
       "hauptattribut": "ASTRAL",
@@ -2823,8 +2881,17 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "parade_riposte_primary",
+          "description": "Wähle eine eigene Bezwingerin. Sie erhält für diese Kampfrunde Primärangriff.",
+          "instinkt": true,
+          "trigger": "instinct"
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.02-21-32-0585e891",
@@ -2877,8 +2944,17 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "astral_feuerball_damage",
+          "description": "Füge einer gegnerischen Bezwingerin 1 ASTRAL-Schaden zu.",
+          "instinkt": true,
+          "trigger": "instinct"
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     },
     {
       "id": "1.02-29-32-c16a8a54",
@@ -2904,7 +2980,12 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
+      "effekte": [
+        {
+          "engine_key": "keine_ruestung_naechste_kr",
+          "description": "Wähle eine gegnerische Bezwingerin. In ihrer kommenden Kampfrunde darf ihr keine Rüstung angelegt werden."
+        }
+      ],
       "tags": []
     },
     {
@@ -3021,8 +3102,22 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "typ": "sofort",
+          "trigger": "Ausspielen",
+          "engine_key": "system_reset_return_azr",
+          "effekt_text": "Bringe eine Karte deiner Wahl in der ASTRAL-/RÜSTKAMMER-Zone eines Gegenspielers auf die Hand ihres Besitzers zurück."
+        }
+      ],
+      "tags": [
+        "astral_spruch",
+        "blitz",
+        "gegner_azr",
+        "auf_hand_zurueck"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_text": "Bringe eine Karte deiner Wahl in der ASTRAL-/RÜSTKAMMER-Zone eines Gegenspielers auf die Hand ihres Besitzers zurück."
     },
     {
       "id": "1.05-08-32-8ef64670",
@@ -3050,8 +3145,25 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "typ": "reaktion",
+          "trigger": "Ansturmphase einer gegnerischen Bezwingerin",
+          "engine_key": "portalgeschoss_reactive",
+          "effekt_text": "Diese Karte kann nur während der Ansturmphase (AP) einer gegnerischen Bezwingerin eingesetzt werden. Erleidet die von ihr als Angriffsziel gewählte Bezwingerin (die mindestens einen ASTRAL-Angriffswert besitzt) in diesem Kampf physischen Schaden, erhält die angreifende gegnerische Bezwingerin 1 ASTRAL-Schaden.",
+          "instinkt": true
+        }
+      ],
+      "tags": [
+        "astral_spruch",
+        "blitz",
+        "portal",
+        "gegnerischer_angriff",
+        "reaktion",
+        "instinkt"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_text": "Diese Karte kann nur während der Ansturmphase (AP) einer gegnerischen Bezwingerin eingesetzt werden. Erleidet die von ihr als Angriffsziel gewählte Bezwingerin (die mindestens einen ASTRAL-Angriffswert besitzt) in diesem Kampf physischen Schaden, erhält die angreifende gegnerische Bezwingerin 1 ASTRAL-Schaden."
     },
     {
       "id": "1.05-09-32-eb218fe4",
@@ -3079,8 +3191,28 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "typ": "sofort",
+          "trigger": "on_play",
+          "engine_key": "tauschportal_swap_equipment",
+          "effekt_text": "Wähle eine Rüstung, einen Kopfschutz oder einen Schild einer gegnerischen Bezwingerin. Tausche diese Ausrüstung mit dem gleichen Ausrüstungstyp einer anderen gegnerischen Bezwingerin, falls möglich, selbst wenn deren Ausrüstungszone leer ist.",
+          "allowed_equipment": [
+            "Rüstung",
+            "Kopfschutz",
+            "Schild"
+          ]
+        }
+      ],
+      "tags": [
+        "astral_spruch",
+        "blitz",
+        "portal",
+        "ausruestung",
+        "tausch"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_text": "Wähle eine Rüstung, einen Kopfschutz oder einen Schild einer gegnerischen Bezwingerin. Tausche diese Ausrüstung mit dem gleichen Ausrüstungstyp einer anderen gegnerischen Bezwingerin, falls möglich, selbst wenn deren Ausrüstungszone leer ist."
     },
     {
       "id": "1.05-10-32-da4a30d4",
@@ -3096,7 +3228,7 @@ window.GODDESSES_DB = {
       "stufe": 1,
       "klasse": null,
       "bereich": "Sekundär",
-      "untertyp": null,
+      "untertyp": "Stadt",
       "material": null,
       "nebenattribute": [
         "Stadt"
@@ -3108,8 +3240,26 @@ window.GODDESSES_DB = {
       "astraler_schild": 0,
       "ehre": 0,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "trigger": "next_opponent_round_first_bez_attack",
+          "engine_key": "nebel",
+          "target": "first_opponent_bezwingerin",
+          "roll": "W6",
+          "success_even": true,
+          "odd_prevents_attack": true,
+          "duration_rounds": 2
+        }
+      ],
+      "tags": [
+        "Sekundär",
+        "Stadt",
+        "W6",
+        "Angriffskontrolle"
+      ],
+      "effekt_symbol": "dauer",
+      "effekt_dauer_kr": 2,
+      "effekt_text": "In der nächsten gegnerischen Kampfrunde: Die erste gegnerische Bezwingerin darf ihre Ansturmphase nur beginnen, falls ihr Besitzer einen W6 würfelt und das Ergebnis gerade ist."
     },
     {
       "id": "1.05-11-32-74768ae5",
@@ -3177,8 +3327,26 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "typ": "sofort",
+          "trigger": "on_play",
+          "engine_key": "zeitlose_unterwerfung_wonder_discount",
+          "effekt_text": "Wähle eine eigene Bezwingerin. Ihr Wunder kostet in dieser Kampfrunde 1 Ehre weniger; 2 Ehre weniger, wenn sie eine Astralwelt-Bezwingerin ist.",
+          "discount_default": 1,
+          "discount_astralwelt": 2,
+          "duration": "current_round"
+        }
+      ],
+      "tags": [
+        "astral_spruch",
+        "blitz",
+        "wunder",
+        "ehrekosten",
+        "kampfrunde"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_text": "Wähle eine eigene Bezwingerin. Ihr Wunder kostet in dieser Kampfrunde 1 Ehre weniger; 2 Ehre weniger, wenn sie eine Astralwelt-Bezwingerin ist."
     },
     {
       "id": "1.05-25-32-c179b405",
@@ -3248,8 +3416,26 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "typ": "sofort",
+          "trigger": "on_play",
+          "engine_key": "strahl_des_vergessens_void",
+          "instinkt": true,
+          "effekt_text": "Wähle eine Bezwingerin. Sende sie in die Leere (Karten in der Leere gelten als aus dem Spiel entfernt). Zu Beginn deiner nächsten Versorgungsphase oder Nachschubphase, die du erreichst, bringe sie mit allen aktuellen Zuständen, mit denen sie entfernt wurde, auf ihr ursprüngliches Feld zurück. Ist dieses Feld belegt, bleibt sie dauerhaft in der Leere.",
+          "target": "beliebige_bezwingerin",
+          "return_trigger": "next_own_supply_or_resupply_start"
+        }
+      ],
+      "tags": [
+        "astral_spruch",
+        "blitz",
+        "instinkt",
+        "leere",
+        "aus_dem_spiel_entfernt"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_text": "Wähle eine Bezwingerin. Sende sie in die Leere (Karten in der Leere gelten als aus dem Spiel entfernt). Zu Beginn deiner nächsten Versorgungsphase oder Nachschubphase, die du erreichst, bringe sie mit allen aktuellen Zuständen, mit denen sie entfernt wurde, auf ihr ursprüngliches Feld zurück. Ist dieses Feld belegt, bleibt sie dauerhaft in der Leere."
     },
     {
       "id": "1.05-27-32-e5e1814c",
@@ -3275,8 +3461,39 @@ window.GODDESSES_DB = {
       "astraler_schild": null,
       "ehre": null,
       "wunder": null,
-      "effekte": [],
-      "tags": []
+      "effekte": [
+        {
+          "engine_key": "exonova_mass_astral",
+          "trigger": "on_play",
+          "target": "all_bezwingerinnen",
+          "damage_type": "astral",
+          "damage": 1,
+          "play_condition": {
+            "equal_controlled_bezwingerinnen": true,
+            "controller_requires_any": [
+              {
+                "klasse": "Magierin"
+              },
+              {
+                "klasse": "Unterstützerin"
+              },
+              {
+                "nebenattribut": "Xalathir"
+              }
+            ]
+          }
+        }
+      ],
+      "tags": [
+        "gebot",
+        "massenschaden",
+        "astral-schaden",
+        "ausspielbedingung"
+      ],
+      "effekt_symbol": "blitz",
+      "effekt_zaehler_max": null,
+      "effekt_dauer_kr": null,
+      "effekt_text": "Füge allen Bezwingerinnen 1 ASTRAL-Schaden zu. Du darfst diese Karte nur spielen, wenn beide Spieler gleich viele Bezwingerinnen kontrollieren und du eine Magierin oder Unterstützerin oder eine Bezwingerin mit dem Nebenattribut Xalathir kontrollierst."
     },
     {
       "id": "1.04-12-32-5ce2afb4",
@@ -6397,6 +6614,42 @@ window.GODDESSES_DB = {
       "effekt_zaehler_max": null,
       "effekt_dauer_kr": null,
       "effekt_text": "Erhöhe oder verringere die aktuelle Kampfrundendauer einer eigenen oder gegnerischen Karte um 1 (nicht bei eigenen Waffen). Bei einer eigenen Karte kostet dieses Wunder 1 Ehre zusätzlich."
+    },
+    {
+      "id": "1.03-25-32-vollendete-toetungstechnik",
+      "bild": "Astralkammer/1.03-25-32-vollendete-toetungstechnik.webp",
+      "name": "Vollendete Tötungstechnik",
+      "kartengruppe": "Astralkammer",
+      "deck_bereich": "astral",
+      "hauptattribut": "ASTRAL",
+      "kartentyp": "ASTRAL-Spruch",
+      "entwicklungskarte": false,
+      "grundkarte_bild": null,
+      "fraktion": "Unterwelt",
+      "stufe": 1,
+      "klasse": null,
+      "bereich": null,
+      "untertyp": null,
+      "material": null,
+      "nebenattribute": [],
+      "herzen": null,
+      "physische_staerke": null,
+      "astrale_staerke": null,
+      "physischer_schild": null,
+      "astraler_schild": null,
+      "ehre": null,
+      "wunder": null,
+      "effekte": [
+        {
+          "engine_key": "vollendete_toetungstechnik_dual",
+          "instinkt": true,
+          "trigger": "instinct",
+          "description": "Wähle eine eigene Assassine. In genau einem Kampf dieser Kampfrunde verursacht sie gleichzeitig physischen und ASTRAL-Schaden."
+        }
+      ],
+      "tags": [
+        "instinkt"
+      ]
     }
   ],
   "index": {

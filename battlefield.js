@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.76';
+window.G5_BATTLEFIELD_BUILD='1.78';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -515,6 +515,7 @@ function playerBoardHtml(p,isActive,isOpponent){
         ${stackHtml(safePlayer,'astral','ASTRAL')}
         ${stackHtml(safePlayer,'ruestkammer','RÜSTKAMMER')}
         <div class="discard-pile"><span>ABLAGE</span><b>${discard.length}</b></div>
+        ${(()=>{const vz=(state.voidZone||[]).filter(v=>Number(v.originalPlayerIndex)===Number(safePlayer.index));const names=vz.map(v=>cardName(v.runtime)).join(', ');return `<div class="discard-pile void-pile" title="${esc(names||'Keine Karte in der Leere')}"><span>LEERE</span><b>${vz.length}</b></div>`;})()}
       </div>
     </div>
   </div>`;
@@ -1030,7 +1031,7 @@ function renderActions(){
       return;
     }
   }
-  if(state.pendingBezEffect && ['exekution_target','zweifache_bestrafung_target','lilous_gabe_target','vengeresse_vergeltung_target','feiertag_target','sprint_angriff_target','auszeichnung_target','aufstieg_target','demoralisierung_target','legionsruestung_search','legionsruestung_equip','neutralisationssiegel_target'].includes(state.pendingBezEffect.type)){
+  if(state.pendingBezEffect && ['exekution_target','zweifache_bestrafung_target','lilous_gabe_target','vengeresse_vergeltung_target','feiertag_target','sprint_angriff_target','auszeichnung_target','aufstieg_target','demoralisierung_target','legionsruestung_search','legionsruestung_equip','neutralisationssiegel_target','system_reset_target','tauschportal_source','tauschportal_destination','zeitlose_unterwerfung_target','strahl_des_vergessens_target','siegel_kampfschwaeche_target','siegel_astralschwaeche_target'].includes(state.pendingBezEffect.type)){
     const labels={
       exekution_target:'Exekution – Bezwingerin wählen',
       zweifache_bestrafung_target:'Zweifache Bestrafung – eigene Bezwingerin wählen',
@@ -1043,7 +1044,14 @@ function renderActions(){
       demoralisierung_target:'Demoralisierung – gegnerische Bezwingerin wählen',
       legionsruestung_search:'Legionsrüstung erscheine! – Rüstung aus Eisen wählen',
       legionsruestung_equip:'Legionsrüstung erscheine! – eigene Bezwingerin ausrüsten',
-      neutralisationssiegel_target:'Neutralisationssiegel – verdeckte Karte wählen'
+      neutralisationssiegel_target:'Neutralisationssiegel – verdeckte Karte wählen',
+      system_reset_target:'System Reset – gegnerische AZR-Karte wählen',
+      tauschportal_source:'Tauschportal – gegnerische Rüstung/Kopfschutz/Schild wählen',
+      tauschportal_destination:'Tauschportal – andere gegnerische Bezwingerin wählen',
+      zeitlose_unterwerfung_target:'Zeitlose Unterwerfung – eigene Bezwingerin wählen',
+      strahl_des_vergessens_target:'Strahl des Vergessens – Bezwingerin für die Leere wählen',
+      siegel_kampfschwaeche_target:'Siegel der Kampfschwäche – gegnerische Bezwingerin wählen',
+      siegel_astralschwaeche_target:'Siegel der Astralschwäche – gegnerische Bezwingerin wählen'
     };
     const title=document.createElement('strong');title.textContent=labels[state.pendingBezEffect.type]||'ASTRAL-Spruch – Ziel wählen';root.appendChild(title);
     E().newAstralSpellTargets(state).forEach(t=>{
