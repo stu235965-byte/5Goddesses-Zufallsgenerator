@@ -1527,7 +1527,7 @@ h1{font-size:30px;margin:0 0 16px}
 }
 
 
-/* v1.84 Startbildschirm */
+/* v1.85 Startbildschirm */
 .brand-button{background:transparent;border:0;color:inherit;padding:0;border-radius:0;font:inherit;letter-spacing:.08em;cursor:pointer}
 .brand-button:hover{background:transparent;color:#fff}
 .home-page{min-height:calc(100vh - 120px);align-content:center}
@@ -1536,7 +1536,8 @@ h1{font-size:30px;margin:0 0 16px}
 .home-panel h1{margin-bottom:26px;letter-spacing:.08em}
 .home-menu,.play-submenu{display:grid;gap:12px}
 .play-submenu{padding:0 14px 4px}
+.play-submenu[hidden]{display:none!important}
 .home-menu-btn{width:100%;min-height:52px;font-size:18px}
-.storymode-btn:disabled{opacity:.42;cursor:not-allowed;background:#292929;color:#aaa;border-color:#444}
-.storymode-btn:disabled:hover{background:#292929}
+.future-mode-btn:disabled{opacity:.42;cursor:not-allowed;background:#292929;color:#aaa;border-color:#444}
+.future-mode-btn:disabled:hover{background:#292929}
 @media(max-width:700px){.home-panel{padding:24px 16px}.home-menu-btn{font-size:17px}.topbar nav{display:none}}
