@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.82';
+window.G5_BATTLEFIELD_BUILD='1.83';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -47,7 +47,7 @@ function phase(){return state?E().currentPhase(state):null}
 function selectedAttackerRuntime(){
   if(selectedAttacker===null || !state)return null;
   const p=E().active(state);
-  return selectedAttacker==='refuge' ? p.refuge : p.bezSlots[selectedAttacker];
+  return selectedAttacker==='refuge'?p.refuge:selectedAttacker==='primary'?p.primary:selectedAttacker==='secondary'?state.sharedSecondary:p.bezSlots[selectedAttacker];
 }
 function saveRender(msg=''){
   if(state)E().save(state);
@@ -777,6 +777,16 @@ function renderBoards(){
       refugeBtn.classList.add('attack-source-valid');
       if(selectedAttacker==='refuge')refugeBtn.classList.add('attack-source-selected');
     }
+    const primaryBtn=document.querySelector('#playerBoard [data-primary-target]');
+    if(primaryBtn && E().canAttack(E().active(state).primary,E().active(state))){
+      primaryBtn.classList.add('attack-source-valid');
+      if(selectedAttacker==='primary')primaryBtn.classList.add('attack-source-selected');
+    }
+    const secondaryBtn=document.querySelector('#sharedSecondaryZone [data-secondary-target]');
+    if(secondaryBtn && state.sharedSecondary?.owner===state.activePlayer && E().canAttack(state.sharedSecondary,E().active(state))){
+      secondaryBtn.classList.add('attack-source-valid');
+      if(selectedAttacker==='secondary')secondaryBtn.classList.add('attack-source-selected');
+    }
 
     // Nach Wahl eines Angreifers nur legale gegnerische Karten mit Herzen hervorheben.
     if(selectedAttacker!==null){
@@ -1495,6 +1505,8 @@ function renderActions(){
     }else{
       const attackers=p.bezSlots.map((r,i)=>E().canAttack(r,p)?i:null).filter(i=>i!==null);
       if(E().canRefugeAttack(state))attackers.push('refuge');
+      if(E().canAttack(p.primary,p))attackers.push('primary');
+      if(state.sharedSecondary?.owner===p.index && E().canAttack(state.sharedSecondary,p))attackers.push('secondary');
 
       if(!attackers.length){
         const info=document.createElement('span');
@@ -1504,9 +1516,7 @@ function renderActions(){
         root.appendChild(info);
       }else if(selectedAttacker===null){
         const info=document.createElement('span');
-        info.textContent=E().canRefugeAttack(state)
-          ?'Klicke auf deine Zuflucht, um sie als Angreifer zu wählen.'
-          :'Klicke auf eine eigene einsatzbereite Bezwingerin. Sie wird als Angreiferin ausgewählt.';
+        info.textContent='Klicke auf eine gold markierte eigene einsatzbereite Karte (Bezwingerin, Primär-/Sekundärkarte oder ggf. Zuflucht), um sie als Angreifer zu wählen.';
         root.appendChild(info);
       }else if(selectedTarget===null){
         const info=document.createElement('span');
@@ -1568,7 +1578,7 @@ function renderActions(){
     }
 
     if(state.attack){
-      const a=(state.attack.attackerKind==='refuge'?p.refuge:p.bezSlots[state.attack.attackerSlot]);
+      const a=state.attack.attackerKind==='refuge'?p.refuge:state.attack.attackerKind==='primary'?p.primary:state.attack.attackerKind==='secondary'?state.sharedSecondary:p.bezSlots[state.attack.attackerSlot];
       const b=document.createElement('button');
       b.className='primary';
       b.textContent=`Kampf ausführen: ${cardName(a)}`;
@@ -1582,7 +1592,7 @@ function renderActions(){
       });
       root.appendChild(b);
     }else{
-      const more=p.bezSlots.some(r=>E().canAttack(r,p)) || E().canRefugeAttack(state);
+      const more=p.bezSlots.some(r=>E().canAttack(r,p)) || E().canRefugeAttack(state) || E().canAttack(p.primary,p) || (state.sharedSecondary?.owner===p.index && E().canAttack(state.sharedSecondary,p));
       if(more){
         const b=document.createElement('button');
         b.textContent='Mit weiterer Karte angreifen';
@@ -1839,6 +1849,11 @@ Abbrechen = 1 ASTRAL → 1 physische`) ? 'physical_to_astral' : 'astral_to_physi
 function handleOwnPrimary(){
   const p=E().active(state),r=p.primary,c=E().cardData(r);
   if(!r || r.owner!==p.index)return;
+  if(phase()?.id==='rush' && !state.attack){
+    if(!E().canAttack(r,p))return message('Diese Primärkarte ist einsatzverzögert, gesperrt oder hat bereits angegriffen.','warn');
+    selectedAttacker='primary';selectedTarget=null;selectedAttackType=null;renderBoards();renderActions();
+    return message(`${cardName(r)} als Angreifer gewählt. Wähle jetzt ein leuchtendes gegnerisches Ziel.`);
+  }
   if(c?.effekte?.some(e=>e.engine_key==='kiki_counter_dodge')){
     if(phase()?.id!=='supply')return message('Kiki kann ihren Effekt nur während deiner Versorgungsphase aktivieren.','warn');
     const targets=E().kikiEligibleTargets(state);
@@ -1897,6 +1912,11 @@ function handleOwnPrimary(){
 function handleOwnSecondary(){
   const r=state.sharedSecondary,c=E().cardData(r),p=E().active(state);
   if(!r || r.owner!==p.index)return;
+  if(phase()?.id==='rush' && !state.attack){
+    if(!E().canAttack(r,p))return message('Diese Sekundärkarte ist einsatzverzögert, gesperrt oder hat bereits angegriffen.','warn');
+    selectedAttacker='secondary';selectedTarget=null;selectedAttackType=null;renderBoards();renderActions();
+    return message(`${cardName(r)} als Angreifer gewählt. Wähle jetzt ein leuchtendes gegnerisches Ziel.`);
+  }
   if(c?.effekte?.some(e=>e.engine_key==='meteorsturm_wunder')){
     const chk=E().meteorsturmWonderAvailable(state,p.index);
     if(!chk.ok)return message(chk.msg,'warn');
@@ -2092,7 +2112,7 @@ function handleInstinctBeforePhaseEnd(){
   if(!candidates.length)return false;
 
   const owner=state.players[1-state.activePlayer]?.name||'Gegenspieler';
-  const phaseName=phase()?.id==='resupply'?'Nachschubphase':phase()?.id==='rush'?'Ansturmphase':'Versorgungsphase';
+  const phaseName=phase()?.id==='honor'?'Ehrungsphase':phase()?.id==='resupply'?'Nachschubphase':phase()?.id==='rush'?'Ansturmphase':'Versorgungsphase';
   const use=confirm(`${owner}: Möchtest du vor dem Ende der gegnerischen ${phaseName} eine verdeckt gesetzte Instinkt-Karte aktivieren?`);
 
   if(!use){

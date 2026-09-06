@@ -1,0 +1,6 @@
+Beim Update auf v1.83 bitte den alten, falsch kodierten Ordner
+R#U00fcstkammer
+vollständig löschen. Der korrekte Ordner heißt jetzt:
+Rüstkammer
+
+Die v1.83-Update-ZIP enthält den vollständigen korrekten Rüstkammer-Ordner mit allen 50 Kartenbildern.

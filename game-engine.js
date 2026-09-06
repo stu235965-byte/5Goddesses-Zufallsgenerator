@@ -807,6 +807,22 @@ function autoReadyEligibleBez(state){
   }
   return madeReady;
 }
+function readyEligibleField(state,kind){
+  const p=active(state);
+  const r=kind==='primary'?p.primary:(kind==='secondary'&&state.sharedSecondary?.owner===p.index?state.sharedSecondary:null);
+  return !!r && !r.ready && p.turnCount>r.enteredTurn && !(r.effectState?.delayLockedUntilSupply);
+}
+function autoReadyEligibleFields(state){
+  const p=active(state),madeReady=[];
+  for(const kind of ['primary','secondary']){
+    if(!readyEligibleField(state,kind))continue;
+    const r=kind==='primary'?p.primary:state.sharedSecondary;
+    r.ready=true;
+    madeReady.push(cardData(r)?.name|| (kind==='primary'?'Primärkarte':'Sekundärkarte'));
+  }
+  if(madeReady.length)log(state,`${p.name}: Einsatzverzögerung automatisch aufgehoben – ${madeReady.join(', ')} ${madeReady.length===1?'ist':'sind'} jetzt einsatzbereit.`);
+  return madeReady;
+}
 function recruit(state,handIndex,slot){
   const p=active(state);
   if(!['supply','resupply'].includes(currentPhase(state).id))return {ok:false,msg:'Rekrutieren ist nur in Versorgungs- oder Nachschubphase möglich.'};
@@ -2543,7 +2559,7 @@ function instinctWindowKey(state){
 }
 function instinctCandidates(state){
   const ph=currentPhase(state)?.id;
-  if(!['supply','rush','resupply'].includes(ph))return [];
+  if(!['honor','supply','rush','resupply'].includes(ph))return [];
   const owner=1-state.activePlayer;
   const p=state.players[owner];
   return (p?.azr||[]).map((r,slot)=>{
@@ -2553,7 +2569,7 @@ function instinctCandidates(state){
   }).filter(Boolean);
 }
 function instinctWindowNeeded(state){
-  if(!['supply','rush','resupply'].includes(currentPhase(state)?.id))return false;
+  if(!['honor','supply','rush','resupply'].includes(currentPhase(state)?.id))return false;
   if(state.instinctWindowPassed===instinctWindowKey(state))return false;
   return instinctCandidates(state).length>0;
 }
@@ -2564,9 +2580,10 @@ function passInstinctWindow(state){
 function activateInstinctCard(state,slot){
   const owner=1-state.activePlayer,p=state.players[owner],r=p?.azr?.[Number(slot)],c=cardData(r);
   if(!r?.faceDown || !hasInstinct(c))return {ok:false,msg:'Keine aktivierbare Instinkt-Karte in diesem Bereich.'};
-  if(!['supply','rush','resupply'].includes(currentPhase(state)?.id))return {ok:false,msg:'Instinkt ist hier derzeit nicht aktivierbar.'};
+  if(!['honor','supply','rush','resupply'].includes(currentPhase(state)?.id))return {ok:false,msg:'Instinkt ist hier derzeit nicht aktivierbar.'};
   r.faceDown=false;
-  state.instinctWindowPassed=instinctWindowKey(state);
+  // Nach einer Aktivierung bleibt das Fenster offen: Der Gegenspieler darf weitere gesetzte Instinkt-Karten aktivieren.
+  state.instinctWindowPassed=null;
   log(state,`${p.name} aktiviert ${c.name} per Instinkt in der gegnerischen ${currentPhase(state).name}.`);
   return isInstantAstralSpell(c)?startInstantAstralSpell(state,owner,Number(slot)):startInstantRuestkammerItem(state,owner,Number(slot));
 }
@@ -3021,9 +3038,9 @@ function playFieldFromHand(state,handIndex,area){
   if(!c || !allowed.includes(areaKind) || !['primary','secondary','bez'].includes(areaKind))return {ok:false,msg:'Diese Karte gehört nicht in diesen Bereich.'};
 
   if(areaKind==='primary'){
-    if(p.primary)return {ok:false,msg:'Dein Primärbereich ist bereits belegt.'};
+    // Eine eigene Primärkarte darf regelkonform durch die neu ausgespielte Primärkarte ersetzt werden.
   }else if(areaKind==='secondary'){
-    if(state.sharedSecondary)return {ok:false,msg:'Der gemeinsame Sekundärbereich ist bereits belegt.'};
+    if(state.sharedSecondary && Number(state.sharedSecondary.owner)!==Number(p.index))return {ok:false,msg:'Der gemeinsame Sekundärbereich ist durch die gegnerische Karte belegt und muss zuerst freigemacht werden.'};
     if(secondaryLockedFor(state,p.index))return {ok:false,msg:'Der Sekundärbereich ist für dich bis zum Beginn der nächsten Versorgungsphase des Wurzelpeinverschlinger-Besitzers gesperrt.'};
   }else{
     const slot=Number(bezMatch[1]);
@@ -3037,8 +3054,14 @@ function playFieldFromHand(state,handIndex,area){
 
   if(c?.effekte?.some(e=>e.engine_key==='ruth_shop'))r.effectUsesRemaining=3;
   if(c?.effekte?.some(e=>e.engine_key==='kiki_counter_dodge')){r.effectRoundsRemaining=Number(c.effekt_dauer_kr||3);r.effectDisabled=false;r.effectUsedTurn=null;r.effectState=r.effectState||{};}
-  if(areaKind==='primary')p.primary=r;
-  else if(areaKind==='secondary')state.sharedSecondary=r;
+  if(areaKind==='primary'){
+    if(p.primary){const old=p.primary;discardRuntime(p,old);log(state,`${cardData(old)?.name||'Die bisherige Primärkarte'} wird durch ${c.name} ersetzt und abgelegt.`);}
+    p.primary=r;
+  }
+  else if(areaKind==='secondary'){
+    if(state.sharedSecondary){const old=state.sharedSecondary;discardRuntime(p,old);if(cardData(old)?.effekte?.some(e=>e.engine_key==='wiederbelebungsapparatur_virus_lock'))state.azrLocks=(state.azrLocks||[]).filter(x=>Number(x.sourceOwner)!==Number(p.index));log(state,`${cardData(old)?.name||'Die bisherige Sekundärkarte'} wird durch ${c.name} ersetzt und abgelegt.`);}
+    state.sharedSecondary=r;
+  }
   else p.bezSlots[Number(bezMatch[1])]=r;
   if(areaKind==='secondary' && isNebel(c))armNebelForNextOpponentRound(state,r);
   if(areaKind==='secondary'&&c?.effekte?.some(e=>e.engine_key==='wiederbelebungsapparatur_virus_lock')){r.effectRoundsRemaining=2;r.effectState=r.effectState||{};r.effectState.durationOwnRounds=true;state.pendingBezEffect={type:'virus_azr_slot',sourcePlayer:p.index};}
@@ -3078,11 +3101,12 @@ function moveRevealedFieldCard(state,azrSlot){
   if(!area)return {ok:false,msg:'Diese Karte gehört nicht in Primär- oder Sekundärbereich.'};
 
   if(area==='primary'){
-    if(p.primary)return {ok:false,msg:'Dein Primärbereich ist bereits belegt. Die aufgedeckte Karte kann noch nicht verschoben werden.'};
+    if(p.primary){const old=p.primary;discardRuntime(p,old);log(state,`${cardData(old)?.name||'Die bisherige Primärkarte'} wird durch ${c?.name||'die neue Primärkarte'} ersetzt und abgelegt.`);}
     p.primary=r;
   }else{
-    if(state.sharedSecondary)return {ok:false,msg:'Der gemeinsame Sekundärbereich ist bereits belegt. Die aufgedeckte Karte kann noch nicht verschoben werden.'};
+    if(state.sharedSecondary && Number(state.sharedSecondary.owner)!==Number(p.index))return {ok:false,msg:'Der gemeinsame Sekundärbereich ist durch die gegnerische Karte belegt. Die aufgedeckte Karte kann noch nicht verschoben werden.'};
     if(secondaryLockedFor(state,p.index))return {ok:false,msg:'Der Sekundärbereich ist für dich derzeit durch Wurzelpeinverschlinger gesperrt.'};
+    if(state.sharedSecondary){const old=state.sharedSecondary;discardRuntime(p,old);if(cardData(old)?.effekte?.some(e=>e.engine_key==='wiederbelebungsapparatur_virus_lock'))state.azrLocks=(state.azrLocks||[]).filter(x=>Number(x.sourceOwner)!==Number(p.index));log(state,`${cardData(old)?.name||'Die bisherige Sekundärkarte'} wird durch ${c?.name||'die neue Sekundärkarte'} ersetzt und abgelegt.`);}
     state.sharedSecondary=r;
     if(isNebel(c))armNebelForNextOpponentRound(state,r);
     if(c?.effekte?.some(e=>e.engine_key==='wiederbelebungsapparatur_virus_lock')){r.effectRoundsRemaining=2;r.effectState=r.effectState||{};r.effectState.durationOwnRounds=true;state.pendingBezEffect={type:'virus_azr_slot',sourcePlayer:p.index};}
@@ -3481,11 +3505,15 @@ function targetKey(t){
 function attackerRuntime(state,attackerSource){
   const p=active(state);
   if(attackerSource==='refuge' || attackerSource?.type==='refuge')return p.refuge;
+  if(attackerSource==='primary' || attackerSource?.type==='primary')return p.primary;
+  if(attackerSource==='secondary' || attackerSource?.type==='secondary')return state.sharedSecondary?.owner===p.index?state.sharedSecondary:null;
   const slot=typeof attackerSource==='number' ? attackerSource : attackerSource?.slot;
   return p.bezSlots[slot];
 }
 function attackerKindAndSlot(attackerSource){
   if(attackerSource==='refuge' || attackerSource?.type==='refuge')return {kind:'refuge',slot:null};
+  if(attackerSource==='primary' || attackerSource?.type==='primary')return {kind:'primary',slot:null};
+  if(attackerSource==='secondary' || attackerSource?.type==='secondary')return {kind:'secondary',slot:null};
   const slot=typeof attackerSource==='number' ? attackerSource : attackerSource?.slot;
   return {kind:'bez',slot};
 }
@@ -3589,8 +3617,10 @@ function prepareAttack(state,attackerSource,target,attackType){
   const p=active(state),src=attackerKindAndSlot(attackerSource),r=attackerRuntime(state,attackerSource);
   if(src.kind==='refuge'){
     if(!canRefugeAttack(state,p.index))return {ok:false,msg:'Die Zuflucht kann nur angreifen, wenn auf deiner Spielfeldseite keine Bezwingerin vorhanden ist.'};
+  }else if(src.kind==='secondary' && (!r || Number(r.owner)!==Number(p.index))){
+    return {ok:false,msg:'Du kontrollierst keine eigene Sekundärkarte, die angreifen kann.'};
   }else if(!canAttack(r,p)){
-    return {ok:false,msg:'Diese Bezwingerin ist einsatzverzögert, gesperrt oder hat bereits angegriffen.'};
+    return {ok:false,msg:'Diese Karte ist einsatzverzögert, gesperrt oder hat bereits angegriffen.'};
   }
   if(!['physical','astral'].includes(attackType))return {ok:false,msg:'Ungültige Angriffsart.'};
   const usingExtra=src.kind==='bez' && r.attackedTurn===p.turnCount && !!r.effectState?.extraPhysicalAttackAvailable;
@@ -3980,7 +4010,7 @@ function resolveCombat(state){
 
   const p=active(state),opp=opponent(state);
   const attackerKind=state.attack.attackerKind||'bez';
-  const a=attackerKind==='refuge' ? p.refuge : p.bezSlots[state.attack.attackerSlot];
+  const a=attackerKind==='refuge'?p.refuge:attackerKind==='primary'?p.primary:attackerKind==='secondary'?state.sharedSecondary:p.bezSlots[state.attack.attackerSlot];
   if(!a)return {ok:false,msg:'Der Angreifer ist nicht mehr auf dem Feld.'};
   if(!state.attack.defenderConfirmed)return {ok:false,msg:'Der verteidigende Spieler muss den Angriff zuerst zulassen.'};
 
@@ -3995,10 +4025,11 @@ function resolveCombat(state){
   const ac=cardData(a),dc=cardData(d);
   const type=state.attack.attackType;
 
-  const atk=attackerKind==='refuge'
-    ? {base:type==='physical'?(a.physical ?? ac?.physische_staerke ?? 0):(a.astral ?? ac?.astrale_staerke ?? 0),equipment:0,total:type==='physical'?(a.physical ?? ac?.physische_staerke ?? 0):(a.astral ?? ac?.astrale_staerke ?? 0)}
-    : combatStrength(state,p.index,state.attack.attackerSlot,type,true);
+  const atk=attackerKind==='bez'
+    ? combatStrength(state,p.index,state.attack.attackerSlot,type,true)
+    : {base:type==='physical'?(a.physical ?? ac?.physische_staerke ?? 0):(a.astral ?? ac?.astrale_staerke ?? 0),equipment:0,total:type==='physical'?(a.physical ?? ac?.physische_staerke ?? 0):(a.astral ?? ac?.astrale_staerke ?? 0)};
   let attackValue=atk.total;
+  if(attackerKind==='primary' && type==='physical')attackValue+=Number(a?.effectState?.mantaPhysicalOneCombat||0);
   if(attackerKind==='bez' && a?.effectState?.baronesse2Armed &&
      a.effectState.baronesse2ArmedTurn===p.turnCount &&
      baronesse2CanBuff(state,state.attack.attackerSlot,target)){
@@ -4057,8 +4088,24 @@ function resolveCombat(state){
   if(a?.effectState?.primaryAttackActive)a.effectState.primaryAttackActive=false;
   if(target.type==='bez' && d?.effectState?.primaryAttackActive)d.effectState.primaryAttackActive=false;
 
-// Primär/Sekundär/Zuflucht haben keine anliegende Bezwingerinnen-Ausrüstung
-  // und werden deshalb weiterhin direkt abgewickelt.
+// Primär/Sekundär/Zuflucht haben keine anliegende Bezwingerinnen-Ausrüstung.
+  // Bei einem verteidigerseitigen Primärangriff muss dessen Gegenangriff zuerst
+  // vollständig abgehandelt werden. Fällt die angreifende Feldkarte dabei auf 0,
+  // findet ihr eigener nachgelagerter Treffer nicht mehr statt.
+  let nonBezCounterApplied=false;
+  if(target.type==='bez' && attackerKind!=='bez' && timing==='defender_first' && counterValue>0){
+    const dmg=applyDamage(a,counterValue,type);nonBezCounterApplied=true;
+    if(dmg.shield||dmg.hearts)log(state,`Angreifende ${attackerKind==='refuge'?'Zuflucht':attackerKind==='primary'?'Primärkarte':'Sekundärkarte'}: −${dmg.shield} Basisschild/−${dmg.hearts} Herzen durch vorrangigen Gegenangriff.`);
+    if(Number(a.hearts||0)<=0){
+      if(attackerKind==='primary')consumeMantaCombatBonus(state);
+      killIfNeeded(state,p.index,attackerKind,state.attack.attackerSlot);
+      state.attack=null;
+      return {ok:true,msg:'Der vorrangige Gegenangriff zerstört den Angreifer; dessen Angriff entfällt.'};
+    }
+  }
+
+  // Primär/Sekundär/Zuflucht werden bei direktem Schaden weiterhin ohne
+  // Bezwingerinnen-Ausrüstungsquellen abgewickelt.
   if(target.type!=='bez'){
     const dmg=target.type==='refuge'?applyDamageWithTitanOverflow(state,d,attackValue,type,opp):applyDamage(d,attackValue,type);
     if(dmg.shield||dmg.hearts){
@@ -4070,7 +4117,7 @@ function resolveCombat(state){
   const defenderPacket=target.type==='bez' && attackValue>0 ? {
     role:'defender',playerIndex:opp.index,bezSlot:target.slot,type,remaining:attackValue,shieldLoss:0,heartLoss:0
   }:null;
-  let attackerPacket=counterValue>0 && attackerKind!=='refuge' ? {
+  let attackerPacket=counterValue>0 && attackerKind==='bez' ? {
     role:'attacker',playerIndex:p.index,bezSlot:state.attack.attackerSlot,type,remaining:counterValue,shieldLoss:0,heartLoss:0
   }:null;
   if(target.type==='bez' && attackerKind==='bez' && a?.effectState?.vollendeteToetungstechnikAvailable && a.effectState.vollendeteToetungstechnikRoundSerial===state.roundSerial){const other=type==='physical'?'astral':'physical';const val=combatStrength(state,p.index,state.attack.attackerSlot,other,true).total;if(val>0)packets.push({role:'dual_attacker',playerIndex:opp.index,bezSlot:target.slot,type:other,remaining:val,shieldLoss:0,heartLoss:0});a.effectState.vollendeteToetungstechnikAvailable=false;delete a.effectState.vollendeteToetungstechnikRoundSerial;log(state,`Vollendete Tötungstechnik: ${cardData(a)?.name||'Assassine'} verursacht zusätzlich ${val} ${other==='physical'?'physischen':'ASTRAL'} Schaden.`);}
@@ -4082,9 +4129,9 @@ function resolveCombat(state){
       log(state,`${cardData(a)?.name}: weicht dem Gegenangriff vollständig aus (${dodgeSource}).`);
     }
   }
-  if(attackerKind==='refuge' && counterValue>0){
+  if(attackerKind!=='bez' && counterValue>0 && !nonBezCounterApplied){
     const dmg=applyDamage(a,counterValue,type);
-    if(dmg.shield||dmg.hearts)log(state,`Angreifende Zuflucht: −${dmg.shield} Basisschild/−${dmg.hearts} Herzen durch Gegenangriff.`);
+    if(dmg.shield||dmg.hearts)log(state,`Angreifende ${attackerKind==='refuge'?'Zuflucht':attackerKind==='primary'?'Primärkarte':'Sekundärkarte'}: −${dmg.shield} Basisschild/−${dmg.hearts} Herzen durch Gegenangriff.`);
   }
   if(timing==='defender_first'){if(attackerPacket)packets.push(attackerPacket);if(defenderPacket)packets.push(defenderPacket);}
   else {if(defenderPacket)packets.push(defenderPacket);if(attackerPacket)packets.push(attackerPacket);}
@@ -4164,6 +4211,7 @@ function beginPhase(state){
     // Damit kollidiert das Freischalten nicht mehr mit anklickbaren Karten-
     // effekten/Wundern in VP oder NP.
     autoReadyEligibleBez(state);
+    autoReadyEligibleFields(state);
   }
   return phase;
 }
@@ -4241,7 +4289,7 @@ function drawPhaseCard(state,stack){
 function returnToRush(state){
   if(currentPhase(state).id!=='combat' || state.attack)return {ok:false,msg:'Noch nicht möglich.'};
   const p=active(state);
-  if(!p.bezSlots.some(r=>canAttack(r,p)) && !canRefugeAttack(state))return {ok:false,msg:'Keine weitere eigene Karte kann angreifen.'};
+  if(!p.bezSlots.some(r=>canAttack(r,p)) && !canRefugeAttack(state) && !canAttack(p.primary,p) && !(state.sharedSecondary?.owner===p.index && canAttack(state.sharedSecondary,p)))return {ok:false,msg:'Keine weitere eigene Karte kann angreifen.'};
   state.phaseIndex=5;
   beginPhase(state);
   return {ok:true};
@@ -4355,7 +4403,7 @@ function clear(){localStorage.removeItem('5goddesses_active_game_v1')}
 
 window.G5Engine={
   PHASES,decks,validDeck,normalizeDeckForBattle,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
-  advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,autoReadyEligibleBez,recruit,setFaceDown,playOpenAzr,reveal,
+  advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,autoReadyEligibleBez,readyEligibleField,autoReadyEligibleFields,recruit,setFaceDown,playOpenAzr,reveal,
   equipmentKind,isEquipmentCard,activeKrakenAt,fieldArea,mornakAllowedAreas,playFieldFromHand,moveRevealedFieldCard,moveMornakFromAzr,equipFromHand,equipFromAzr,discardEquipment,
   chooseEquipmentShieldBonus,equipmentCombatProfile,effectiveBezStats,combatStrength,startMantaWonder,consumeMantaCombatBonus,effectiveWonderCost,ruthTargets,activateRuth,selectEhrisTarget,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,destroyedQueenProtectionActive,prepareAttack,
