@@ -1549,7 +1549,7 @@ body.menu-background{
   background-image:url("start-hintergrund.png");
   background-repeat:no-repeat;
   background-position:center top;
-  background-size:min(100vw,1024px) auto;
+  background-size:min(100vw,1024px) max(100vh,1536px);
   background-attachment:fixed;
 }
 body.menu-background .home-panel,
@@ -1570,8 +1570,8 @@ body.menu-background #page-decks > .intro{
   text-shadow:0 2px 8px #000,0 0 14px #000;
 }
 @media(min-width:1025px){
-  body.menu-background{background-size:1024px auto}
+  body.menu-background{background-size:1024px max(100vh,1536px)}
 }
 @media(max-width:700px){
-  body.menu-background{background-size:100vw auto}
+  body.menu-background{background-size:100vw max(100vh,1536px)}
 }
