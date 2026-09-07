@@ -1546,7 +1546,7 @@ h1{font-size:30px;margin:0 0 16px}
 /* v1.90 – gemeinsamer Menü-Hintergrund */
 body.menu-background{
   background-color:#090909;
-  background-image:url("assets/start-hintergrund.png");
+  background-image:url("start-hintergrund.png");
   background-repeat:no-repeat;
   background-position:center top;
   background-size:min(100vw,1024px) auto;
