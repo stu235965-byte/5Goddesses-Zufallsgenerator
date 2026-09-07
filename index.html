@@ -19,7 +19,8 @@
   <header class="topbar">
     <div class="brand-wrap">
       <button id="homeButton" class="brand brand-button" type="button" aria-label="Zum Startbildschirm">5 GODDESSES</button>
-      <div class="app-version" title="Aktuell geladene PWA-Version">v1.91</div>
+      <div class="app-version" title="Aktuell geladene PWA-Version">v1.92</div>
+      <button id="musicToggle" class="music-toggle" type="button" aria-pressed="false" title="Hintergrundmusik ein- oder ausschalten">♫ Musik: An</button>
     </div>
     <nav>
       <button class="navbtn" id="navSpielen" type="button">Spielen</button>
@@ -174,7 +175,7 @@
             <div id="gamePhaseInfo" class="game-phase-info">–</div>
           </div>
           <div class="game-toolbar-actions">
-            <button id="gamePreviewToggle" class="game-preview-toggle" type="button" title="Kartenvorschau · v1.91" aria-label="Kartenvorschau" aria-pressed="false">🔍</button>
+            <button id="gamePreviewToggle" class="game-preview-toggle" type="button" title="Kartenvorschau · v1.92" aria-label="Kartenvorschau" aria-pressed="false">🔍</button>
             <button id="gameNew">Neues Gefecht</button>
             <button id="gameNextPhase" class="primary">Nächste Phase</button>
           </div>
@@ -210,6 +211,21 @@
     </section>
 
   </main>
+
+  <div id="fanNotice" class="fan-notice" role="dialog" aria-modal="true" aria-labelledby="fanNoticeTitle" aria-describedby="fanNoticeText">
+    <div class="fan-notice-card">
+      <div class="fan-notice-brand">5 GODDESSES</div>
+      <h2 id="fanNoticeTitle">Fanmade-Projekt</h2>
+      <div id="fanNoticeText" class="fan-notice-text">
+        <p><strong>5Goddesses – Fanmade WebApp</strong> wurde von <strong>Brombeerbart</strong> als Fanprojekt zum Kartenspiel <strong>5Goddesses</strong> entwickelt.</p>
+        <p>Die WebApp ist kein offizielles Produkt. <strong>Alle Rechte an 5Goddesses sowie den zugehörigen Namen, Grafiken, Karten und Spielinhalten liegen bei den jeweiligen Urhebern und Rechteinhabern.</strong></p>
+        <p class="fan-notice-signature">Fanmade WebApp by Brombeerbart</p>
+      </div>
+      <button id="fanNoticeAccept" class="primary fan-notice-accept" type="button">Verstanden &amp; weiterspielen</button>
+    </div>
+  </div>
+
+  <audio id="backgroundMusic" src="5goddesses-intro.mp3" preload="auto" loop></audio>
 
   <script src="5goddesses-datenbank.js"></script>
   <script src="generator.js"></script>

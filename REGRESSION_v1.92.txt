@@ -1,0 +1,12 @@
+5Goddesses v1.92 Regression
+
+Zusätzliche Prüfungen:
+- Fanmade-Hinweis vorhanden und nicht dauerhaft weg-speicherbar.
+- Bestätigungsbutton vorhanden.
+- MP3 ist als loopendes Audio eingebunden und physisch vorhanden.
+- Start erfolgt erst nach Nutzerklick auf den Hinweis.
+- Musik läuft auf home/generator/profil/decks und stoppt außerhalb dieser Menüseiten.
+- Musik-An/Aus-Einstellung wird per localStorage gespeichert.
+- MP3 ist im Service-Worker-Cache v103 enthalten.
+
+Bestehende Tests aus v1.91 werden unverändert erneut ausgeführt.

@@ -1575,3 +1575,59 @@ body.menu-background #page-decks > .intro{
 @media(max-width:700px){
   body.menu-background{background-size:100vw max(100vh,1536px)}
 }
+
+
+/* v1.92 – Fanprojekt-Hinweis und Hintergrundmusik */
+.music-toggle{
+  margin-left:8px;
+  min-height:30px;
+  padding:5px 9px;
+  border:1px solid rgba(212,175,55,.65);
+  border-radius:999px;
+  background:rgba(17,17,17,.82);
+  color:#f0d77b;
+  font-size:12px;
+  white-space:nowrap;
+}
+.music-toggle:hover{background:rgba(40,34,18,.95)}
+.music-toggle.muted{color:#aaa;border-color:#555}
+.fan-notice{
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  display:grid;
+  place-items:center;
+  padding:20px;
+  background:rgba(0,0,0,.72);
+  backdrop-filter:blur(5px);
+}
+.fan-notice[hidden]{display:none!important}
+.fan-notice-card{
+  width:min(560px,100%);
+  padding:30px 26px 24px;
+  border:1px solid rgba(222,188,75,.82);
+  border-radius:16px;
+  background:linear-gradient(180deg,rgba(26,24,20,.97),rgba(12,12,12,.98));
+  box-shadow:0 24px 80px rgba(0,0,0,.72),0 0 28px rgba(202,164,52,.12);
+  text-align:center;
+}
+.fan-notice-brand{
+  color:#e5c65f;
+  letter-spacing:.16em;
+  font-weight:800;
+  font-size:13px;
+  margin-bottom:8px;
+}
+.fan-notice-card h2{margin:0 0 18px;font-size:28px;letter-spacing:.04em}
+.fan-notice-text{color:#e6e1d6;line-height:1.55;text-align:left}
+.fan-notice-text p{margin:0 0 14px}
+.fan-notice-signature{text-align:center!important;color:#d9bb58;font-weight:700;margin-top:20px!important}
+.fan-notice-accept{width:100%;margin-top:6px;min-height:48px;font-size:16px}
+body.fan-notice-open{overflow:hidden}
+@media(max-width:700px){
+  .brand-wrap{flex-wrap:wrap}
+  .music-toggle{margin-left:4px;font-size:11px;padding:4px 7px}
+  .fan-notice{padding:14px}
+  .fan-notice-card{padding:24px 18px 20px}
+  .fan-notice-card h2{font-size:24px}
+}

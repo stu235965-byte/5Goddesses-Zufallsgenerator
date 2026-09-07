@@ -62,13 +62,82 @@ function speicherePool(){
 }
 function profilname(){return localStorage.getItem(PROFILE_KEY)||'Kartenpool'}
 
+const MUSIC_PREF_KEY='5goddesses_musik_aktiv_v1';
+let fanHinweisBestaetigt=false;
+let aktuelleSeite='home';
+
+function musikAktiviert(){
+  return localStorage.getItem(MUSIC_PREF_KEY)!=='0';
+}
+
+function istMenuseite(name){
+  return ['home','generator','profil','decks'].includes(name);
+}
+
+function aktualisiereMusikSchalter(){
+  const btn=document.getElementById('musicToggle');
+  if(!btn)return;
+  const aktiv=musikAktiviert();
+  btn.textContent=aktiv?'♫ Musik: An':'♫ Musik: Aus';
+  btn.setAttribute('aria-pressed',aktiv?'true':'false');
+  btn.classList.toggle('muted',!aktiv);
+}
+
+function stoppeHintergrundmusik(reset=true){
+  const audio=document.getElementById('backgroundMusic');
+  if(!audio)return;
+  audio.pause();
+  if(reset){
+    try{audio.currentTime=0}catch(e){}
+  }
+}
+
+function starteHintergrundmusik(){
+  const audio=document.getElementById('backgroundMusic');
+  if(!audio || !fanHinweisBestaetigt || !musikAktiviert() || !istMenuseite(aktuelleSeite))return;
+  audio.volume=0.25;
+  const versuch=audio.play();
+  if(versuch?.catch)versuch.catch(()=>{});
+}
+
+function setzeMusikAktiv(aktiv){
+  localStorage.setItem(MUSIC_PREF_KEY,aktiv?'1':'0');
+  aktualisiereMusikSchalter();
+  if(aktiv)starteHintergrundmusik();
+  else stoppeHintergrundmusik(false);
+}
+
+function initialisiereFanHinweisUndMusik(){
+  const notice=document.getElementById('fanNotice');
+  const accept=document.getElementById('fanNoticeAccept');
+  const audio=document.getElementById('backgroundMusic');
+  if(audio)audio.volume=0.25;
+  aktualisiereMusikSchalter();
+  document.body.classList.add('fan-notice-open');
+  accept?.focus();
+  accept?.addEventListener('click',()=>{
+    fanHinweisBestaetigt=true;
+    if(notice)notice.hidden=true;
+    document.body.classList.remove('fan-notice-open');
+    starteHintergrundmusik();
+  });
+  document.getElementById('musicToggle')?.addEventListener('click',()=>{
+    setzeMusikAktiv(!musikAktiviert());
+  });
+}
+
 function zeigeSeite(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.navbtn[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
+  initialisiereFanHinweisUndMusik();
+
+document.querySelectorAll('.navbtn[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
   const ziel=document.getElementById('page-'+name);
   if(!ziel)return;
   ziel.classList.add('active');
-  document.body.classList.toggle('menu-background',['home','generator','profil','decks'].includes(name));
+  aktuelleSeite=name;
+  document.body.classList.toggle('menu-background',istMenuseite(name));
+  if(istMenuseite(name))starteHintergrundmusik();
+  else stoppeHintergrundmusik(true);
   if(name==='profil')renderKartenpool();
   if(name==='decks' && window.renderGespeicherteDecks)window.renderGespeicherteDecks();
   if(name==='game' && window.gamePageOpened)window.gamePageOpened();
@@ -96,6 +165,8 @@ document.getElementById('homeSpielen')?.addEventListener('click',()=>{
   btn.setAttribute('aria-expanded',submenu.hidden?'false':'true');
 });
 document.getElementById('homeTestgefecht')?.addEventListener('click',()=>zeigeSeite('game'));
+document.getElementById('homeTutorial')?.addEventListener('click',()=>stoppeHintergrundmusik(true));
+document.getElementById('homeStorymode')?.addEventListener('click',()=>stoppeHintergrundmusik(true));
 
 function aktualisiereStatus(){
   const alle=datenbank(),n=alle.filter(k=>istImPool(k)).length;
