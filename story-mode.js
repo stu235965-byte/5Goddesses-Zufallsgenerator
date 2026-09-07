@@ -63,13 +63,47 @@ function current(p){return EVENTS[Math.min(p.index,EVENTS.length-1)]||EVENTS[0];
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
 function cardImageByName(name,area){return (window.GODDESSES_DB?.karten||[]).find(c=>c.name===name&&(!area||c.deck_bereich===area))?.bild;}
 function playerDeck(){
-  const base=window.G5STORY_ENCOUNTER_DECKS?.get?.('act1_zahira');
-  if(!base)throw new Error('Menias Testdeck konnte nicht aufgebaut werden.');
-  const menia=cardImageByName('Der unsichtbare Untergang Menia','bezwingerinnen');
-  if(!menia)throw new Error('Menia fehlt in der Kartendatenbank.');
-  base.id='story-menia-act1'; base.name='Menia · Akt I'; base.storyPlayerDeck=true;
-  base.karten.bezwingerinnen[0]=menia;
-  return base;
+  // Festes Starterdeck für Menias Storymode. Nicht aus einem Gegnerdeck ableiten:
+  // dadurch bleibt die Zusammenstellung reproduzierbar und unabhängig von späteren Encounter-Änderungen.
+  const pick=(name,area)=>{
+    const bild=cardImageByName(name,area);
+    if(!bild)throw new Error(`Menias Starterdeck: Karte fehlt: ${name} (${area})`);
+    return bild;
+  };
+  return {
+    id:'story-menia-starter-v1',
+    name:'Menia · Starterdeck',
+    storyPlayerDeck:true,
+    karten:{
+      zuflucht:[pick('Das strahlende Schloss Kaizer','zuflucht')],
+      bezwingerinnen:[
+        pick('Die glorreiche Eroberin Martha Kaizer','bezwingerinnen'),
+        pick('Die Schöpferin Cassandra','bezwingerinnen'),
+        pick('Der unsichtbare Untergang Menia','bezwingerinnen')
+      ],
+      astral:[
+        pick('Aufstieg','astral'),
+        pick('Zweifache Bestrafung','astral'),
+        pick('Bis zum bitteren Ende','astral'),
+        pick('Rabe der Hoffnung Kiki','astral'),
+        pick('Vollendete Tötungstechnik','astral')
+      ],
+      ruestkammer:[
+        pick('Die Abenddämmerung Hyhde','ruestkammer'),
+        pick('Die Morgenröte Jakyl','ruestkammer'),
+        pick('Parierdolch','ruestkammer'),
+        pick('Die strahlende Krone Gloria','ruestkammer'),
+        pick('Ubusa Brustpanzer','ruestkammer')
+      ],
+      entwicklung:[
+        pick('Das strahlende Schloss Kaizer','entwicklung'),
+        pick('Die glorreiche Eroberin Martha Kaizer','entwicklung'),
+        pick('Bastion Fernstille','entwicklung'),
+        pick('Glut des Morgens','entwicklung'),
+        pick('Sanctum Lysandor','entwicklung')
+      ]
+    }
+  };
 }
 function closeDialog(){const m=document.getElementById('storyModal');if(m)m.hidden=true;}
 function setHtmlText(root,paragraphs){root.innerHTML=(paragraphs||[]).map(t=>`<p>${esc(t)}</p>`).join('');}

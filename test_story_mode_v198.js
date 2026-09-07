@@ -19,5 +19,5 @@ t('Menia im Story-Spielerdeck',story.includes("Der unsichtbare Untergang Menia")
 t('Alte Knoten deaktiviert',story.includes("b.classList.add('completed');b.disabled=true"));
 t('Zukünftige Knoten unsichtbar',story.includes("if(i>p.index"));
 t('Kampfresultat zurück an Storymode',bf.includes('renderStoryBattleResult()')&&bf.includes('window.G5StoryMode?.battleFinished'));
-t('Service Worker cached Storymode',sw.includes('./story-mode.js')&&sw.includes('./story-weltkarte.png')&&sw.includes("v109"));
+t('Service Worker cached Storymode',sw.includes('./story-mode.js')&&sw.includes('./story-weltkarte.png')&&sw.includes("v111"));
 console.log(`TOTAL ${pass} PASS / ${fail} FAIL`); if(fail)process.exit(1);
