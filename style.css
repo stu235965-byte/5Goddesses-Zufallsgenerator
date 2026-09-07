@@ -1643,3 +1643,29 @@ body.fan-notice-open{overflow:hidden}
 .story-modal[hidden]{display:none!important}.story-modal{position:fixed;inset:0;z-index:10010;display:grid;place-items:center;padding:18px}.story-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(4px)}.story-dialog{position:relative;z-index:1;width:min(720px,100%);max-height:86vh;overflow:auto;padding:28px;border-radius:18px;background:linear-gradient(180deg,rgba(20,22,34,.98),rgba(7,8,14,.99));border:1px solid rgba(226,197,125,.7);box-shadow:0 24px 80px #000}.story-dialog-close{position:absolute;right:10px;top:8px;border:0;background:transparent;font-size:28px;color:#ddd}.story-dialog-act{font-size:.78rem;letter-spacing:.12em;color:#dcbf76;font-weight:900;text-transform:uppercase}.story-dialog h2{margin:.35rem 32px 1rem 0;color:#f2e5bd}.story-dialog-text p{line-height:1.65;color:#e4e4e8}.story-dialog-actions{display:flex;justify-content:flex-end;margin-top:22px}.story-fight-button{min-width:180px;font-size:1.02rem}
 @media(max-width:700px){.story-page{padding:10px 0 18px}.story-head{padding:0 12px;align-items:flex-start;flex-direction:column}.story-reset{align-self:flex-end}.story-map-shell{border-radius:0;border-left:0;border-right:0}.story-map{min-width:760px}.story-chronicle{margin:12px;border-radius:10px}.story-dialog{padding:22px 18px}.story-node.current small{font-size:10px}}
 .story-battle-result{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;width:100%;padding:12px;border:1px solid rgba(220,188,106,.55);border-radius:10px;background:rgba(20,16,8,.72)}.story-battle-result strong{color:#f0d990}.story-battle-result span{flex:1;min-width:230px}.story-battle-result button{margin-left:auto}
+
+/* v2.03 Story-Kartenpool, Belohnungen und Story-Deckbuilder */
+.story-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.story-pool-count{font-size:.86rem;color:#e8d5a5;padding:8px 10px;border:1px solid rgba(226,197,125,.28);border-radius:9px;background:rgba(7,9,18,.72)}
+.story-reward-dialog{width:min(920px,100%)}
+.story-reward-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:18px}
+.story-reward-card,.story-builder-card{border:1px solid rgba(226,197,125,.3);border-radius:12px;background:rgba(10,12,22,.96);padding:8px;color:#eee;text-align:left;cursor:pointer;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+.story-reward-card:hover,.story-builder-card:hover{transform:translateY(-2px);border-color:#e5c875;box-shadow:0 8px 22px rgba(0,0,0,.35)}
+.story-reward-card img,.story-builder-card img{display:block;width:100%;aspect-ratio:5/7;object-fit:contain;border-radius:8px;background:#05060a}
+.story-reward-card span,.story-builder-card span{display:block;margin-top:7px;font-size:.82rem;font-weight:700;line-height:1.2}
+.story-reward-card small{display:block;margin-top:4px;color:#d6bd7b;font-size:.72rem}
+.story-deckbuilder-dialog{width:min(1080px,100%);max-height:92vh}
+.story-builder-fixed{padding:12px 14px;border:1px solid rgba(226,197,125,.25);border-radius:10px;background:rgba(255,255,255,.025);margin:12px 0 18px}
+.story-builder-fixed p{margin:.45rem 0;color:#d6d6dc;font-size:.9rem;line-height:1.45}
+.story-builder-section{margin:20px 0}
+.story-builder-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
+.story-builder-section-head h3{margin:0;color:#f0d996}.story-builder-section-head span{font-size:.8rem;color:#bfc0c7}
+.story-builder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.story-builder-card.selected{border-color:#ffd96b;box-shadow:0 0 0 2px rgba(255,217,107,.22),0 0 18px rgba(255,193,66,.28);background:rgba(85,60,15,.4)}
+.story-builder-actions{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;bottom:-28px;margin:18px -28px -28px;padding:14px 28px;background:rgba(7,8,14,.98);border-top:1px solid rgba(226,197,125,.25)}
+.chronicle-reward{display:block;margin-top:7px;color:#d9be74;font-weight:700}
+@media(max-width:700px){
+  .story-head-actions{width:100%;justify-content:stretch;padding:0 12px}.story-head-actions>*{flex:1 1 auto}.story-pool-count{text-align:center}
+  .story-reward-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.story-builder-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .story-builder-actions{bottom:-22px;margin:16px -18px -22px;padding:12px 18px}.story-builder-actions button{flex:1 1 100%}
+}

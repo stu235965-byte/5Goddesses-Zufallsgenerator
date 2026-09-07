@@ -19,7 +19,7 @@
   <header class="topbar">
     <div class="brand-wrap">
       <button id="homeButton" class="brand brand-button" type="button" aria-label="Zum Startbildschirm">5 GODDESSES</button>
-      <div class="app-version" title="Aktuell geladene PWA-Version">v2.02</div>
+      <div class="app-version" title="Aktuell geladene PWA-Version">v2.03</div>
       <button id="musicToggle" class="music-toggle" type="button" aria-pressed="false" title="Hintergrundmusik ein- oder ausschalten">♫ Musik: An</button>
     </div>
     <nav>
@@ -144,7 +144,11 @@
           <h1>ASTRAGODDESSIA</h1>
           <p id="storyActTitle" class="story-act-title">Akt I – Die Fanfaren der Göttinnen</p>
         </div>
-        <button id="storyReset" class="story-reset" type="button" title="Setzt nur den Story-Testfortschritt zurück">Testfortschritt zurücksetzen</button>
+        <div class="story-head-actions">
+          <div id="storyPoolCount" class="story-pool-count">Story-Kartenpool: 19 Karten</div>
+          <button id="storyDeckBuilderOpen" class="primary" type="button">Storydeck bearbeiten</button>
+          <button id="storyReset" class="story-reset" type="button" title="Setzt Storyfortschritt, Belohnungskarten und Storydeck zurück">Testfortschritt zurücksetzen</button>
+        </div>
       </div>
 
       <div class="story-map-shell">
@@ -167,6 +171,33 @@
           <h2 id="storyDialogTitle"></h2>
           <div id="storyDialogText" class="story-dialog-text"></div>
           <div id="storyDialogActions" class="story-dialog-actions"></div>
+        </article>
+      </div>
+
+      <div id="storyRewardModal" class="story-modal" hidden>
+        <div class="story-modal-backdrop"></div>
+        <article class="story-dialog story-reward-dialog" role="dialog" aria-modal="true" aria-labelledby="storyRewardTitle">
+          <button id="storyRewardClose" class="story-dialog-close" type="button" aria-label="Belohnungsfenster schließen">×</button>
+          <div class="story-dialog-act">SIEGESBELOHNUNG</div>
+          <h2 id="storyRewardTitle">Neue Karte wählen</h2>
+          <p>Wähle genau eine <strong>Astralkammer- oder Rüstkammerkarte</strong> aus dem besiegten gegnerischen Deck. Sie wird dauerhaft Menias Story-Kartenpool hinzugefügt.</p>
+          <div id="storyRewardGrid" class="story-reward-grid"></div>
+        </article>
+      </div>
+
+      <div id="storyDeckBuilderModal" class="story-modal" hidden>
+        <div class="story-modal-backdrop" data-story-builder-close></div>
+        <article class="story-dialog story-deckbuilder-dialog" role="dialog" aria-modal="true" aria-labelledby="storyDeckBuilderTitle">
+          <button id="storyDeckBuilderClose" class="story-dialog-close" type="button" aria-label="Storydeck schließen">×</button>
+          <div class="story-dialog-act">MENIAS STORYDECK</div>
+          <h2 id="storyDeckBuilderTitle">Story-Deckbuilder</h2>
+          <p>Nur im Storymode. Neue Karten erhält Menia ausschließlich als Siegesbelohnung. Zuflucht, Bezwingerinnen und Entwicklung bleiben vorerst fest; Astralkammer und Rüstkammer können aus dem freigeschalteten Story-Kartenpool angepasst werden.</p>
+          <div id="storyDeckBuilderBody"></div>
+          <div id="storyDeckBuilderInfo" class="meldung"></div>
+          <div class="story-builder-actions">
+            <button id="storyDeckBuilderStarter" type="button">Starterauswahl wiederherstellen</button>
+            <button id="storyDeckBuilderSave" class="primary" type="button">Storydeck speichern</button>
+          </div>
         </article>
       </div>
     </section>
@@ -208,7 +239,7 @@
             <div id="gamePhaseInfo" class="game-phase-info">–</div>
           </div>
           <div class="game-toolbar-actions">
-            <button id="gamePreviewToggle" class="game-preview-toggle" type="button" title="Kartenvorschau · v2.02" aria-label="Kartenvorschau" aria-pressed="false">🔍</button>
+            <button id="gamePreviewToggle" class="game-preview-toggle" type="button" title="Kartenvorschau · v2.03" aria-label="Kartenvorschau" aria-pressed="false">🔍</button>
             <button id="gameNew">Neues Gefecht</button>
             <button id="gameNextPhase" class="primary">Nächste Phase</button>
           </div>
