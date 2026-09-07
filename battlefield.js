@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='2.02';
+window.G5_BATTLEFIELD_BUILD='2.04';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -2278,6 +2278,13 @@ window.G5StoryBattlefield={
     render(`Storyboss: ${boss.boss}`);
     window.starteGameplayMusik?.();
     scheduleAI();
+    // Storymode startet direkt aus einem Overlay heraus. Auf Mobilgeräten ist die
+    // endgültige Viewport-/Board-Höhe erst nach dem Schließen/Rendern stabil.
+    // Deshalb denselben verzögerten Auto-Fit wie im normalen Testgefecht erzwingen.
+    setTimeout(()=>{
+      resetMobileBattlefieldFit();
+      scheduleMobileBattlefieldFit();
+    },250);
     return state;
   }
 };
@@ -2293,7 +2300,15 @@ window.G5StoryBattlefield.startEncounter=function(playerDeck,encounterId,startPl
   if(state.players?.[1])state.players[1].name=enemy.leader; E().save(state);
   document.getElementById('gameSetup').hidden=true; document.getElementById('gameShell').hidden=false;
   selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;refugeActionSelected=false; resetMobileBattlefieldFit();
-  render(`Story: ${enemy.title}`); window.starteGameplayMusik?.(); scheduleAI(); return state;
+  render(`Story: ${enemy.title}`); window.starteGameplayMusik?.(); scheduleAI();
+  // Auch Zwischengegner müssen beim direkten Story-Start einmal nach dem sichtbaren
+  // Spielfeldaufbau neu eingepasst werden; sonst bleibt auf Hochformatgeräten oft
+  // die unskalierte Anfangsgeometrie bestehen, bis ein orientationchange erfolgt.
+  setTimeout(()=>{
+    resetMobileBattlefieldFit();
+    scheduleMobileBattlefieldFit();
+  },250);
+  return state;
 };
 
 
