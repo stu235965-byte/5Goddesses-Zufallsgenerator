@@ -13,6 +13,6 @@ test('background music asset is embedded as looping audio',/<audio[^>]+id="backg
 test('music starts only after fan notice confirmation',js.includes('fanHinweisBestaetigt=true') && js.includes("accept?.addEventListener('click'") && js.includes('starteHintergrundmusik();'));
 test('music persists on menu pages and stops outside menu pages',js.includes("return ['home','generator','profil','decks'].includes(name);") && js.includes('if(istMenuseite(name))starteHintergrundmusik();') && js.includes('else stoppeHintergrundmusik(true);'));
 test('music preference toggle is persisted',html.includes('id="musicToggle"') && js.includes("const MUSIC_PREF_KEY='5goddesses_musik_aktiv_v1'") && js.includes('localStorage.setItem(MUSIC_PREF_KEY'));
-test('music is available offline through service worker',sw.includes("5goddesses-pwa-v103") && sw.includes('./5goddesses-intro.mp3'));
+test('music is available offline through service worker',sw.includes("5goddesses-pwa-v104") && sw.includes('./5goddesses-intro.mp3'));
 console.log(`RESULT ${pass} PASS / ${fail} FAIL`);
 process.exitCode=fail?1:0;

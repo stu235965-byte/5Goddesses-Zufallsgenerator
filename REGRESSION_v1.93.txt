@@ -1,0 +1,7 @@
+v1.93 Regression
+- Fan-Hinweis beim App-Start vorhanden.
+- Klick auf „Verstanden & weiterspielen“: Hinweis wird ausgeblendet, Scroll-Sperre entfernt, Musikstart freigegeben.
+- Fan-Hinweis-/Musik-Listener werden nicht bei jedem Seitenwechsel erneut registriert.
+- Menü-Musik bleibt auf Home/Generator/Kartenpool/Deckbuilder aktiv und endet beim Testgefecht.
+- Musikschalter und Offline-Cache bleiben erhalten.
+- 225 PASS / 0 FAIL.

@@ -128,9 +128,8 @@ function initialisiereFanHinweisUndMusik(){
 
 function zeigeSeite(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  initialisiereFanHinweisUndMusik();
 
-document.querySelectorAll('.navbtn[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
+  document.querySelectorAll('.navbtn[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
   const ziel=document.getElementById('page-'+name);
   if(!ziel)return;
   ziel.classList.add('active');
@@ -456,5 +455,6 @@ document.getElementById('profilSpeichern').addEventListener('click',()=>{
   setTimeout(()=>document.getElementById('speicherInfo').textContent='',2500);
 });
 
+initialisiereFanHinweisUndMusik();
 aktualisiereStatus();
 ziehen();
