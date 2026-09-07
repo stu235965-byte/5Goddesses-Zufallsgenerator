@@ -2236,8 +2236,6 @@ const saved=E().load();
 document.getElementById('gameResume').hidden=!saved;
 document.getElementById('gamePreviewToggle')?.addEventListener('click',toggleCardPreviewMode);
 
-})();
-
 // v1.96 Storymode bridge: startet einen hinterlegten Boss mit denselben Gefechtsregeln.
 // Einzige Deckbau-Ausnahme ist act3_nemesis (3x Nemesis); validDeck prüft diese explizit.
 window.G5StoryBattlefield={
@@ -2264,3 +2262,20 @@ window.G5StoryBattlefield={
     return state;
   }
 };
+
+// v1.97 Storymode bridge für reguläre Zwischengegner. Verwendet dieselbe KI wie Testgefecht und Bosse.
+window.G5StoryBattlefield.startEncounter=function(playerDeck,encounterId,startPlayer=0){
+  const enemy=window.G5STORY_ENCOUNTER_DECKS?.get?.(encounterId);
+  if(!enemy)throw new Error(`Unbekannter Story-Zwischengegner: ${encounterId}`);
+  if(!E().validDeck(playerDeck))throw new Error('Das Story-Spielerdeck ist ungültig.');
+  if(!E().validDeck(enemy))throw new Error(`Story-Zwischengegnerdeck ist ungültig: ${encounterId}`);
+  state=E().startGame(playerDeck,enemy,Number(startPlayer)===1?1:0); state.aiPlayer=1; state.storyMode=true;
+  state.storyEncounterId=encounterId; state.storyAct=enemy.storyAct; applyBattlePlayerNames();
+  if(state.players?.[1])state.players[1].name=enemy.leader; E().save(state);
+  document.getElementById('gameSetup').hidden=true; document.getElementById('gameShell').hidden=false;
+  selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;refugeActionSelected=false; resetMobileBattlefieldFit();
+  render(`Story: ${enemy.title}`); window.starteGameplayMusik?.(); scheduleAITurn(); return state;
+};
+
+
+})();
