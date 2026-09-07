@@ -455,7 +455,7 @@ function effectiveBezStats(state,playerIndex,bezSlot){
 }
 
 function cardHasEngineKey(r,key){return !!cardData(r)?.effekte?.some(e=>e.engine_key===key)}
-function isOberweltBez(r){const c=cardData(r);return !!r&&c?.deck_bereich==='bezwingerinnen'&&c?.fraktion==='Oberwelt'}
+function isOberweltBez(r){const c=cardData(r);return !!r&&c?.hauptattribut==='BEZWINGERIN'&&c?.fraktion==='Oberwelt'}
 function ehrisDiscountFor(state,playerIndex,bezSlot){
   const p=state.players[playerIndex],ear=allRuntimeCards(state).find(x=>x.playerIndex===playerIndex&&cardHasEngineKey(x.r,'ehris_ohrringe'));
   if(!ear||ear.r.faceDown||Number(ear.r.effectRoundsRemaining||0)<=0)return 0;
@@ -1268,7 +1268,7 @@ function resolveThalZirisStage1(state,targetId,delta){
  return {ok:true,msg:`Kampfrundendauer auf ${t.r.effectRoundsRemaining} geändert.`};
 }
 function isMornak(c){return c?.name==='Mornak - Brut'}
-function isBezwingerinRuntime(r){return cardData(r)?.deck_bereich==='bezwingerinnen'}
+function isBezwingerinRuntime(r){return cardData(r)?.hauptattribut==='BEZWINGERIN'}
 function isMornakCard(c){return isMornak(c)||c?.effekte?.some?.(e=>e.engine_key==='mornak_brut')}
 function mornakAllowedAreas(c){return isMornakCard(c)?['primary','secondary','bez']:(fieldArea(c)?[fieldArea(c)]:['azr'])}
 function isUeberwachungssektor(c){return c?.name==='Überwachungssektor'||c?.effekte?.some?.(e=>e.engine_key==='ueberwachungssektor')}
@@ -4433,7 +4433,7 @@ function clear(){localStorage.removeItem('5goddesses_active_game_v1')}
 window.G5Engine={
   PHASES,decks,validDeck,normalizeDeckForBattle,startGame,save,load,clear,dbCard,currentPhase,active,opponent,
   advancePhase,grantHonor,drawPhaseCard,readyEligibleBez,readyBez,autoReadyEligibleBez,readyEligibleField,autoReadyEligibleFields,recruit,setFaceDown,playOpenAzr,reveal,
-  equipmentKind,isEquipmentCard,activeKrakenAt,fieldArea,mornakAllowedAreas,playFieldFromHand,moveRevealedFieldCard,moveMornakFromAzr,equipFromHand,equipFromAzr,discardEquipment,
+  equipmentKind,isEquipmentCard,isBezwingerinRuntime,activeKrakenAt,fieldArea,mornakAllowedAreas,playFieldFromHand,moveRevealedFieldCard,moveMornakFromAzr,equipFromHand,equipFromAzr,discardEquipment,
   chooseEquipmentShieldBonus,equipmentCombatProfile,effectiveBezStats,combatStrength,startMantaWonder,consumeMantaCombatBonus,effectiveWonderCost,ruthTargets,activateRuth,selectEhrisTarget,
   availableDevelopment,develop,hasDeploymentDelay,canAttack,canRefugeAttack,hasHeartAttribute,attackTargets,destroyedQueenProtectionActive,prepareAttack,
   refugeWonderAvailable,activateRefugeWonder,resolveWonderDraw,chooseRefugeStage2Bonus,

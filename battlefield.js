@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.99';
+window.G5_BATTLEFIELD_BUILD='2.01';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -1395,7 +1395,7 @@ function renderActions(){
           [0,1].forEach(bezSlot=>{
             const b=document.createElement('button');
             b.textContent=`${c.kartentyp} an Bezwingerin ${bezSlot+1} anlegen`;
-            b.disabled=!p.bezSlots[bezSlot] || E().cardData(p.bezSlots[bezSlot])?.deck_bereich!=='bezwingerinnen';
+            b.disabled=!p.bezSlots[bezSlot] || !E().isBezwingerinRuntime(p.bezSlots[bezSlot]);
             b.addEventListener('click',()=>{
               let r=E().equipFromHand(state,selectedHandIndex,bezSlot,eqKind);
               if(r.ok){
