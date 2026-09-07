@@ -1,0 +1,11 @@
+const fs=require('fs');
+let pass=0,fail=0;const t=(n,c)=>{if(c){console.log('PASS',n);pass++;}else{console.log('FAIL',n);fail++;}};
+const bf=fs.readFileSync('battlefield.js','utf8');
+const sw=fs.readFileSync('service-worker.js','utf8');
+const html=fs.readFileSync('index.html','utf8');
+t('Story bridge uses defined scheduleAI', !bf.includes('scheduleAITurn()') && (bf.match(/scheduleAI\(\);/g)||[]).length>=2);
+t('scheduleAI function exists', /function\s+scheduleAI\s*\(/.test(bf));
+t('Battlefield build 1.99', bf.includes("G5_BATTLEFIELD_BUILD='1.99'"));
+t('App version 1.99', html.includes('v1.99'));
+t('Service worker cache v110', sw.includes("5goddesses-pwa-v110"));
+console.log(`TOTAL ${pass} PASS / ${fail} FAIL`);process.exit(fail?1:0);

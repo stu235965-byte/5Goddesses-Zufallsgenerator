@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.98';
+window.G5_BATTLEFIELD_BUILD='1.99';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -2277,7 +2277,7 @@ window.G5StoryBattlefield={
     resetMobileBattlefieldFit();
     render(`Storyboss: ${boss.boss}`);
     window.starteGameplayMusik?.();
-    scheduleAITurn();
+    scheduleAI();
     return state;
   }
 };
@@ -2293,7 +2293,7 @@ window.G5StoryBattlefield.startEncounter=function(playerDeck,encounterId,startPl
   if(state.players?.[1])state.players[1].name=enemy.leader; E().save(state);
   document.getElementById('gameSetup').hidden=true; document.getElementById('gameShell').hidden=false;
   selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;refugeActionSelected=false; resetMobileBattlefieldFit();
-  render(`Story: ${enemy.title}`); window.starteGameplayMusik?.(); scheduleAITurn(); return state;
+  render(`Story: ${enemy.title}`); window.starteGameplayMusik?.(); scheduleAI(); return state;
 };
 
 
