@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.88';
+window.G5_BATTLEFIELD_BUILD='1.89';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -47,7 +47,14 @@ function cardImg(r){return r?E().cardData(r)?.bild||r.bild:''}
 function phase(){return state?E().currentPhase(state):null}
 let aiTimer=null;
 function aiIsActive(){return !!state && state.winner===null && Number(state.activePlayer)===Number(state.aiPlayer??1) && !!window.G5AI;}
-function scheduleAI(delay=450){if(!aiIsActive())return;clearTimeout(aiTimer);aiTimer=setTimeout(runAIStep,delay);}
+function aiMayAutoStep(){
+  if(!aiIsActive())return false;
+  if(state.pendingDamage){const q=E().currentShieldChoice?.(state);return !!q && Number(q.playerIndex)===Number(state.aiPlayer??1);}
+  if(state.pendingEquipment||state.pendingFieldCard||state.pendingWonderDraw||state.pendingRefugeStage2Choice||state.pendingBezEffect)return false;
+  if(phase()?.id==='rush'&&state.attack)return false;
+  return true;
+}
+function scheduleAI(delay=450){if(!aiMayAutoStep())return;clearTimeout(aiTimer);aiTimer=setTimeout(runAIStep,delay);}
 function runAIStep(){if(!aiIsActive())return;const r=window.G5AI.step(state);E().save(state);render(r?.msg||'KI-Gegner überlegt …');if(r?.wait)return;if(r?.unsupported){message('Die KI wartet auf eine komplexe Kartenauswahl, die in dieser ersten KI-Version noch nicht automatisiert ist.','warn');return;}if(aiIsActive())scheduleAI(380);}
 let aiDefenseTimer=null;
 function aiIsDefender(){return !!state?.attack && Number(1-state.activePlayer)===Number(state.aiPlayer??1);}
@@ -1055,7 +1062,7 @@ function renderActions(){
     E().strikelynTargets(state,state.pendingBezEffect.sourcePlayer).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.onclick=()=>{const rr=E().resolveStrikelynTarget(state,t.id);saveRender(rr.msg)};root.appendChild(b)});
     return;
   }
-  if(state.pendingBezEffect && ['virus_azr_slot','begnadete_reflexe_target','exekution_target','zweifache_bestrafung_target','lilous_gabe_target','vengeresse_vergeltung_target','feiertag_target','sprint_angriff_target','auszeichnung_target','aufstieg_target','demoralisierung_target','legionsruestung_search','legionsruestung_equip','neutralisationssiegel_target','system_reset_target','tauschportal_source','tauschportal_destination','zeitlose_unterwerfung_target','strahl_des_vergessens_target','siegel_kampfschwaeche_target','siegel_astralschwaeche_target'].includes(state.pendingBezEffect.type)){
+  if(state.pendingBezEffect && ['virus_azr_slot','begnadete_reflexe_target','exekution_target','zweifache_bestrafung_target','lilous_gabe_target','vengeresse_vergeltung_target','feiertag_target','sprint_angriff_target','auszeichnung_target','aufstieg_target','demoralisierung_target','legionsruestung_search','legionsruestung_equip','neutralisationssiegel_target','system_reset_target','tauschportal_source','tauschportal_destination','zeitlose_unterwerfung_target','strahl_des_vergessens_target','siegel_kampfschwaeche_target','siegel_astralschwaeche_target','aufopferung_shield_target','parade_riposte_target','keine_ruestung_target','sofortige_zerstoerung_target','vollendete_toetungstechnik_target','astral_feuerball_target','ehrenlos_target','wunderunterdrueckung_target','ueberlegene_kriegsfuehrung_source','ueberlegene_kriegsfuehrung_dest','energieschild_search','energieschild_equip','abstieg_target'].includes(state.pendingBezEffect.type)){
     const labels={
       virus_azr_slot:'Wiederbelebungsapparatur Virus – ASTRAL-/Rüstkammer-Zone blockieren',
       begnadete_reflexe_target:'Begnadete Reflexe – eigene Bezwingerin wählen',
@@ -1077,7 +1084,20 @@ function renderActions(){
       zeitlose_unterwerfung_target:'Zeitlose Unterwerfung – eigene Bezwingerin wählen',
       strahl_des_vergessens_target:'Strahl des Vergessens – Bezwingerin für die Leere wählen',
       siegel_kampfschwaeche_target:'Siegel der Kampfschwäche – gegnerische Bezwingerin wählen',
-      siegel_astralschwaeche_target:'Siegel der Astralschwäche – gegnerische Bezwingerin wählen'
+      siegel_astralschwaeche_target:'Siegel der Astralschwäche – gegnerische Bezwingerin wählen',
+      aufopferung_shield_target:'Aufopferung der S.H.I.E.L.D. – eigene Bezwingerin wählen',
+      parade_riposte_target:'Parade, Riposte! – eigene Bezwingerin wählen',
+      keine_ruestung_target:'Keine Rüstung für Dich! – gegnerische Bezwingerin wählen',
+      sofortige_zerstoerung_target:'Sofortige Zerstörung – offene Rüstung wählen',
+      vollendete_toetungstechnik_target:'Vollendete Tötungstechnik – eigene Assassine wählen',
+      astral_feuerball_target:'ASTRAL-Feuerball – gegnerische Bezwingerin wählen',
+      ehrenlos_target:'Ehrenlos – gegnerische Bezwingerin wählen',
+      wunderunterdrueckung_target:'Wunderunterdrückung – gegnerische Bezwingerin wählen',
+      ueberlegene_kriegsfuehrung_source:'Überlegene Kriegsführung – eigene Bezwingerin wählen',
+      ueberlegene_kriegsfuehrung_dest:'Überlegene Kriegsführung – Zielfeld wählen',
+      energieschild_search:'Energieschildsynchronisation – Energie-Schild wählen',
+      energieschild_equip:'Energieschildsynchronisation – eigene Bezwingerin wählen',
+      abstieg_target:'Abstieg – gegnerische entwickelte Bezwingerin wählen'
     };
     const title=document.createElement('strong');title.textContent=labels[state.pendingBezEffect.type]||'ASTRAL-Spruch – Ziel wählen';root.appendChild(title);
     E().newAstralSpellTargets(state).forEach(t=>{

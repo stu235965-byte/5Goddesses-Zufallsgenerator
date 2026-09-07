@@ -1,0 +1,7 @@
+5Goddesses v1.89 – Regression Instinkt-Zielauswahl / KI-Warteschleife
+
+- Aufopferung der S.H.I.E.L.D.: Zielauswahl im UI ergänzt.
+- Alle vom generischen ASTRAL-Zielsystem erzeugten pending-Zieltypen werden nun im Battlefield-UI behandelt.
+- KI-Autotaktung pausiert bei menschlichen Pflichtauswahlen und bei vorbereitetem KI-Angriff im Reaktionsfenster.
+- Neuer Regressionstest test_regression_instinct_target_ui_v189.js verhindert Wiederauftreten dieser Fehlerklasse.
+- Gesamtsuite: 211 PASS / 0 FAIL.
