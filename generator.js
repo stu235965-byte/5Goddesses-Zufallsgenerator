@@ -233,7 +233,7 @@ document.getElementById('homeSpielen')?.addEventListener('click',()=>{
 });
 document.getElementById('homeTestgefecht')?.addEventListener('click',()=>zeigeSeite('game'));
 document.getElementById('homeStorymode')?.addEventListener('click',()=>zeigeSeite('story'));
-// Tutorial bleibt vorerst deaktiviert. Storymode v2.01 nutzt die Weltkarte als Hub.
+// Tutorial bleibt vorerst deaktiviert. Storymode v2.02 nutzt die Weltkarte als Hub.
 
 function aktualisiereStatus(){
   const alle=datenbank(),n=alle.filter(k=>istImPool(k)).length;
