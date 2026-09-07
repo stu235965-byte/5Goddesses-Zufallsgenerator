@@ -19,7 +19,7 @@
   <header class="topbar">
     <div class="brand-wrap">
       <button id="homeButton" class="brand brand-button" type="button" aria-label="Zum Startbildschirm">5 GODDESSES</button>
-      <div class="app-version" title="Aktuell geladene PWA-Version">v1.97</div>
+      <div class="app-version" title="Aktuell geladene PWA-Version">v1.98</div>
       <button id="musicToggle" class="music-toggle" type="button" aria-pressed="false" title="Hintergrundmusik ein- oder ausschalten">♫ Musik: An</button>
     </div>
     <nav>
@@ -39,7 +39,7 @@
           <div id="playSubmenu" class="play-submenu" hidden>
             <button id="homeTestgefecht" class="home-menu-btn" type="button">Testgefecht</button>
             <button id="homeTutorial" class="home-menu-btn future-mode-btn" type="button" disabled title="Für eine spätere Version vorbereitet">Tutorial</button>
-            <button id="homeStorymode" class="home-menu-btn future-mode-btn" type="button" disabled title="Für eine spätere Version vorbereitet">Storymode</button>
+            <button id="homeStorymode" class="home-menu-btn" type="button">Storymode</button>
           </div>
           <button class="home-menu-btn" data-home-page="generator" type="button">Zufallsgenerator</button>
           <button class="home-menu-btn" data-home-page="profil" type="button">Kartenpool</button>
@@ -137,6 +137,39 @@
       </div>
     </section>
 
+    <section id="page-story" class="page story-page">
+      <div class="story-head">
+        <div>
+          <div class="eyebrow">STORYMODE · TESTLAUF</div>
+          <h1>ASTRAGODDESSIA</h1>
+          <p id="storyActTitle" class="story-act-title">Akt I – Die Fanfaren der Göttinnen</p>
+        </div>
+        <button id="storyReset" class="story-reset" type="button" title="Setzt nur den Story-Testfortschritt zurück">Testfortschritt zurücksetzen</button>
+      </div>
+
+      <div class="story-map-shell">
+        <div id="storyMap" class="story-map" aria-label="Weltkarte von Astragoddessia">
+          <img src="story-weltkarte.png" alt="Astragoddessia – die fünf Welten">
+          <div id="storyNodes" class="story-nodes"></div>
+        </div>
+      </div>
+
+      <details id="storyChronicle" class="story-chronicle">
+        <summary>Menias Chronik – bisherige Ereignisse</summary>
+        <div id="storyChronicleContent" class="story-chronicle-content"></div>
+      </details>
+
+      <div id="storyModal" class="story-modal" hidden>
+        <div class="story-modal-backdrop" data-story-close></div>
+        <article class="story-dialog" role="dialog" aria-modal="true" aria-labelledby="storyDialogTitle">
+          <button id="storyDialogClose" class="story-dialog-close" type="button" aria-label="Storyfenster schließen">×</button>
+          <div id="storyDialogAct" class="story-dialog-act"></div>
+          <h2 id="storyDialogTitle"></h2>
+          <div id="storyDialogText" class="story-dialog-text"></div>
+          <div id="storyDialogActions" class="story-dialog-actions"></div>
+        </article>
+      </div>
+    </section>
 
     <section id="page-game" class="page">
       <h1>TESTGEFECHT</h1>
@@ -175,7 +208,7 @@
             <div id="gamePhaseInfo" class="game-phase-info">–</div>
           </div>
           <div class="game-toolbar-actions">
-            <button id="gamePreviewToggle" class="game-preview-toggle" type="button" title="Kartenvorschau · v1.97" aria-label="Kartenvorschau" aria-pressed="false">🔍</button>
+            <button id="gamePreviewToggle" class="game-preview-toggle" type="button" title="Kartenvorschau · v1.98" aria-label="Kartenvorschau" aria-pressed="false">🔍</button>
             <button id="gameNew">Neues Gefecht</button>
             <button id="gameNextPhase" class="primary">Nächste Phase</button>
           </div>
@@ -236,6 +269,7 @@
   <script src="game-engine.js"></script>
   <script src="ai-player.js"></script>
   <script src="battlefield.js"></script>
+  <script src="story-mode.js"></script>
   <script src="pwa.js"></script>
 </body>
 </html>

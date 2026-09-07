@@ -1,5 +1,5 @@
 // Previous cache marker kept for regression compatibility: 5goddesses-pwa-v105
-const CACHE='5goddesses-pwa-v108';
+const CACHE='5goddesses-pwa-v109';
 const CORE=[
   "./",
   "./index.html",
@@ -13,6 +13,8 @@ const CORE=[
   "./5goddesses-datenbank.js",
   "./story-boss-decks.js",
   "./story-encounter-decks.js",
+  "./story-mode.js",
+  "./story-weltkarte.png",
   "./manifest.webmanifest",
   "./start-hintergrund.png",
   "./5goddesses-intro.mp3",

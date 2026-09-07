@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.95';
+window.G5_BATTLEFIELD_BUILD='1.98';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -2149,11 +2149,30 @@ function render(msg=''){
   document.getElementById('gamePreviewToggle')?.classList.toggle('active',cardPreviewMode);
   document.getElementById('gamePreviewToggle')?.setAttribute('aria-pressed',String(cardPreviewMode));
   renderLog();
+  renderStoryBattleResult();
   requestAnimationFrame(updateStickyGameOffsets);
   if(aiIsActive())scheduleAI();
   if(aiIsDefender() && phase()?.id==='rush')scheduleAIDefense();
 }
 
+
+function renderStoryBattleResult(){
+  if(!state?.storyMode || state.winner===null)return;
+  const root=document.getElementById('gameActions');
+  if(!root)return;
+  root.innerHTML='';
+  const won=Number(state.winner)===0;
+  const box=document.createElement('div');
+  box.className='story-battle-result';
+  const strong=document.createElement('strong');
+  strong.textContent=won?'Story-Gefecht gewonnen':'Story-Gefecht verloren';
+  const note=document.createElement('span');
+  note.textContent=won?'Menias Reise kann fortgesetzt werden.':'Der Storyfortschritt bleibt am aktuellen Ereignis. Du kannst den Kampf erneut versuchen.';
+  const b=document.createElement('button');
+  b.type='button';b.className='primary';b.textContent='Zur Storykarte';
+  b.addEventListener('click',()=>window.G5StoryMode?.battleFinished?.({won,encounterId:state.storyEncounterId||null,bossId:state.storyBossId||null,act:state.storyAct||null}));
+  box.append(strong,note,b);root.appendChild(box);
+}
 
 function handleInstinctBeforePhaseEnd(){
   if(cardPreviewMode)return true;

@@ -74,7 +74,7 @@ function musikAktiviert(){
 }
 
 function istMenuseite(name){
-  return ['home','generator','profil','decks'].includes(name);
+  return ['home','generator','profil','decks','story'].includes(name);
 }
 
 function aktualisiereMusikSchalter(){
@@ -204,6 +204,7 @@ function zeigeSeite(name){
   if(name==='profil')renderKartenpool();
   if(name==='decks' && window.renderGespeicherteDecks)window.renderGespeicherteDecks();
   if(name==='game' && window.gamePageOpened)window.gamePageOpened();
+  if(name==='story' && window.G5StoryMode?.open)window.G5StoryMode.open();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 window.zeigeSeite=zeigeSeite;
@@ -231,8 +232,8 @@ document.getElementById('homeSpielen')?.addEventListener('click',()=>{
   btn.setAttribute('aria-expanded',submenu.hidden?'false':'true');
 });
 document.getElementById('homeTestgefecht')?.addEventListener('click',()=>zeigeSeite('game'));
-// Tutorial und Storymode sind noch deaktiviert. Sobald deren echtes Spielfeld
-// aufgebaut wird, muss dort window.starteGameplayMusik() aufgerufen werden.
+document.getElementById('homeStorymode')?.addEventListener('click',()=>zeigeSeite('story'));
+// Tutorial bleibt vorerst deaktiviert. Storymode v1.98 nutzt die Weltkarte als Hub.
 
 function aktualisiereStatus(){
   const alle=datenbank(),n=alle.filter(k=>istImPool(k)).length;

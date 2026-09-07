@@ -1,0 +1,23 @@
+const fs=require('fs');
+const html=fs.readFileSync('index.html','utf8');
+const gen=fs.readFileSync('generator.js','utf8');
+const story=fs.readFileSync('story-mode.js','utf8');
+const bf=fs.readFileSync('battlefield.js','utf8');
+const sw=fs.readFileSync('service-worker.js','utf8');
+let pass=0,fail=0;
+function t(name,ok){console.log((ok?'PASS ':'FAIL ')+name); ok?pass++:fail++;}
+t('Storymode-Menü entsperrt',/id="homeStorymode"[^>]*>Storymode<\/button>/.test(html)&&!/id="homeStorymode"[^>]*disabled/.test(html));
+t('Storyseite vorhanden',html.includes('id="page-story"')&&html.includes('id="storyMap"')&&html.includes('id="storyChronicle"'));
+t('Feste Weltkarte eingebunden',html.includes('story-weltkarte.png')&&fs.existsSync('story-weltkarte.png'));
+t('Storymode JS geladen',html.includes('<script src="story-mode.js"></script>'));
+t('Menü öffnet Storyseite',gen.includes("homeStorymode')?.addEventListener('click',()=>zeigeSeite('story')"));
+const ids=['act1_prolog','act1_martha','act1_zahira','act1_sperrbezirk','act1_waechter','act1_queen'];
+for(const id of ids)t(`Akt-I-Knoten ${id}`,story.includes(`id:'${id}'`));
+t('Zwischengegner-Bridges verdrahtet',story.includes("encounter:'act1_martha'")&&story.includes("encounter:'act1_waechter'"));
+t('Q.U.E.E.N.-Boss verdrahtet',story.includes("boss:'act1_queen'"));
+t('Menia im Story-Spielerdeck',story.includes("Der unsichtbare Untergang Menia"));
+t('Alte Knoten deaktiviert',story.includes("b.classList.add('completed');b.disabled=true"));
+t('Zukünftige Knoten unsichtbar',story.includes("if(i>p.index"));
+t('Kampfresultat zurück an Storymode',bf.includes('renderStoryBattleResult()')&&bf.includes('window.G5StoryMode?.battleFinished'));
+t('Service Worker cached Storymode',sw.includes('./story-mode.js')&&sw.includes('./story-weltkarte.png')&&sw.includes("v109"));
+console.log(`TOTAL ${pass} PASS / ${fail} FAIL`); if(fail)process.exit(1);
