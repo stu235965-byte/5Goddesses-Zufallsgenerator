@@ -2,169 +2,100 @@
 'use strict';
 const E=()=>window.G5Engine;
 const AI_INDEX=1;
-function isAIPlayer(state,index=AI_INDEX){return !!state && Number(index)===AI_INDEX;}
+let memKey='';
+let attempted=new Set();
+function resetMemory(state){const k=`${state?.roundSerial}|${state?.activePlayer}|${E().currentPhase(state)?.id}`;if(k!==memKey){memKey=k;attempted=new Set();}}
+function once(key,fn){if(attempted.has(key))return null;attempted.add(key);return fn();}
+function isAIPlayer(state,index=AI_INDEX){return !!state&&Number(index)===AI_INDEX;}
 function cardOfBild(b){return E().dbCard(b);}
-function cardScore(c){
-  if(!c)return -999;
-  return Number(c.herzen||0)*4+Number(c.physische_staerke||0)*3+Number(c.astrale_staerke||0)*3+
-    Number(c.physischer_schild||0)*2+Number(c.astraler_schild||0)*2+Number(c.ehre||0);
-}
-function runtimeThreat(state,playerIndex,slot){
-  const r=state.players[playerIndex]?.bezSlots?.[slot];
-  if(!r)return 0;
-  const s=E().effectiveBezStats(state,playerIndex,slot);
-  return Number(r.hearts||0)*2+Number(s?.physical||0)*3+Number(s?.astral||0)*3+Number(s?.physicalShield||0)+Number(s?.astralShield||0);
-}
-function chooseDrawStack(state){
-  const p=E().active(state), nonempty=k=>(p.stacks?.[k]||[]).length>0;
-  const handCards=p.hand.map(cardOfBild).filter(Boolean);
-  const freeBez=(p.bezSlots||[]).filter(x=>!x).length;
-  const handBez=handCards.filter(c=>c.deck_bereich==='bezwingerinnen').length;
-  if(nonempty('bezwingerinnen') && (freeBez>0 || handBez===0))return 'bezwingerinnen';
-  const handEq=handCards.some(c=>E().isEquipmentCard(c));
-  if(nonempty('ruestkammer') && !handEq && p.bezSlots.some(Boolean))return 'ruestkammer';
-  if(nonempty('astral'))return 'astral';
-  if(nonempty('ruestkammer'))return 'ruestkammer';
-  if(nonempty('bezwingerinnen'))return 'bezwingerinnen';
-  return null;
-}
-function chooseRecruit(state){
-  const p=E().active(state);
-  if(p.recruitedThisTurn)return null;
-  const free=[0,1].filter(i=>!p.bezSlots[i]); if(!free.length)return null;
-  const candidates=p.hand.map((b,i)=>({i,c:cardOfBild(b)})).filter(x=>x.c?.deck_bereich==='bezwingerinnen');
-  if(!candidates.length)return null;
-  candidates.sort((a,b)=>cardScore(b.c)-cardScore(a.c));
-  // Protect the refuge first: occupy the lane of the most dangerous opposing Bezwingerin.
-  const enemy=state.players[1-p.index];
-  let slot=free[0], bestThreat=-1;
-  for(const s of free){const t=runtimeThreat(state,enemy.index,s);if(t>bestThreat){bestThreat=t;slot=s;}}
-  return {handIndex:candidates[0].i,slot};
-}
-function chooseEquipment(state){
-  const p=E().active(state);
-  for(let hi=0;hi<p.hand.length;hi++){
-    const c=cardOfBild(p.hand[hi]); if(!c||!E().isEquipmentCard(c))continue;
-    const kind=E().equipmentKind(c); if(!kind)continue;
-    const targets=[0,1].filter(s=>p.bezSlots[s]);
-    targets.sort((a,b)=>runtimeThreat(state,p.index,b)-runtimeThreat(state,p.index,a));
-    for(const s of targets){
-      const slot=p.equipment?.[s]?.[kind];
-      if(!slot)return {handIndex:hi,bezSlot:s,kind};
-    }
-  }
-  return null;
-}
-function chooseField(state){
-  const p=E().active(state);
-  for(let hi=0;hi<p.hand.length;hi++){
-    const c=cardOfBild(p.hand[hi]); if(!c)continue;
-    const allowed=E().mornakAllowedAreas(c)||[];
-    if(allowed.includes('primary') && !p.primary)return {handIndex:hi,area:'primary'};
-    if(allowed.includes('secondary') && !state.sharedSecondary)return {handIndex:hi,area:'secondary'};
-  }
-  return null;
-}
-function chooseSetCard(state){
-  const p=E().active(state),free=p.azr.map((r,i)=>r?null:i).filter(i=>i!==null);if(!free.length)return null;
-  const cand=p.hand.map((b,i)=>({i,c:cardOfBild(b)})).filter(x=>['astral','ruestkammer'].includes(x.c?.deck_bereich));
-  if(!cand.length)return null;
-  // Instinkt cards are especially valuable face-down because they can protect the refuge in the opponent's turn.
-  cand.sort((a,b)=>{
-    const ai=(a.c.instinkt===true||a.c.effekte?.some(e=>e.instinkt===true))?1:0;
-    const bi=(b.c.instinkt===true||b.c.effekte?.some(e=>e.instinkt===true))?1:0;
-    return bi-ai;
-  });
-  return {handIndex:cand[0].i,slot:free[0]};
-}
-function sourceRuntime(state,src){
-  const p=E().active(state);
-  if(src==='refuge')return p.refuge;if(src==='primary')return p.primary;if(src==='secondary')return state.sharedSecondary;
-  return p.bezSlots[Number(src)];
-}
-function sourceStrength(state,src,type){
-  const p=E().active(state),r=sourceRuntime(state,src); if(!r)return 0;
-  if(typeof src==='number')return Number(E().combatStrength(state,p.index,src,type,true)?.total||0);
-  const c=E().cardData(r);return Number(type==='physical'?(r.physical??c?.physische_staerke??0):(r.astral??c?.astrale_staerke??0));
-}
+function cardScore(c){if(!c)return-999;return Number(c.herzen||0)*4+Number(c.physische_staerke||0)*3+Number(c.astrale_staerke||0)*3+Number(c.physischer_schild||0)*2+Number(c.astraler_schild||0)*2+Number(c.ehre||0);}
+function runtimeThreat(state,playerIndex,slot){const r=state.players[playerIndex]?.bezSlots?.[slot];if(!r)return 0;const s=E().effectiveBezStats(state,playerIndex,slot);return Number(r.hearts||0)*2+Number(s?.physical||0)*3+Number(s?.astral||0)*3+Number(s?.physicalShield||0)+Number(s?.astralShield||0);}
+function runtimeMaxHearts(r){return Number(E().cardData(r)?.herzen??r?.hearts??0);}
+function chooseDrawStack(state){const p=E().active(state),nonempty=k=>(p.stacks?.[k]||[]).length>0;const handCards=p.hand.map(cardOfBild).filter(Boolean),freeBez=(p.bezSlots||[]).filter(x=>!x).length,handBez=handCards.filter(c=>c.deck_bereich==='bezwingerinnen').length;if(nonempty('bezwingerinnen')&&(freeBez>0||handBez===0))return'bezwingerinnen';const handEq=handCards.some(c=>E().isEquipmentCard(c));if(nonempty('ruestkammer')&&!handEq&&p.bezSlots.some(Boolean))return'ruestkammer';if(nonempty('astral'))return'astral';if(nonempty('ruestkammer'))return'ruestkammer';if(nonempty('bezwingerinnen'))return'bezwingerinnen';return null;}
+function chooseRecruit(state){const p=E().active(state);if(p.recruitedThisTurn)return null;const free=[0,1].filter(i=>!p.bezSlots[i]);if(!free.length)return null;const candidates=p.hand.map((b,i)=>({i,c:cardOfBild(b)})).filter(x=>x.c?.deck_bereich==='bezwingerinnen');if(!candidates.length)return null;candidates.sort((a,b)=>cardScore(b.c)-cardScore(a.c));const enemy=state.players[1-p.index];let slot=free[0],best=-1;for(const s of free){const t=runtimeThreat(state,enemy.index,s);if(t>best){best=t;slot=s;}}return{handIndex:candidates[0].i,slot};}
+function chooseEquipment(state){const p=E().active(state);for(let hi=0;hi<p.hand.length;hi++){const c=cardOfBild(p.hand[hi]);if(!c||!E().isEquipmentCard(c))continue;const kind=E().equipmentKind(c);if(!kind)continue;const targets=[0,1].filter(s=>p.bezSlots[s]).sort((a,b)=>runtimeThreat(state,p.index,b)-runtimeThreat(state,p.index,a));for(const s of targets){if(!p.equipment?.[s]?.[kind])return{handIndex:hi,bezSlot:s,kind};}}return null;}
+function chooseField(state){const p=E().active(state);for(let hi=0;hi<p.hand.length;hi++){const c=cardOfBild(p.hand[hi]);if(!c)continue;const allowed=E().mornakAllowedAreas(c)||[];if(allowed.includes('primary')&&!p.primary)return{handIndex:hi,area:'primary'};if(allowed.includes('secondary')&&!state.sharedSecondary)return{handIndex:hi,area:'secondary'};}return null;}
+function chooseSetCard(state){const p=E().active(state),free=p.azr.map((r,i)=>r?null:i).filter(i=>i!==null);if(!free.length)return null;const cand=p.hand.map((b,i)=>({i,c:cardOfBild(b)})).filter(x=>['astral','ruestkammer'].includes(x.c?.deck_bereich));if(!cand.length)return null;cand.sort((a,b)=>{const ai=(a.c.instinkt===true||a.c.effekte?.some(e=>e.instinkt===true))?1:0,bi=(b.c.instinkt===true||b.c.effekte?.some(e=>e.instinkt===true))?1:0;return bi-ai;});return{handIndex:cand[0].i,slot:free[0]};}
+function sourceRuntime(state,src){const p=E().active(state);if(src==='refuge')return p.refuge;if(src==='primary')return p.primary;if(src==='secondary')return state.sharedSecondary;return p.bezSlots[Number(src)];}
+function sourceStrength(state,src,type){const p=E().active(state),r=sourceRuntime(state,src);if(!r)return 0;if(typeof src==='number')return Number(E().combatStrength(state,p.index,src,type,true)?.total||0);const c=E().cardData(r);return Number(type==='physical'?(r.physical??c?.physische_staerke??0):(r.astral??c?.astrale_staerke??0));}
 function targetRuntime(state,t){const o=E().opponent(state);if(t.type==='bez')return o.bezSlots[t.slot];if(t.type==='primary')return o.primary;if(t.type==='secondary')return state.sharedSecondary;return o.refuge;}
 function targetDefense(r,type){if(!r)return 0;return Number(type==='physical'?r.physicalShield:r.astralShield)||0;}
-function targetScore(state,src,t,type){
-  const r=targetRuntime(state,t);if(!r)return -9999;
-  const attack=sourceStrength(state,src,type), hp=Number(r.hearts||0), shield=targetDefense(r,type);
-  let s=attack*12-shield*3;
-  if(t.type==='refuge')s+=10000; // winning the game is the top offensive priority
-  if(attack>=shield+hp)s+=2500; // prefer a guaranteed destruction
-  if(t.type==='bez'){
-    s+=runtimeThreat(state,E().opponent(state).index,t.slot)*8;
-    // Enemy Bezwingerinnen in front of an exposed refuge lane are defensive priorities.
-    if(Number(t.slot)===Number(src))s+=400;
-  }
-  if(t.type==='primary'||t.type==='secondary')s+=120;
-  return s;
+function targetScore(state,src,t,type){const r=targetRuntime(state,t);if(!r)return-9999;const attack=sourceStrength(state,src,type),hp=Number(r.hearts||0),shield=targetDefense(r,type);let s=attack*12-shield*3;if(t.type==='refuge')s+=10000;if(attack>=shield+hp)s+=2500;if(t.type==='bez'){s+=runtimeThreat(state,E().opponent(state).index,t.slot)*8;if(Number(t.slot)===Number(src))s+=400;}if(t.type==='primary'||t.type==='secondary')s+=120;return s;}
+function chooseAttack(state){const p=E().active(state),sources=[];p.bezSlots.forEach((r,i)=>{if(E().canAttack(r,p))sources.push(i);});if(E().canRefugeAttack(state,p.index))sources.push('refuge');if(E().canAttack(p.primary,p))sources.push('primary');if(state.sharedSecondary?.owner===p.index&&E().canAttack(state.sharedSecondary,p))sources.push('secondary');let best=null;for(const src of sources){for(const t of E().attackTargets(state,src)||[]){for(const type of['physical','astral']){const score=targetScore(state,src,t,type);if(!best||score>best.score)best={src,target:{type:t.type,slot:t.slot},type,score};}}}return best;}
+function chooseAIShield(state){const q=E().currentShieldChoice(state);if(!q||Number(q.playerIndex)!==AI_INDEX)return null;const order=['aufopferung','equipment','base','mornak'];return[...q.sources].sort((a,b)=>order.indexOf(a.source)-order.indexOf(b.source))[0]||null;}
+function choiceByThreat(state,choices,playerIndex,preferLow=false){if(!choices?.length)return null;let best=choices[0],score=preferLow?Infinity:-Infinity;for(const x of choices){const n=Number(String(x.id).split(':').pop());const s=Number.isInteger(n)?runtimeThreat(state,playerIndex,n):0;if((preferLow&&s<score)||(!preferLow&&s>score)){score=s;best=x;}}return best;}
+function chooseGenericChoice(state,choices,q){if(!choices?.length)return null;const enemyTypes=new Set(['mira','talisia2','laehmendes_nervengift','die_kanone','feiertag_target','demoralisierung_target','system_reset_target','siegel_kampfschwaeche_target','siegel_astralschwaeche_target','keine_ruestung_target','sofortige_zerstoerung_target','astral_feuerball_target','ehrenlos_target','wunderunterdrueckung_target','abstieg_target']);if(enemyTypes.has(q?.type))return choiceByThreat(state,choices,1-Number(q.sourcePlayer));if(q?.type==='cassandra'){const p=state.players[q.sourcePlayer];return[...choices].sort((a,b)=>{const ar=p.bezSlots[Number(a.id)],br=p.bezSlots[Number(b.id)];return(runtimeMaxHearts(br)-Number(br?.hearts||0))-(runtimeMaxHearts(ar)-Number(ar?.hearts||0));})[0];}return choiceByThreat(state,choices,Number(q?.sourcePlayer??AI_INDEX))||choices[0];}
+function resolvePending(state){
+  if(state.pendingDamage){const s=chooseAIShield(state);if(s)return E().chooseShieldSource(state,s.source,s.kind);return null;}
+  if(state.pendingWonderDraw){const st=chooseDrawStack(state);return st?E().resolveWonderDraw(state,st):null;}
+  if(state.pendingRefugeStage2Choice){const p=state.players[AI_INDEX],enemy=state.players[0],phys=(enemy.bezSlots||[]).reduce((a,r)=>a+Number(r?.physicalShield||0),0),astr=(enemy.bezSlots||[]).reduce((a,r)=>a+Number(r?.astralShield||0),0);return E().chooseRefugeStage2Bonus(state,phys<=astr?'physical':'astral');}
+  if(state.pendingEquipment){const q=state.pendingEquipment;if(Number(q.owner)!==AI_INDEX)return null;const p=state.players[AI_INDEX],targets=[0,1].filter(i=>p.bezSlots[i]&&!p.equipment?.[i]?.[q.kind]).sort((a,b)=>runtimeThreat(state,AI_INDEX,b)-runtimeThreat(state,AI_INDEX,a));return targets.length?E().equipFromAzr(state,q.azrSlot,targets[0],q.kind):null;}
+  if(state.pendingFieldCard){const q=state.pendingFieldCard;if(Number(q.owner)!==AI_INDEX)return null;const p=state.players[AI_INDEX];if(q.area==='mornak_choice'){const free=[0,1].find(i=>!p.bezSlots[i]);const area=free!==undefined?`bez:${free}`:(!p.primary?'primary':(!state.sharedSecondary?'secondary':null));return area?E().moveMornakFromAzr(state,q.azrSlot,area):null;}return E().moveRevealedFieldCard(state,q.azrSlot);}
+  const q=state.pendingBezEffect;if(!q||Number(q.sourcePlayer)!==AI_INDEX)return null;
+  let choices;
+  if(q.type==='bis_zum_bitteren_ende_target'){choices=E().bisZumBitterenEndeTargets(state,q.sourcePlayer);const c=choiceByThreat(state,choices,q.sourcePlayer);return c?E().resolveBisZumBitterenEndeTarget(state,c.id):null;}
+  if(q.type==='bis_zum_bitteren_ende_choice'){const b=state.players[q.sourcePlayer]?.bezSlots?.[q.targetSlot],s=E().effectiveBezStats(state,q.sourcePlayer,q.targetSlot);return E().resolveBisZumBitterenEndeChoice(state,Number(s?.physical||0)>=Number(s?.astral||0)?'physical':'astral');}
+  if(q.type==='meteorsturm_target'){choices=E().meteorsturmTargets(state);let c=choices.find(x=>String(x.id).startsWith('0:'));if(!c)c=choices[0];return c?E().resolveMeteorsturmTarget(state,c.id):null;}
+  if(q.type==='lilou2_discard'){choices=E().lilou2Targets(state,q.sourcePlayer);return choices[0]?E().resolveLilou2Discard(state,choices[0].id):null;}
+  if(q.type==='queen_search'){choices=E().queenStackTargets(state,q.sourcePlayer);return choices[0]?E().resolveQueenSearch(state,choices[0].id):null;}
+  if(q.type==='queen2_discard'){choices=E().queenDiscardTargets(state,q.sourcePlayer);return choices[0]?E().resolveQueen2Discard(state,choices[0].id):null;}
+  if(q.type==='keyla_search'||q.type==='keyla2_search'){choices=E().keylaSearchTargets(state,q.sourcePlayer);return choices[0]?E().resolveKeylaSearch(state,choices[0].id):null;}
+  if(q.type==='keyla2_choice')return E().resolveKeyla2Choice(state,(E().keyla2DestroyTargets(state,q.sourcePlayer)||[]).length?'destroy':((E().keyla2DiscardTargets(state,q.sourcePlayer)||[]).length?'discard':'search'));
+  if(q.type==='keyla2_destroy'){choices=E().keyla2DestroyTargets(state,q.sourcePlayer);const c=choiceByThreat(state,choices,0);return c?E().resolveKeyla2Destroy(state,c.id):null;}
+  if(q.type==='keyla2_discard'){choices=E().keyla2DiscardTargets(state,q.sourcePlayer);return choices[0]?E().resolveKeyla2Discard(state,choices[0].id):null;}
+  if(q.type==='wunderumwandlungsapparatur_remove_honor'){choices=E().wunderumwandlungsapparaturHonorSources(state);return choices[0]?E().resolveWunderumwandlungsapparaturHonor(state,choices[0].id):null;}
+  if(q.type==='wunderumwandlungsapparatur_target'){choices=E().wunderumwandlungsapparaturTargets(state);const c=choiceByThreat(state,choices,q.sourcePlayer);return c?E().resolveWunderumwandlungsapparaturTarget(state,c.id):null;}
+  if(q.type==='ruth_target'){choices=E().ruthTargets(state);const c=choiceByThreat(state,choices,q.sourcePlayer);return c?E().resolveRuthTarget(state,c.slot??c.id):null;}
+  if(q.type==='ruth_choice'){const b=state.players[q.sourcePlayer]?.bezSlots?.[q.targetSlot];return E().resolveRuthChoice(state,Number(b?.physicalShield||0)<=Number(b?.astralShield||0)?'physical':'astral');}
+  if(q.type==='ehris_select'){choices=E().ehrisTargets(state,q.sourcePlayer);const c=choiceByThreat(state,choices,q.sourcePlayer);return c?E().resolveEhrisSelection(state,c.id):null;}
+  if(q.type==='erlass_umverteilung'){if(!q.x)return E().erlassBegin(state,Math.min(2,(E().erlassHonorSources(state)||[]).reduce((s,x)=>s+Number(x.honor||0),0)));if(Number(q.remaining)>0){choices=E().erlassHonorSources(state);return choices[0]?E().erlassRemoveHonor(state,choices[0].id):null;}choices=E().erlassTargets(state);const c=choiceByThreat(state,choices,q.sourcePlayer);return c?E().resolveErlassTarget(state,c.id):null;}
+  if(q.type==='strikelyn_target'){choices=E().strikelynTargets(state,q.sourcePlayer);const c=choiceByThreat(state,choices,q.sourcePlayer);return c?E().resolveStrikelynTarget(state,c.id):null;}
+  if(q.type==='kristallharnisch_choice')return E().resolveKristallharnischEffect(state,true);
+  if(q.type==='fragmentfresser_schlund_discard'){choices=E().fragmentfresserSchlundTargets(state,q.sourcePlayer);return choices[0]?E().resolveFragmentfresserSchlund(state,choices[0].id):null;}
+  if(q.type==='menia_dagger'){choices=E().meniaDaggerTargets(state,q.sourcePlayer);return choices[0]?E().resolveMeniaDagger(state,choices[0].id??choices[0].index):null;}
+  if(q.type==='thal1'){choices=E().thalZirisStage1Targets(state,q.sourcePlayer);return choices[0]?E().resolveThalZirisStage1(state,choices[0].id):null;}
+  if(q.type==='thal2'){choices=E().thalZirisTargets(state);return choices[0]?E().resolveThalZiris(state,choices[0].id):null;}
+  if(q.type==='mornak_token_place'){choices=E().mornakTokenTargets(state,q.sourcePlayer,!!q.allowEnemyAzr);return choices[0]?E().resolveMornakTokenPlacement(state,choices[0].id):null;}
+  choices=E().checkedEffectTargets(state);if(choices?.length){const c=chooseGenericChoice(state,choices,q);return E().resolveCheckedEffectTarget(state,c.id);}
+  choices=E().newAstralSpellTargets(state);if(choices?.length){const c=chooseGenericChoice(state,choices,q);return E().resolveNewAstralSpellTarget(state,c.id);}
+  choices=E().instantRuestkammerTargets(state);if(choices?.length){const c=chooseGenericChoice(state,choices,q);return E().resolveInstantRuestkammerTarget(state,c.id);}
+  return null;
 }
-function chooseAttack(state){
-  const p=E().active(state),sources=[];
-  p.bezSlots.forEach((r,i)=>{if(E().canAttack(r,p))sources.push(i);});
-  if(E().canRefugeAttack(state,p.index))sources.push('refuge');
-  if(E().canAttack(p.primary,p))sources.push('primary');
-  if(state.sharedSecondary?.owner===p.index&&E().canAttack(state.sharedSecondary,p))sources.push('secondary');
-  let best=null;
-  for(const src of sources){
-    const targets=E().attackTargets(state,src)||[];
-    for(const t of targets){
-      for(const type of ['physical','astral']){
-        const score=targetScore(state,src,t,type);
-        if(!best||score>best.score)best={src,target:{type:t.type,slot:t.slot},type,score};
-      }
-    }
-  }
-  return best;
+function chooseDevelopment(state){const p=E().active(state),cand=[];const add=(kind,slot,r)=>{if(!r||r.developedTurn===p.turnCount)return;const d=E().availableDevelopment(state,r);if(!d)return;const cost=Number(d.stufe||0);if(Number(r.honor||0)<cost)return;const gain=cardScore(d)-cardScore(E().cardData(r))+(kind==='refuge'?10:0);cand.push({kind,slot,gain,cost});};add('refuge',null,p.refuge);p.bezSlots.forEach((r,i)=>add('bez',i,r));cand.sort((a,b)=>b.gain-a.gain||a.cost-b.cost);return cand[0]||null;}
+function tryDevelop(state){const d=chooseDevelopment(state);if(!d)return null;return once(`develop:${d.kind}:${d.slot}`,()=>E().develop(state,d.kind,d.slot));}
+function supportedBezKey(c){const key=c?.effekte?.[0]?.engine_key;return['talisia1','thal2','zahira','cassandra','psilo','queen2','nemesis','lilou2','baronesse2','strikelyn','serinith','evelyn','saphira2','trix2','martha2'].includes(key);}
+function tryBezEffect(state){const p=E().active(state);for(let i=0;i<p.bezSlots.length;i++){const r=p.bezSlots[i],c=E().cardData(r),info=E().bezEffectInfo(state,i);if(!r||!c||!info||!supportedBezKey(c)||info.disabled)continue;if(info.symbol==='wonder'&&info.wonderUsed)continue;if(info.symbol==='charges'&&(info.usedThisTurn||Number(info.usesRemaining||0)<=0))continue;let choice=null,key=c.effekte?.[0]?.engine_key;if(key==='serinith')choice=Number(r.astralShield||0)>Number(r.physicalShield||0)?'astral_to_physical':'physical_to_astral';if(key==='trix2')choice=Number(r.astral||0)>Number(r.physical||0)?'astral_to_physical':'physical_to_astral';if(key==='strikelyn')choice=Number(r.effectUsesRemaining||0)>=2?'enhanced':null;const rr=once(`bezfx:${i}:${key}`,()=>E().activateBezEffect(state,i,choice));if(rr?.ok)return rr;}return null;}
+function trySpecialEffects(state){const p=E().active(state),ph=E().currentPhase(state).id;if(!['supply','resupply'].includes(ph))return null;
+  let rr;
+  rr=once('refugeWonder',()=>E().refugeWonderAvailable(state)?.ok?E().activateRefugeWonder(state):null);if(rr?.ok)return rr;
+  const pc=E().cardData(p.primary),pk=pc?.effekte?.[0]?.engine_key;
+  if(pk==='manta_wonder_physical'){rr=once('mantaWonder',()=>E().startMantaWonder(state));if(rr?.ok)return rr;}
+  if(pk==='ruth_kaufladen'){rr=once('ruth',()=>E().startRuthEffect(state));if(rr?.ok)return rr;}
+  if(pk==='wunderumwandlungsapparatur_honor_convert'){rr=once('wua',()=>E().startWunderumwandlungsapparatur(state));if(rr?.ok)return rr;}
+  if(pk==='kiki_counter_dodge'&&ph==='supply'){const t=E().kikiEligibleTargets(state);if(t?.length){rr=once('kiki',()=>E().activateKikiDodge(state,choiceByThreat(state,t,p.index)?.id));if(rr?.ok)return rr;}}
+  if(state.sharedSecondary?.owner===p.index){const sc=E().cardData(state.sharedSecondary);if(sc?.effekte?.some(e=>e.engine_key==='meteorsturm_wunder')){rr=once('meteorsturm',()=>E().startMeteorsturmWonder(state));if(rr?.ok)return rr;}}
+  for(let i=0;i<p.bezSlots.length;i++){const b=p.bezSlots[i],bc=E().cardData(b);if(bc?.effekte?.[0]?.engine_key==='alice'&&ph==='supply'){rr=once(`alice:${i}`,()=>E().activateAliceDodge(state,i));if(rr?.ok)return rr;}for(const kind of['weapon','shield','armor','helmet']){const eq=p.equipment?.[i]?.[kind],ec=E().cardData(eq);if(!eq||!ec)continue;if(ec.effekte?.some(e=>e.engine_key==='parierdolch_dodge')&&ph==='supply'){rr=once(`parier:${i}`,()=>E().activateParierdolchDodge(state,i));if(rr?.ok)return rr;}if(ec.effekte?.some(e=>e.engine_key==='voidpiercer_lifebreaker_convert')){const dir=Number(b?.physical||0)>Number(b?.astral||0)?'physical_to_astral':'astral_to_physical';rr=once(`voidpiercer:${i}`,()=>E().activateVoidpiercerLifebreaker(state,i,dir));if(rr?.ok)return rr;}if(ec.effekte?.some(e=>e.engine_key==='kristallharnisch')){rr=once(`kristall:${i}`,()=>E().startKristallharnischEffect(state,p.index,eq,i));if(rr?.ok)return rr;}}}
+  return null;
 }
-function chooseAIShield(state){
-  const q=E().currentShieldChoice(state);if(!q||Number(q.playerIndex)!==AI_INDEX)return null;
-  // Preserve base shields where possible; equipment/temporary shields are spent first.
-  const order=['aufopferung','equipment','base','mornak'];
-  return [...q.sources].sort((a,b)=>order.indexOf(a.source)-order.indexOf(b.source))[0]||null;
-}
-function step(state){
-  if(!state||state.winner!==null||state.activePlayer!==AI_INDEX)return {acted:false,wait:true};
-  const ph=E().currentPhase(state),p=E().active(state);
-  if(state.pendingDamage){
-    const shield=chooseAIShield(state);
-    if(shield){const r=E().chooseShieldSource(state,shield.source,shield.kind);return {acted:true,msg:r.msg};}
-    return {acted:false,wait:true};
-  }
-  if(state.pendingEquipment||state.pendingFieldCard||state.pendingWonderDraw||state.pendingRefugeStage2Choice||state.pendingBezEffect){
-    // The first AI version deliberately avoids initiating complex effects that require extra choices.
-    return {acted:false,wait:true,unsupported:true};
-  }
-  if(ph.id==='start'||ph.id==='supply_start')return {acted:true,msg:E().advancePhase(state).msg};
-  if(ph.id==='honor')return {acted:true,msg:E().advancePhase(state).msg};
-  if(ph.id==='draw'){
-    if(!p.drawDone){const stack=chooseDrawStack(state);if(stack){const r=E().drawPhaseCard(state,stack);return {acted:true,msg:r.msg};}}
-    return {acted:true,msg:E().advancePhase(state).msg};
-  }
+function chooseOwnAzrActivation(state){const p=E().active(state);for(let i=0;i<p.azr.length;i++){const r=p.azr[i],c=E().cardData(r);if(!r?.faceDown||!c)continue;const isInstinct=c.instinkt===true||c.effekte?.some(e=>e.instinkt===true);if(isInstinct)continue;const rr=once(`reveal:${i}`,()=>E().reveal(state,i));if(rr?.ok)return rr;}return null;}
+function shouldUseInstinct(state,c){const key=c?.effekte?.find(e=>e.instinkt===true)?.engine_key||c?.effekte?.[0]?.engine_key||'';if(E().currentPhase(state)?.id==='rush'&&state.attack)return true;return['astral_feuerball_damage','siegel_kampfschwaeche_physical_minus','siegel_astralschwaeche_astral_minus','aufopferung_shield_temp','parade_riposte_primary','sofortige_zerstoerung_armor','vollendete_toetungstechnik_dual','portalgeschoss_reactive','abstieg_downgrade_negate','kontrollierte_ueberlastung_automata','energieschildsynchronisation_search'].includes(key);}
+function reactInstinct(state){if(!state||state.winner!==null)return null;const cand=E().instinctCandidates(state)||[];for(const x of cand){if(Number(x.playerIndex)!==AI_INDEX)continue;const c=E().cardData(state.players[AI_INDEX]?.azr?.[x.slot]);if(!shouldUseInstinct(state,c))continue;const r=E().activateInstinctCard(state,x.slot);if(r.ok)return r;}E().passInstinctWindow(state);return{ok:true,passed:true,msg:'KI-Gegner passt im Instinkt-Fenster.'};}
+function defenseStep(state){if(!state||state.winner!==null)return{acted:false};const pending=resolvePending(state);if(pending?.ok)return{acted:true,msg:pending.msg};if(state.pendingDamage)return{acted:false,wait:true};if(E().instinctWindowNeeded?.(state)){const r=reactInstinct(state);return{acted:!!r?.ok,msg:r?.msg,passed:!!r?.passed};}if(state.attack&&Number(1-state.activePlayer)===AI_INDEX&&E().currentPhase(state)?.id==='rush'){const r=E().confirmAttack(state);return{acted:r.ok,msg:r.msg};}return{acted:false};}
+function step(state){if(!state||state.winner!==null||state.activePlayer!==AI_INDEX)return{acted:false,wait:true};resetMemory(state);const ph=E().currentPhase(state),p=E().active(state);const pending=resolvePending(state);if(pending?.ok)return{acted:true,msg:pending.msg};if(state.pendingDamage||state.pendingEquipment||state.pendingFieldCard||state.pendingWonderDraw||state.pendingRefugeStage2Choice||state.pendingBezEffect)return{acted:false,wait:true,unsupported:true};if(ph.id==='start'||ph.id==='supply_start')return{acted:true,msg:E().advancePhase(state).msg};if(ph.id==='honor')return{acted:true,msg:E().advancePhase(state).msg};if(ph.id==='draw'){if(!p.drawDone){const stack=chooseDrawStack(state);if(stack){const r=E().drawPhaseCard(state,stack);return{acted:true,msg:r.msg};}}return{acted:true,msg:E().advancePhase(state).msg};}
   if(ph.id==='supply'||ph.id==='resupply'){
-    const rec=chooseRecruit(state);if(rec){const r=E().recruit(state,rec.handIndex,rec.slot);if(r.ok && !state.pendingBezEffect)return {acted:true,msg:r.msg};if(r.ok)return {acted:false,wait:true,unsupported:true,msg:r.msg};}
-    const eq=chooseEquipment(state);if(eq){const r=E().equipFromHand(state,eq.handIndex,eq.bezSlot,eq.kind);if(r.ok && !r.needsShieldChoice)return {acted:true,msg:r.msg};}
-    const field=chooseField(state);if(field){const r=E().playFieldFromHand(state,field.handIndex,field.area);if(r.ok && !state.pendingBezEffect)return {acted:true,msg:r.msg};}
-    const set=chooseSetCard(state);if(set){const r=E().setFaceDown(state,set.handIndex,set.slot);if(r.ok)return {acted:true,msg:r.msg};}
-    return {acted:true,msg:E().advancePhase(state).msg};
+    let r=tryDevelop(state);if(r?.ok)return{acted:true,msg:r.msg};
+    r=tryBezEffect(state);if(r?.ok)return{acted:true,msg:r.msg};
+    r=trySpecialEffects(state);if(r?.ok)return{acted:true,msg:r.msg};
+    const rec=chooseRecruit(state);if(rec){r=once(`recruit:${rec.handIndex}:${rec.slot}`,()=>E().recruit(state,rec.handIndex,rec.slot));if(r?.ok)return{acted:true,msg:r.msg};}
+    const eq=chooseEquipment(state);if(eq){r=once(`equip:${eq.handIndex}:${eq.bezSlot}:${eq.kind}`,()=>E().equipFromHand(state,eq.handIndex,eq.bezSlot,eq.kind));if(r?.ok){if(r.needsShieldChoice){const rr=E().chooseEquipmentShieldBonus(state,eq.bezSlot,eq.kind,'physical');return{acted:rr.ok,msg:rr.msg};}return{acted:true,msg:r.msg};}}
+    const field=chooseField(state);if(field){r=once(`field:${field.handIndex}:${field.area}`,()=>E().playFieldFromHand(state,field.handIndex,field.area));if(r?.ok)return{acted:true,msg:r.msg};}
+    r=chooseOwnAzrActivation(state);if(r?.ok)return{acted:true,msg:r.msg};
+    const set=chooseSetCard(state);if(set){r=once(`set:${set.handIndex}:${set.slot}`,()=>E().setFaceDown(state,set.handIndex,set.slot));if(r?.ok)return{acted:true,msg:r.msg};}
+    return{acted:true,msg:E().advancePhase(state).msg};
   }
-  if(ph.id==='rush'){
-    if(state.attack)return {acted:false,wait:true}; // human defender may react / confirm
-    const a=chooseAttack(state);
-    if(a){const r=E().prepareAttack(state,a.src,a.target,a.type);return {acted:r.ok,wait:r.ok,msg:r.msg};}
-    return {acted:true,msg:E().advancePhase(state).msg};
-  }
-  if(ph.id==='combat'){
-    if(state.attack){const r=E().resolveCombat(state);if(r.needsShieldChoice){const q=r.choice;if(Number(q?.playerIndex)!==AI_INDEX)return {acted:false,wait:true};const s=chooseAIShield(state);if(s){const rr=E().chooseShieldSource(state,s.source,s.kind);return {acted:true,msg:rr.msg};}}return {acted:r.ok,msg:r.msg};}
-    const rr=E().returnToRush(state);if(rr.ok)return {acted:true,msg:rr.msg};
-    return {acted:true,msg:E().advancePhase(state).msg};
-  }
-  if(ph.id==='end')return {acted:true,msg:E().advancePhase(state).msg};
-  return {acted:true,msg:E().advancePhase(state).msg};
+  if(ph.id==='rush'){if(state.attack)return{acted:false,wait:true};const a=chooseAttack(state);if(a){const r=E().prepareAttack(state,a.src,a.target,a.type);return{acted:r.ok,wait:r.ok,msg:r.msg};}return{acted:true,msg:E().advancePhase(state).msg};}
+  if(ph.id==='combat'){if(state.attack){const r=E().resolveCombat(state);if(r.needsShieldChoice){const q=r.choice;if(Number(q?.playerIndex)!==AI_INDEX)return{acted:false,wait:true};const s=chooseAIShield(state);if(s){const rr=E().chooseShieldSource(state,s.source,s.kind);return{acted:true,msg:rr.msg};}}return{acted:r.ok,msg:r.msg};}const rr=E().returnToRush(state);if(rr.ok)return{acted:true,msg:rr.msg};return{acted:true,msg:E().advancePhase(state).msg};}
+  if(ph.id==='end')return{acted:true,msg:E().advancePhase(state).msg};return{acted:true,msg:E().advancePhase(state).msg};
 }
-window.G5AI={AI_INDEX,isAIPlayer,chooseDrawStack,chooseRecruit,chooseAttack,targetScore,step};
+window.G5AI={AI_INDEX,isAIPlayer,chooseDrawStack,chooseRecruit,chooseAttack,targetScore,chooseDevelopment,resolvePending,reactInstinct,defenseStep,step};
 })();

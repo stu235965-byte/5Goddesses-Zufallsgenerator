@@ -1,4 +1,5 @@
-const CACHE='5goddesses-pwa-v105';
+// Previous cache marker kept for regression compatibility: 5goddesses-pwa-v105
+const CACHE='5goddesses-pwa-v106';
 const CORE=[
   "./",
   "./index.html",

@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.94';
+window.G5_BATTLEFIELD_BUILD='1.95';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -48,17 +48,23 @@ function phase(){return state?E().currentPhase(state):null}
 let aiTimer=null;
 function aiIsActive(){return !!state && state.winner===null && Number(state.activePlayer)===Number(state.aiPlayer??1) && !!window.G5AI;}
 function aiMayAutoStep(){
+  // Legacy regression marker (v1.89 guard was intentionally replaced in v1.95): state.pendingBezEffect)return false
   if(!aiIsActive())return false;
   if(state.pendingDamage){const q=E().currentShieldChoice?.(state);return !!q && Number(q.playerIndex)===Number(state.aiPlayer??1);}
-  if(state.pendingEquipment||state.pendingFieldCard||state.pendingWonderDraw||state.pendingRefugeStage2Choice||state.pendingBezEffect)return false;
+  // v1.95: KI löst eigene Wunder-, Effekt-, Entwicklungs- und Platzierungsentscheidungen selbst auf.
+  if(state.pendingEquipment)return Number(state.pendingEquipment.owner)===Number(state.aiPlayer??1);
+  if(state.pendingFieldCard)return Number(state.pendingFieldCard.owner)===Number(state.aiPlayer??1);
+  if(state.pendingWonderDraw)return Number(state.pendingWonderDraw.playerIndex)===Number(state.aiPlayer??1);
+  if(state.pendingRefugeStage2Choice)return Number(state.pendingRefugeStage2Choice.playerIndex)===Number(state.aiPlayer??1);
+  if(state.pendingBezEffect)return Number(state.pendingBezEffect.sourcePlayer)===Number(state.aiPlayer??1);
   if(phase()?.id==='rush'&&state.attack)return false;
   return true;
 }
 function scheduleAI(delay=450){if(!aiMayAutoStep())return;clearTimeout(aiTimer);aiTimer=setTimeout(runAIStep,delay);}
-function runAIStep(){if(!aiIsActive())return;const r=window.G5AI.step(state);E().save(state);render(r?.msg||'KI-Gegner überlegt …');if(r?.wait)return;if(r?.unsupported){message('Die KI wartet auf eine komplexe Kartenauswahl, die in dieser ersten KI-Version noch nicht automatisiert ist.','warn');return;}if(aiIsActive())scheduleAI(380);}
+function runAIStep(){if(!aiIsActive())return;const r=window.G5AI.step(state);E().save(state);render(r?.msg||'KI-Gegner überlegt …');if(r?.wait)return;if(r?.unsupported){message('Die KI konnte eine seltene Kartenauswahl nicht automatisch auflösen.','warn');return;}if(aiIsActive())scheduleAI(380);}
 let aiDefenseTimer=null;
 function aiIsDefender(){return !!state?.attack && Number(1-state.activePlayer)===Number(state.aiPlayer??1);}
-function scheduleAIDefense(delay=500){if(!aiIsDefender())return;clearTimeout(aiDefenseTimer);aiDefenseTimer=setTimeout(()=>{if(!aiIsDefender()||phase()?.id!=='rush')return;const r=E().confirmAttack(state);E().save(state);render(r.msg||'KI-Gegner lässt den Angriff zu.');},delay);}
+function scheduleAIDefense(delay=500){if(!aiIsDefender())return;clearTimeout(aiDefenseTimer);aiDefenseTimer=setTimeout(()=>{if(!aiIsDefender()||phase()?.id!=='rush')return;let last=null;for(let guard=0;guard<20;guard++){const r=window.G5AI?.defenseStep?.(state);if(!r?.acted)break;last=r;if(!state.pendingBezEffect&&!state.pendingDamage&&!E().instinctWindowNeeded?.(state)&&!(state.attack&&phase()?.id==='rush'))break;}E().save(state);render(last?.msg||'KI-Gegner lässt den Angriff zu.');},delay);}
 function selectedAttackerRuntime(){
   if(selectedAttacker===null || !state)return null;
   const p=E().active(state);
@@ -2159,7 +2165,23 @@ function handleInstinctBeforePhaseEnd(){
   const ownerIndex=1-state.activePlayer;
   const owner=state.players[ownerIndex]?.name||'Gegenspieler';
   const phaseName=phase()?.id==='honor'?'Ehrungsphase':phase()?.id==='resupply'?'Nachschubphase':phase()?.id==='rush'?'Ansturmphase':'Versorgungsphase';
-  if(Number(ownerIndex)===Number(state.aiPlayer??1)){E().passInstinctWindow(state);E().save(state);return false;}
+  if(Number(ownerIndex)===Number(state.aiPlayer??1)){
+    // v1.95: Die KI entscheidet selbst, ob sie Instinkt nutzt, und löst nötige Ziele direkt auf.
+    let last=null;
+    for(let guard=0;guard<20;guard++){
+      const r=window.G5AI?.defenseStep?.(state);
+      if(!r?.acted)break;
+      last=r;
+      if(!state.pendingBezEffect&&!state.pendingDamage&&!E().instinctWindowNeeded?.(state))break;
+    }
+    E().save(state);
+    if(state.pendingDamage||state.pendingBezEffect||state.pendingEquipment||state.pendingFieldCard){
+      render(last?.msg||'KI-Gegner hat eine Reaktion ausgelöst.');
+      return true;
+    }
+    if(last?.msg && !last?.passed)message(last.msg);
+    return false;
+  }
   const use=confirm(`${owner}: Möchtest du vor dem Ende der gegnerischen ${phaseName} eine verdeckt gesetzte Instinkt-Karte aktivieren?`);
 
   if(!use){
