@@ -2237,3 +2237,30 @@ document.getElementById('gameResume').hidden=!saved;
 document.getElementById('gamePreviewToggle')?.addEventListener('click',toggleCardPreviewMode);
 
 })();
+
+// v1.96 Storymode bridge: startet einen hinterlegten Boss mit denselben Gefechtsregeln.
+// Einzige Deckbau-Ausnahme ist act3_nemesis (3x Nemesis); validDeck prüft diese explizit.
+window.G5StoryBattlefield={
+  startBoss(playerDeck,bossId,startPlayer=0){
+    const boss=window.G5STORY_BOSS_DECKS?.get?.(bossId);
+    if(!boss)throw new Error(`Unbekannter Storyboss: ${bossId}`);
+    if(!E().validDeck(playerDeck))throw new Error('Das Story-Spielerdeck ist ungültig.');
+    if(!E().validDeck(boss))throw new Error(`Story-Bossdeck ist ungültig: ${bossId}`);
+    state=E().startGame(playerDeck,boss,Number(startPlayer)===1?1:0);
+    state.aiPlayer=1;
+    state.storyMode=true;
+    state.storyBossId=bossId;
+    state.storyAct=boss.storyAct;
+    applyBattlePlayerNames();
+    if(state.players?.[1])state.players[1].name=boss.boss;
+    E().save(state);
+    document.getElementById('gameSetup').hidden=true;
+    document.getElementById('gameShell').hidden=false;
+    selectedHandIndex=null;selectedAttacker=null;selectedTarget=null;refugeActionSelected=false;
+    resetMobileBattlefieldFit();
+    render(`Storyboss: ${boss.boss}`);
+    window.starteGameplayMusik?.();
+    scheduleAITurn();
+    return state;
+  }
+};

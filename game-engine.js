@@ -70,7 +70,9 @@ function validDeck(d){
 
   // Dieselben Regeln wie im Deckbuilder: 3 verschiedene Klassen.
   const classes=k.bezwingerinnen.map(dbCard).map(c=>c?.klasse).filter(Boolean);
-  if(classes.length!==3 || new Set(classes).size!==3)return false;
+  const nemesisStoryException = d?.storyBossId==='act3_nemesis' &&
+    k.bezwingerinnen.length===3 && k.bezwingerinnen.every(b=>dbCard(b)?.name==='Geißel der Galaxie Nemesis');
+  if(!nemesisStoryException && (classes.length!==3 || new Set(classes).size!==3))return false;
 
   // Die zur Zuflucht gehörende Stufe-2-Entwicklung muss enthalten sein.
   const refuge=k.zuflucht[0];
