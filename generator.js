@@ -63,8 +63,11 @@ function speicherePool(){
 function profilname(){return localStorage.getItem(PROFILE_KEY)||'Kartenpool'}
 
 const MUSIC_PREF_KEY='5goddesses_musik_aktiv_v1';
+const MENU_MUSIC_VOLUME=0.25;
+const GAMEPLAY_MUSIC_VOLUME=0.15;
 let fanHinweisBestaetigt=false;
 let aktuelleSeite='home';
+let gameplayMusikModus=false;
 
 function musikAktiviert(){
   return localStorage.getItem(MUSIC_PREF_KEY)!=='0';
@@ -83,6 +86,12 @@ function aktualisiereMusikSchalter(){
   btn.classList.toggle('muted',!aktiv);
 }
 
+function audioZuruecksetzen(audio){
+  if(!audio)return;
+  audio.pause();
+  try{audio.currentTime=0}catch(e){}
+}
+
 function stoppeHintergrundmusik(reset=true){
   const audio=document.getElementById('backgroundMusic');
   if(!audio)return;
@@ -92,26 +101,65 @@ function stoppeHintergrundmusik(reset=true){
   }
 }
 
+function stoppeGameplayMusik(reset=true){
+  const audio=document.getElementById('gameplayMusic');
+  if(!audio)return;
+  audio.pause();
+  if(reset){
+    try{audio.currentTime=0}catch(e){}
+  }
+}
+
 function starteHintergrundmusik(){
   const audio=document.getElementById('backgroundMusic');
-  if(!audio || !fanHinweisBestaetigt || !musikAktiviert() || !istMenuseite(aktuelleSeite))return;
-  audio.volume=0.25;
+  if(!audio || !fanHinweisBestaetigt || !musikAktiviert() || gameplayMusikModus)return;
+  // Auch die Deckauswahl des Testgefechts gehört noch zum Menübereich.
+  if(!istMenuseite(aktuelleSeite) && aktuelleSeite!=='game')return;
+  stoppeGameplayMusik(true);
+  audio.volume=MENU_MUSIC_VOLUME;
   const versuch=audio.play();
   if(versuch?.catch)versuch.catch(()=>{});
+}
+
+function starteGameplayMusik(){
+  gameplayMusikModus=true;
+  stoppeHintergrundmusik(true);
+  const audio=document.getElementById('gameplayMusic');
+  if(!audio || !fanHinweisBestaetigt || !musikAktiviert())return;
+  audio.volume=GAMEPLAY_MUSIC_VOLUME;
+  const versuch=audio.play();
+  if(versuch?.catch)versuch.catch(()=>{});
+}
+
+function beendeGameplayMusikUndStarteMenue(){
+  gameplayMusikModus=false;
+  stoppeGameplayMusik(true);
+  starteHintergrundmusik();
+}
+
+function stoppeAlleMusik(reset=false){
+  stoppeHintergrundmusik(reset);
+  stoppeGameplayMusik(reset);
 }
 
 function setzeMusikAktiv(aktiv){
   localStorage.setItem(MUSIC_PREF_KEY,aktiv?'1':'0');
   aktualisiereMusikSchalter();
-  if(aktiv)starteHintergrundmusik();
-  else stoppeHintergrundmusik(false);
+  if(!aktiv){
+    stoppeAlleMusik(false);
+    return;
+  }
+  if(gameplayMusikModus)starteGameplayMusik();
+  else starteHintergrundmusik();
 }
 
 function initialisiereFanHinweisUndMusik(){
   const notice=document.getElementById('fanNotice');
   const accept=document.getElementById('fanNoticeAccept');
-  const audio=document.getElementById('backgroundMusic');
-  if(audio)audio.volume=0.25;
+  const menuAudio=document.getElementById('backgroundMusic');
+  const gameAudio=document.getElementById('gameplayMusic');
+  if(menuAudio)menuAudio.volume=MENU_MUSIC_VOLUME;
+  if(gameAudio)gameAudio.volume=GAMEPLAY_MUSIC_VOLUME;
   aktualisiereMusikSchalter();
   document.body.classList.add('fan-notice-open');
   accept?.focus();
@@ -135,14 +183,32 @@ function zeigeSeite(name){
   ziel.classList.add('active');
   aktuelleSeite=name;
   document.body.classList.toggle('menu-background',istMenuseite(name));
-  if(istMenuseite(name))starteHintergrundmusik();
-  else stoppeHintergrundmusik(true);
+
+  if(name==='game'){
+    // Beim Öffnen der Testgefecht-Deckauswahl läuft die Menümusik weiter.
+    // Erst battlefield.js meldet nach dem tatsächlichen Spielfeldaufbau den Wechsel.
+    const shell=document.getElementById('gameShell');
+    if(shell && !shell.hidden)starteGameplayMusik();
+    else{
+      gameplayMusikModus=false;
+      stoppeGameplayMusik(true);
+      starteHintergrundmusik();
+    }
+  }else if(istMenuseite(name)){
+    beendeGameplayMusikUndStarteMenue();
+  }else{
+    gameplayMusikModus=false;
+    stoppeAlleMusik(true);
+  }
+
   if(name==='profil')renderKartenpool();
   if(name==='decks' && window.renderGespeicherteDecks)window.renderGespeicherteDecks();
   if(name==='game' && window.gamePageOpened)window.gamePageOpened();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 window.zeigeSeite=zeigeSeite;
+window.starteGameplayMusik=starteGameplayMusik;
+window.beendeGameplayMusikUndStarteMenue=beendeGameplayMusikUndStarteMenue;
 
 function zeigeStartbildschirm(spielen=false){
   zeigeSeite('home');
@@ -151,6 +217,7 @@ function zeigeStartbildschirm(spielen=false){
   if(submenu)submenu.hidden=!spielen;
   if(btn)btn.setAttribute('aria-expanded',spielen?'true':'false');
 }
+
 
 document.querySelectorAll('.navbtn[data-page]').forEach(b=>b.addEventListener('click',()=>zeigeSeite(b.dataset.page)));
 document.querySelectorAll('[data-home-page]').forEach(b=>b.addEventListener('click',()=>zeigeSeite(b.dataset.homePage)));
@@ -164,8 +231,8 @@ document.getElementById('homeSpielen')?.addEventListener('click',()=>{
   btn.setAttribute('aria-expanded',submenu.hidden?'false':'true');
 });
 document.getElementById('homeTestgefecht')?.addEventListener('click',()=>zeigeSeite('game'));
-document.getElementById('homeTutorial')?.addEventListener('click',()=>stoppeHintergrundmusik(true));
-document.getElementById('homeStorymode')?.addEventListener('click',()=>stoppeHintergrundmusik(true));
+// Tutorial und Storymode sind noch deaktiviert. Sobald deren echtes Spielfeld
+// aufgebaut wird, muss dort window.starteGameplayMusik() aufgerufen werden.
 
 function aktualisiereStatus(){
   const alle=datenbank(),n=alle.filter(k=>istImPool(k)).length;

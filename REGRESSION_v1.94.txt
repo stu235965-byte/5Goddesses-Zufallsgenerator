@@ -1,0 +1,9 @@
+v1.94 Regression
+- Menü -> Testgefecht-Deckauswahl: Menümusik bleibt aktiv.
+- Gefecht starten: Gameplay-Musik startet erst nach render() des Spielfelds.
+- Gespeichertes Gefecht fortsetzen: Gameplay-Musik startet nach render().
+- Neues Gefecht / zurück zur Deckauswahl: Gameplay-Musik endet, Menümusik übernimmt.
+- Wechsel vom aktiven Gefecht auf Generator/Kartenpool/Deckbuilder/Home: Menümusik übernimmt.
+- Musikschalter steuert Menü- und Gameplay-Musik gemeinsam.
+- Gameplay-Lautstärke 0.15, Menülaufstärke 0.25.
+- Gameplay-MP3 wird vom Service Worker v105 offline gecacht.

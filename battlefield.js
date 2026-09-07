@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-window.G5_BATTLEFIELD_BUILD='1.92';
+window.G5_BATTLEFIELD_BUILD='1.94';
 
 const G5_PROFILE_NAME_KEY='5goddesses_profilname_v1';
 function battleProfileName(){
@@ -308,6 +308,8 @@ function startGame(){
   // der bisher erst nach einem echten orientationchange zuverlässig griff.
   resetMobileBattlefieldFit();
   render('Gefecht gestartet. Beide Spieler haben 3 Karten auf der Starthand.');
+  // Gameplay-Musik wirklich erst nach dem sichtbaren Spielfeldaufbau starten.
+  window.starteGameplayMusik?.();
   setTimeout(()=>{
     resetMobileBattlefieldFit();
     scheduleMobileBattlefieldFit();
@@ -325,6 +327,8 @@ function resumeGame(){
   // Auch beim Fortsetzen eines Gefechts frisch an das aktuelle Hoch-/Querformat anpassen.
   resetMobileBattlefieldFit();
   render('Gespeichertes Gefecht fortgesetzt.');
+  // Auch beim Fortsetzen erst nach dem wieder aufgebauten Spielfeld wechseln.
+  window.starteGameplayMusik?.();
   setTimeout(()=>{
     resetMobileBattlefieldFit();
     scheduleMobileBattlefieldFit();
@@ -335,6 +339,7 @@ function newGame(){
   state=null;E().clear();
   document.getElementById('gameShell').hidden=true;
   document.getElementById('gameSetup').hidden=false;
+  window.beendeGameplayMusikUndStarteMenue?.();
   window.addEventListener('resize',updateStickyGameOffsets);
 
   fillDeckSelectors();
