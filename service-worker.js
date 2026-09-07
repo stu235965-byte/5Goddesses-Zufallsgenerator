@@ -1,4 +1,4 @@
-const CACHE='5goddesses-pwa-v100';
+const CACHE='5goddesses-pwa-v101';
 const CORE=[
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const CORE=[
   "./pwa.js",
   "./5goddesses-datenbank.js",
   "./manifest.webmanifest",
+  "./assets/start-hintergrund.png",
   "./Astralkammer/1.01-07-32-03e63bf8.webp",
   "./Astralkammer/1.01-08-32-49edc2a7.webp",
   "./Astralkammer/1.01-09-32-cb99ac81.webp",

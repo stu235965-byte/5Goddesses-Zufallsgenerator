@@ -68,6 +68,7 @@ function zeigeSeite(name){
   const ziel=document.getElementById('page-'+name);
   if(!ziel)return;
   ziel.classList.add('active');
+  document.body.classList.toggle('menu-background',['home','generator','profil','decks'].includes(name));
   if(name==='profil')renderKartenpool();
   if(name==='decks' && window.renderGespeicherteDecks)window.renderGespeicherteDecks();
   if(name==='game' && window.gamePageOpened)window.gamePageOpened();

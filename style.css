@@ -1541,3 +1541,37 @@ h1{font-size:30px;margin:0 0 16px}
 .future-mode-btn:disabled{opacity:.42;cursor:not-allowed;background:#292929;color:#aaa;border-color:#444}
 .future-mode-btn:disabled:hover{background:#292929}
 @media(max-width:700px){.home-panel{padding:24px 16px}.home-menu-btn{font-size:17px}.topbar nav{display:none}}
+
+
+/* v1.90 – gemeinsamer Menü-Hintergrund */
+body.menu-background{
+  background-color:#090909;
+  background-image:url("assets/start-hintergrund.png");
+  background-repeat:no-repeat;
+  background-position:center top;
+  background-size:min(100vw,1024px) auto;
+  background-attachment:fixed;
+}
+body.menu-background .home-panel,
+body.menu-background .profilbox,
+body.menu-background .generator-savebar,
+body.menu-background .saved-deck,
+body.menu-background .deck-editor-head,
+body.menu-background .empty-state{
+  background:rgba(24,24,24,.92);
+  backdrop-filter:blur(2px);
+}
+body.menu-background #page-generator > h1,
+body.menu-background #page-generator > .intro,
+body.menu-background #page-profil > h1,
+body.menu-background #page-profil > .intro,
+body.menu-background #page-decks > h1,
+body.menu-background #page-decks > .intro{
+  text-shadow:0 2px 8px #000,0 0 14px #000;
+}
+@media(min-width:1025px){
+  body.menu-background{background-size:1024px auto}
+}
+@media(max-width:700px){
+  body.menu-background{background-size:100vw auto}
+}

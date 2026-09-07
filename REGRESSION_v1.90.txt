@@ -1,0 +1,13 @@
+5Goddesses v1.90 – Regression
+
+Bestehende Tests aus v1.89: 211 PASS / 0 FAIL
+Neue Menü-Hintergrundtests v1.90: 3 PASS / 0 FAIL
+Gesamt: 214 PASS / 0 FAIL
+
+Zusätzliche Prüfungen:
+- generator.js Syntax PASS
+- battlefield.js Syntax PASS
+- service-worker.js Syntax PASS
+- Hintergrunddatei vorhanden und identisch mit der Nutzer-Vorlage
+- Hintergrund nur für Startbildschirm, Zufallsgenerator, Kartenpool und Deckbuilder aktiv
+- Hintergrund im Offline-Cache enthalten
