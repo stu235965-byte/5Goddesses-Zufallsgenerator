@@ -29,7 +29,24 @@ function resolvePending(state){
   if(state.pendingDamage){const s=chooseAIShield(state);if(s)return E().chooseShieldSource(state,s.source,s.kind);return null;}
   if(state.pendingWonderDraw){const st=chooseDrawStack(state);return st?E().resolveWonderDraw(state,st):null;}
   if(state.pendingRefugeStage2Choice){const p=state.players[AI_INDEX],enemy=state.players[0],phys=(enemy.bezSlots||[]).reduce((a,r)=>a+Number(r?.physicalShield||0),0),astr=(enemy.bezSlots||[]).reduce((a,r)=>a+Number(r?.astralShield||0),0);return E().chooseRefugeStage2Bonus(state,phys<=astr?'physical':'astral');}
-  if(state.pendingEquipment){const q=state.pendingEquipment;if(Number(q.owner)!==AI_INDEX)return null;const p=state.players[AI_INDEX],targets=[0,1].filter(i=>p.bezSlots[i]&&!p.equipment?.[i]?.[q.kind]).sort((a,b)=>runtimeThreat(state,AI_INDEX,b)-runtimeThreat(state,AI_INDEX,a));return targets.length?E().equipFromAzr(state,q.azrSlot,targets[0],q.kind):null;}
+  if(state.pendingEquipment){
+    const q=state.pendingEquipment;
+    if(Number(q.owner)!==AI_INDEX)return null;
+    const p=state.players[AI_INDEX];
+    // Eine bereits aufgedeckte Ausrüstung MUSS sofort angelegt werden. Ein belegter
+    // Ausrüstungsslot ist dabei kein Hindernis: equipFromAzr/equipRuntimeToBez ersetzt
+    // die bisherige Karte regelkonform und legt sie auf den Ablagestapel. Bis v2.05
+    // betrachtete die KI nur freie Slots und konnte deshalb dauerhaft in
+    // pendingEquipment hängen bleiben.
+    const targets=[0,1]
+      .filter(i=>p.bezSlots[i])
+      .sort((a,b)=>runtimeThreat(state,AI_INDEX,b)-runtimeThreat(state,AI_INDEX,a));
+    for(const target of targets){
+      const rr=E().equipFromAzr(state,q.azrSlot,target,q.kind);
+      if(rr?.ok)return rr;
+    }
+    return null;
+  }
   if(state.pendingFieldCard){const q=state.pendingFieldCard;if(Number(q.owner)!==AI_INDEX)return null;const p=state.players[AI_INDEX];if(q.area==='mornak_choice'){const free=[0,1].find(i=>!p.bezSlots[i]);const area=free!==undefined?`bez:${free}`:(!p.primary?'primary':(!state.sharedSecondary?'secondary':null));return area?E().moveMornakFromAzr(state,q.azrSlot,area):null;}return E().moveRevealedFieldCard(state,q.azrSlot);}
   const q=state.pendingBezEffect;if(!q||Number(q.sourcePlayer)!==AI_INDEX)return null;
   let choices;
