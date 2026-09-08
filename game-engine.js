@@ -3183,7 +3183,6 @@ function equipRuntimeToBez(state,p,r,bezSlot,kind){
   if(!actualKind || (actualKind!==kind&&!specialPair))return {ok:false,msg:'Diese Ausrüstung gehört nicht in diesen Bereich.'};
 
   const previous=p.equipment[bezSlot][kind];
-  if(previous?.effectState?.permanentMeniaDagger)return {ok:false,msg:'Menias dauerhaft ausgerüsteter Dolch kann nicht ersetzt werden.'};
   if(previous){
     discardRuntime(p,previous);
     log(state,`${cardData(previous)?.name||'Die bisherige Ausrüstung'} wird ersetzt und auf den Ablagestapel gelegt.`);
@@ -3317,7 +3316,6 @@ function discardEquipment(state,bezSlot,kind){
   ensureEquipmentState(p);
   const r=p.equipment[bezSlot]?.[kind];
   if(!r)return {ok:false,msg:'In diesem Ausrüstungsbereich liegt keine Karte.'};
-  if(r.effectState?.permanentMeniaDagger)return {ok:false,msg:'Dieser Dolch wurde durch Menia dauerhaft ausgerüstet und kann nicht freiwillig abgelegt werden.'};
   discardRuntime(p,r);
   p.equipment[bezSlot][kind]=null;
   normalizeJakylHyhdeAfterRemoval(state,p,bezSlot,r);

@@ -71,11 +71,11 @@ function pick(name,area){const bild=cardImageByName(name,area);if(!bild)throw ne
 function cloneCards(k){return {zuflucht:[...(k.zuflucht||[])],bezwingerinnen:[...(k.bezwingerinnen||[])],astral:[...(k.astral||[])],ruestkammer:[...(k.ruestkammer||[])],entwicklung:[...(k.entwicklung||[])]};}
 function starterDeck(){
   return {
-    id:'story-menia-starter-v1',name:'Menia · Starterdeck',storyPlayerDeck:true,
+    id:'story-menia-starter-v2',name:'Menia · Starterdeck',storyPlayerDeck:true,
     karten:{
       zuflucht:[pick('Das strahlende Schloss Kaizer','zuflucht')],
       bezwingerinnen:[pick('Die glorreiche Eroberin Martha Kaizer','bezwingerinnen'),pick('Die Schöpferin Cassandra','bezwingerinnen'),pick('Der unsichtbare Untergang Menia','bezwingerinnen')],
-      astral:[pick('Aufstieg','astral'),pick('Zweifache Bestrafung','astral'),pick('Bis zum bitteren Ende','astral'),pick('Rabe der Hoffnung Kiki','astral'),pick('Vollendete Tötungstechnik','astral')],
+      astral:[pick('Aufstieg','astral'),pick('Aufopferung der S.H.I.E.L.D.','astral'),pick('ASTRAL-Feuerball','astral'),pick('Rabe der Hoffnung Kiki','astral'),pick('Vollendete Tötungstechnik','astral')],
       ruestkammer:[pick('Die Abenddämmerung Hyhde','ruestkammer'),pick('Die Morgenröte Jakyl','ruestkammer'),pick('Parierdolch','ruestkammer'),pick('Die strahlende Krone Gloria','ruestkammer'),pick('Ubusa Brustpanzer','ruestkammer')],
       entwicklung:[pick('Das strahlende Schloss Kaizer','entwicklung'),pick('Die glorreiche Eroberin Martha Kaizer','entwicklung'),pick('Bastion Fernstille','entwicklung'),pick('Glut des Morgens','entwicklung'),pick('Sanctum Lysandor','entwicklung')]
     }
@@ -94,6 +94,9 @@ function loadStoryDeckCards(){
     const raw=JSON.parse(localStorage.getItem(STORY_DECK_KEY)||'null');
     if(!raw)return cloneCards(starter);
     const k=cloneCards(raw);
+    // v2.05: unverändertes altes Starterdeck automatisch auf die neu balancierte Astralkammer migrieren.
+    const oldStarterAstral=['Aufstieg','Zweifache Bestrafung','Bis zum bitteren Ende','Rabe der Hoffnung Kiki','Vollendete Tötungstechnik'].map(n=>cardImageByName(n,'astral'));
+    if(k.astral.length===5 && oldStarterAstral.every((b,i)=>k.astral[i]===b)) k.astral=[...starter.astral];
     // Storydeck darf nur aus freigeschalteten Storykarten bestehen. Zuflucht, Bezwingerinnen und Entwicklung bleiben fest.
     const pool=storyPoolSet();
     k.zuflucht=[...starter.zuflucht];k.bezwingerinnen=[...starter.bezwingerinnen];k.entwicklung=[...starter.entwicklung];
